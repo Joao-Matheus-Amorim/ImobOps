@@ -1,0 +1,128 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme (raramente usado — o produto é dark-first) */
+    --background: 205 30% 97%;
+    --foreground: 205 35% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 205 35% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 205 35% 10%;
+    --primary: 198 100% 68%;
+    --primary-foreground: 202 90% 8%;
+    --secondary: 205 16% 92%;
+    --secondary-foreground: 205 30% 16%;
+    --muted: 205 16% 92%;
+    --muted-foreground: 205 12% 40%;
+    --accent: 198 100% 68%;
+    --accent-foreground: 202 90% 8%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 56% 42%;
+    --warning: 38 92% 50%;
+    --gold: 43 52% 54%;
+    --gold-foreground: 205 35% 10%;
+    --border: 205 16% 86%;
+    --input: 205 16% 86%;
+    --ring: 198 100% 60%;
+    --radius: 1rem;
+  }
+
+  .dark {
+    /* Dark-first — fundo #070B10, surface #0D131A, accent azul-bebê neon #5CD2FF */
+    --background: 207 36% 5%;
+    --foreground: 200 24% 92%;
+    --card: 205 30% 8%;
+    --card-foreground: 200 24% 92%;
+    --popover: 205 32% 7%;
+    --popover-foreground: 200 24% 92%;
+    /* Azul-bebê fluorescente */
+    --primary: 198 100% 68%;
+    --primary-foreground: 202 100% 7%;
+    --secondary: 205 24% 14%;
+    --secondary-foreground: 200 24% 92%;
+    --muted: 205 22% 13%;
+    --muted-foreground: 205 14% 58%;
+    --accent: 198 100% 68%;
+    --accent-foreground: 202 100% 7%;
+    --destructive: 0 64% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 52% 47%;
+    --warning: 38 90% 56%;
+    --gold: 43 52% 56%;
+    --gold-foreground: 207 36% 5%;
+    --border: 205 22% 16%;
+    --input: 205 22% 16%;
+    --ring: 198 100% 62%;
+    --radius: 1rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+    /* Gradiente radial azul-petróleo nos cantos, sobre o quase-preto. */
+    background-image:
+      radial-gradient(60rem 40rem at 100% 0%, hsl(198 90% 30% / 0.18), transparent 60%),
+      radial-gradient(55rem 40rem at 0% 100%, hsl(198 80% 24% / 0.14), transparent 55%),
+      radial-gradient(40rem 30rem at 50% 50%, hsl(205 40% 10% / 0.4), transparent 70%);
+    background-attachment: fixed;
+  }
+  html {
+    @apply antialiased;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Título display — fonte condensada mono, caixa alta, peso forte. */
+  .font-display {
+    font-family: var(--font-display), ui-monospace, "Cascadia Mono", monospace;
+    letter-spacing: -0.01em;
+  }
+  .section-label {
+    font-family: var(--font-display), ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.68rem;
+  }
+
+  /* Glow neon do accent para CTAs e estados ativos. */
+  .glow-accent {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.4),
+      0 0 24px -4px hsl(var(--primary) / 0.55);
+  }
+  .text-glow {
+    text-shadow: 0 0 18px hsl(var(--primary) / 0.45);
+  }
+
+  /* Badge de seção no topo das páginas (● LABEL). */
+  .pill-badge {
+    @apply inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 section-label text-muted-foreground;
+  }
+}
