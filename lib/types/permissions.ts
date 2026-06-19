@@ -53,6 +53,7 @@ export type FeatureKey =
   | "condo_expenses"
   | "condo_meetings"
   | "finance"
+  | "calendar"
   | "repasses"
   | "commissions"
   | "crm"
@@ -71,6 +72,7 @@ export const FEATURE_KEYS: FeatureKey[] = [
   "condo_expenses",
   "condo_meetings",
   "finance",
+  "calendar",
   "repasses",
   "commissions",
   "crm",
@@ -90,6 +92,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   condo_expenses: "Despesas de condomínio",
   condo_meetings: "Assembleias",
   finance: "Financeiro",
+  calendar: "Calendario",
   repasses: "Repasses",
   commissions: "Comissões",
   crm: "CRM",

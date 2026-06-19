@@ -65,8 +65,12 @@ const config: Config = {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 24px -4px hsl(var(--primary) / 0.55)",
-        "glow-sm": "0 0 14px -4px hsl(var(--primary) / 0.5)",
+        glow:
+          "0 0 0 1px hsl(var(--primary) / 0.44), 0 0 28px -6px hsl(var(--primary) / 0.95), 0 0 72px -28px hsl(var(--primary) / 0.9)",
+        "glow-sm":
+          "0 0 0 1px hsl(var(--primary) / 0.28), 0 0 18px -5px hsl(var(--primary) / 0.82)",
+        "glow-lg":
+          "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 42px -8px hsl(var(--primary) / 0.95), 0 0 120px -42px hsl(var(--primary) / 0.9)",
       },
       keyframes: {
         "accordion-down": {

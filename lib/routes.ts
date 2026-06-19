@@ -15,6 +15,7 @@ export const routes = {
   condos: "/condos",
   condo: (id: string) => `/condos/${id}`,
   finance: "/finance",
+  calendar: "/calendar",
   crm: "/crm",
   whatsapp: "/whatsapp",
   assistant: "/assistant",
@@ -43,6 +44,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: routes.dashboard, label: "Dashboard", icon: "LayoutDashboard", feature: "clients" },
       { href: routes.assistant, label: "Assistente IA", icon: "Sparkles", feature: "assistant" },
       { href: routes.clients, label: "Clientes", icon: "Contact", feature: "clients" },
+      { href: routes.calendar, label: "Calendario", icon: "CalendarDays", feature: "calendar" },
       { href: routes.properties, label: "Imóveis", icon: "Building2", feature: "properties" },
       { href: routes.rentals, label: "Locação", icon: "KeyRound", feature: "rentals" },
       { href: routes.sales, label: "Vendas", icon: "Handshake", feature: "sales" },
@@ -67,6 +69,7 @@ export const PRIMARY_NAV: NavEntry[] = [
   { href: routes.dashboard, label: "Início", icon: "LayoutDashboard", feature: "clients" },
   { href: routes.properties, label: "Imóveis", icon: "Building2", feature: "properties" },
   { href: routes.finance, label: "Finanças", icon: "Wallet", feature: "finance" },
+  { href: routes.calendar, label: "Agenda", icon: "CalendarDays", feature: "calendar" },
   { href: routes.crm, label: "CRM", icon: "Users", feature: "crm" },
   { href: routes.assistant, label: "IA", icon: "Sparkles", feature: "assistant" },
 ];
@@ -74,9 +77,11 @@ export const PRIMARY_NAV: NavEntry[] = [
 // Secondary nav (top bar menu / drawer).
 export const SECONDARY_NAV: NavEntry[] = [
   { href: routes.clients, label: "Clientes", icon: "Contact", feature: "clients" },
+      { href: routes.calendar, label: "Calendario", icon: "CalendarDays", feature: "calendar" },
   { href: routes.rentals, label: "Locação", icon: "KeyRound", feature: "rentals" },
   { href: routes.sales, label: "Vendas", icon: "Handshake", feature: "sales" },
   { href: routes.condos, label: "Condomínios", icon: "Building", feature: "condos" },
   { href: routes.whatsapp, label: "WhatsApp", icon: "MessageCircle", feature: "whatsapp" },
   { href: routes.admin, label: "Administração", icon: "Settings", feature: "admin" },
 ];
+

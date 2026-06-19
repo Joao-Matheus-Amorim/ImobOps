@@ -13,18 +13,21 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col gap-6 border-r border-border bg-card/40 px-3 py-5 md:flex">
-      <Link href={routes.dashboard} className="flex items-center gap-2.5 px-2">
-        <span className="grid size-9 place-items-center rounded-xl bg-primary font-display text-lg font-bold text-primary-foreground shadow-glow-sm">
+    <aside className="hidden w-[268px] shrink-0 flex-col border-r border-primary/14 bg-[#0b2742]/92 shadow-[24px_0_90px_-62px_hsl(var(--primary)/0.95)] backdrop-blur-xl md:flex">
+      <Link href={routes.dashboard} className="flex h-[86px] items-center gap-3 border-b border-primary/12 px-6">
+        <span className="grid size-11 place-items-center rounded-full border border-primary bg-primary/10 font-display text-lg font-bold text-primary shadow-glow">
           I
         </span>
-        <span className="font-display text-sm font-bold tracking-tight">{APP_NAME}</span>
+        <span>
+          <span className="block text-sm font-bold tracking-tight">{APP_NAME}</span>
+          <span className="block text-xs text-muted-foreground">Imobiliária</span>
+        </span>
       </Link>
 
-      <nav className="flex flex-col gap-5 overflow-y-auto thin-scrollbar">
+      <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-6 thin-scrollbar">
         {groups.map((group) => (
           <div key={group.label} className="flex flex-col gap-1">
-            <p className="section-label px-3 pb-1 text-muted-foreground/70">{group.label}</p>
+            <p className="section-label px-3 pb-2 text-muted-foreground/75">{group.label}</p>
             {group.entries.map((e) => {
               const active = pathname === e.href || pathname.startsWith(`${e.href}/`);
               return (
@@ -32,10 +35,10 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
                   key={e.href}
                   href={e.href}
                   className={cn(
-                    "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors",
+                    "group relative flex items-center gap-3 rounded-2xl px-3 py-3 text-[15px] transition-all duration-200",
                     active
-                      ? "border border-primary/40 bg-primary/10 text-foreground shadow-glow-sm"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                      ? "border border-primary/55 bg-primary/12 text-foreground shadow-[0_0_28px_-7px_hsl(var(--primary)/0.95)]"
+                      : "text-muted-foreground hover:bg-primary/8 hover:text-foreground",
                   )}
                 >
                   <Icon
@@ -44,7 +47,10 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
                   />
                   <span className="flex-1">{e.label}</span>
                   {active ? (
-                    <span className="size-1.5 rounded-full bg-primary shadow-glow-sm" />
+                    <>
+                      <span className="absolute inset-y-1 -right-1 w-1 rounded-full bg-primary shadow-glow" />
+                      <span className="size-2 rounded-full bg-primary shadow-glow-sm" />
+                    </>
                   ) : null}
                 </Link>
               );
@@ -52,6 +58,11 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
           </div>
         ))}
       </nav>
+      <div className="border-t border-primary/12 p-4">
+        <p className="section-label text-muted-foreground">Workspace ativo</p>
+        <p className="mt-2 font-semibold text-foreground">ImobOps Demo</p>
+        <p className="text-xs text-muted-foreground">Função: operação</p>
+      </div>
     </aside>
   );
 }

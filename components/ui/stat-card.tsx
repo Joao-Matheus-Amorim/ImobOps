@@ -11,7 +11,7 @@ export interface StatCardProps {
 }
 
 const accentText: Record<NonNullable<StatCardProps["accent"]>, string> = {
-  default: "text-foreground",
+  default: "text-primary text-glow",
   success: "text-[hsl(var(--success))]",
   warning: "text-[hsl(var(--warning))]",
   destructive: "text-destructive",
@@ -36,13 +36,13 @@ function sparkPath(values: number[]): string {
 
 export function StatCard({ label, value, hint, accent = "default", spark }: StatCardProps) {
   return (
-    <Card className="relative overflow-hidden p-4">
-      <p className="section-label text-muted-foreground">{label}</p>
+    <Card className="relative overflow-hidden p-4 after:pointer-events-none after:absolute after:inset-x-0 after:top-0 after:h-px after:bg-primary/50">
+      <p className="section-label text-primary/80">{label}</p>
       <p className={cn("mt-1 font-display text-2xl font-bold", accentText[accent])}>{value}</p>
       {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
       {spark && spark.length > 1 ? (
         <svg
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-7 w-full opacity-60"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-7 w-full opacity-80 drop-shadow-[0_0_10px_hsl(var(--primary)/0.55)]"
           viewBox="0 0 100 28"
           preserveAspectRatio="none"
           aria-hidden
