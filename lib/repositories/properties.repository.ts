@@ -17,6 +17,12 @@ export const propertiesRepository = {
     return col.find(ctx, id);
   },
 
+  // Fetch many by id in a single query (avoids N+1 in listing pages).
+  byIds(ctx: RepoContext, ids: string[]): Promise<Property[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return col.list(ctx, undefined, { in: { id: [...new Set(ids)] } });
+  },
+
   create(
     ctx: RepoContext,
     data: Omit<Property, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,

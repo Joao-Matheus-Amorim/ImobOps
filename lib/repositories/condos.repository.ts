@@ -50,6 +50,21 @@ export const condosRepository = {
     return units.find(ctx, id);
   },
 
+  // Count overdue fees per condo using two bulk queries (all units + all fees),
+  // instead of one listFees() round-trip per condo (was N+1 on the listing page).
+  async overdueFeeCountByCondo(ctx: RepoContext): Promise<Map<string, number>> {
+    const allUnits = await units.list(ctx);
+    const condoByUnit = new Map(allUnits.map((u) => [u.id, u.condoId]));
+    const allFees = await fees.list(ctx, (f) => f.status === "atrasado");
+    const counts = new Map<string, number>();
+    for (const f of allFees) {
+      const condoId = condoByUnit.get(f.unitId);
+      if (!condoId) continue;
+      counts.set(condoId, (counts.get(condoId) ?? 0) + 1);
+    }
+    return counts;
+  },
+
   // --- Fees ---
 
   async listFees(ctx: RepoContext, condoId?: string): Promise<CondoFee[]> {

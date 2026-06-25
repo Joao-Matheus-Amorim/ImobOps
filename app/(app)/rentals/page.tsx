@@ -15,8 +15,16 @@ export const metadata = { title: "Locação" };
 export default async function RentalsPage() {
   const { ctx } = await guardPage("rentals");
   const contracts = await rentalsRepository.list(ctx);
-  const properties = await Promise.all(contracts.map((c) => propertiesRepository.get(ctx, c.propertyId)));
-  const tenants = await Promise.all(contracts.map((c) => clientsRepository.get(ctx, c.tenantClientId)));
+  // Fetch related properties + tenants in two bulk queries instead of one per
+  // contract (was N+1).
+  const propertyById = new Map(
+    (await propertiesRepository.byIds(ctx, contracts.map((c) => c.propertyId))).map((p) => [p.id, p]),
+  );
+  const tenantById = new Map(
+    (await clientsRepository.byIds(ctx, contracts.map((c) => c.tenantClientId))).map((t) => [t.id, t]),
+  );
+  const properties = contracts.map((c) => propertyById.get(c.propertyId) ?? null);
+  const tenants = contracts.map((c) => tenantById.get(c.tenantClientId) ?? null);
 
   return (
     <div className="space-y-4">
