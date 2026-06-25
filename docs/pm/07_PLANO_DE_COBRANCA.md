@@ -59,6 +59,33 @@ em asaas.com/precos antes de assinar** (não é número fixo eterno).
 | Repasse ao proprietário disparado pela baixa | Multa, juros e correção monetária |
 | Régua de lembretes WhatsApp (D-3 / venc. / D+1 / D+5) | Cobrança de cartão recorrente |
 | Status `atrasado` calculado na leitura | Split automático no Asaas (fase 2) |
+| **Cobrança avulsa destinada a cliente** (extensão, ver §3.1) | — |
+
+### 3.1 Extensão — Cobrança avulsa destinada a cliente ✅
+
+> Aprovado e entregue em 2026-06-25. Atende a operação real de cobrar clientes por
+> itens **fora do aluguel** (taxas, acordos, serviços, multas).
+
+**Decisões:**
+- **Tipo:** avulsa **e** vinculada a contrato/parcela convivem na mesma engine.
+- **Local:** botão "Nova cobrança" em **Finanças** + form "Nova cobrança" na **ficha
+  do cliente** (cliente pré-preenchido).
+- **Entrega ao cliente:** link do boleto + copia-e-cola do PIX **na tela** + botão
+  **Enviar WhatsApp** (template `rental.boleto_delivery`).
+- **Repasse:** cobrança avulsa é **receita direta da imobiliária — não gera
+  repasse** (somente a parcela de locação gera). A cascata de baixa é guardada por
+  `sourceType`.
+
+**Implementação:**
+- `Charge.sourceType` aceita `"avulsa"` (`sourceId` = `clientId`); novos campos
+  `clientId`, `description`, `customerName`.
+- `billingRepository.emitStandalone` + `createChargeRecord` compartilhado (unifica o
+  caminho de emissão com o de parcela); `sendChargeWhatsApp` para entrega.
+- Rotas: `POST /api/billing/charges` aceita modo avulso; novo
+  `POST /api/billing/charges/send-whatsapp`.
+- UI: `NewChargeForm` (Finanças + ficha do cliente); painel de cobranças passou a
+  exibir erros de emissão e a não abrir aba em branco para URL mock.
+- Testes: emissão avulsa, ausência de repasse e cliente inexistente.
 
 ---
 
@@ -212,6 +239,7 @@ CRON_SECRET=             # protege /api/cron/billing-daily
   `ensureCustomer` → `POST /payments` → `GET /pixQrCode`; `DELETE /payments/{id}`),
   com header `access_token` e fallback mock intacto. Falta apenas configuração e
   smoke em sandbox (ação operacional, não código — ver §11).
+- **Onda F — Cobrança avulsa ao cliente:** ✅ entregue. Ver §3.1.
 
 ---
 
