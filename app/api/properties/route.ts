@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
 const bodySchema = z.object({
@@ -50,6 +51,15 @@ export async function POST(request: Request) {
     photos: [],
     description: parsed.data.description ?? null,
     ownerUserId: ctx.userId,
+  });
+
+  await auditRepository.log(ctx, {
+    userId: ctx.userId,
+    action: "create",
+    entityType: "property",
+    entityId: property.id,
+    payloadBefore: null,
+    payloadAfter: property as unknown as Record<string, unknown>,
   });
 
   return NextResponse.json({ ok: true, property });

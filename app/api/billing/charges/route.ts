@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { billingRepository } from "@/lib/repositories/billing.repository";
+import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
 const method = z.enum(["boleto", "pix", "cartao"]);
@@ -55,6 +56,15 @@ export async function POST(request: Request) {
       { status: 404 },
     );
   }
+
+  await auditRepository.log(ctx, {
+    userId: ctx.userId,
+    action: "emit_charge",
+    entityType: "charge",
+    entityId: charge.id,
+    payloadBefore: null,
+    payloadAfter: charge as unknown as Record<string, unknown>,
+  });
 
   return NextResponse.json({ ok: true, charge });
 }

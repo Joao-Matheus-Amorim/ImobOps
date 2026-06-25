@@ -4,6 +4,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { financeRepository } from "@/lib/repositories/finance.repository";
+import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
 const bodySchema = z.object({ commissionId: z.string().min(1) });
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Payload inválido." }, { status: 400 });
   }
 
-  const commission = financeRepository.recordCommissionPayment(
+  const commission = await financeRepository.recordCommissionPayment(
     ctx,
     parsed.data.commissionId,
   );
@@ -29,5 +30,15 @@ export async function POST(request: Request) {
       { status: 404 },
     );
   }
+
+  await auditRepository.log(ctx, {
+    userId: ctx.userId,
+    action: "mark_paid",
+    entityType: "commission",
+    entityId: commission.id,
+    payloadBefore: null,
+    payloadAfter: commission as unknown as Record<string, unknown>,
+  });
+
   return NextResponse.json({ ok: true, commission });
 }
