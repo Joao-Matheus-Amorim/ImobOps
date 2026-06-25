@@ -3,6 +3,7 @@ import type { FeatureKey } from "./types/permissions";
 
 export const routes = {
   login: "/login",
+  resetPassword: "/reset-password",
   dashboard: "/dashboard",
   clients: "/clients",
   client: (id: string) => `/clients/${id}`,

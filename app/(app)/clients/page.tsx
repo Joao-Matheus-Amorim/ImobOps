@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   Contact,
   Pencil,
-  Plus,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -20,6 +19,7 @@ import { filterAllowed, getPrincipalCan } from "@/components/domain/_helpers";
 import { routes } from "@/lib/routes";
 import { BUSINESS_ROLE_LABELS } from "@/lib/types/domain";
 import { formatBRL } from "@/lib/utils";
+import { NewClientDialog } from "@/components/domain/clients/new-client-dialog";
 
 export const metadata = { title: "Clientes" };
 
@@ -80,9 +80,7 @@ export default async function ClientsPage() {
               <Button variant="outline" size="sm">
                 <Upload /> POP Cliente Novo
               </Button>
-              <Button size="lg">
-                <Plus /> Novo cliente
-              </Button>
+              <NewClientDialog />
             </div>
           ) : undefined
         }
