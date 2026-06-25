@@ -240,6 +240,35 @@ CRON_SECRET=             # protege /api/cron/billing-daily
   com header `access_token` e fallback mock intacto. Falta apenas configuração e
   smoke em sandbox (ação operacional, não código — ver §11).
 - **Onda F — Cobrança avulsa ao cliente:** ✅ entregue. Ver §3.1.
+- **Onda G — Encargos, condomínio e comissão:** ✅ entregue. Ver §3.2.
+
+---
+
+## 3.2 Extensão — Multa/juros, condomínio e comissão ✅
+
+> Aprovado e entregue em 2026-06-25. Ordem pedida: encargos (1) e condomínio/
+> comissão (2), **antes** da persistência Supabase.
+
+**1. Multa e juros (aluguel atrasado)** — configurável por contrato:
+- `RentalContract` ganha `lateFeePct` + `lateInterestPctMonth` (padrão **2% + 1%
+  a.m.**, pro rata por dia).
+- `computeLateCharge` (puro, testado): multa fixa + juros pro rata, arredondado.
+- Aplicado **na leitura** (Finanças mostra "+ multa/juros Nd · total X" no atraso) e
+  **na re-emissão** (boleto emitido após o vencimento sai com o total atualizado).
+
+**2. Condomínio na engine de cobrança** — sem repasse:
+- `Charge.sourceType` aceita `"condo_fee"`; `CondoFee` ganha `chargeId`.
+- `emitForCondoFee` (pagador = morador ou proprietário da unidade); baixa por webhook
+  marca a taxa paga. Cascata por `sourceType` garante **nenhum repasse**.
+- UI: `CondoFeesPanel` na página do condomínio (emitir boleto/PIX + dar baixa).
+
+**3. Comissão de venda** — controle interno (sem gateway):
+- É pagamento da imobiliária ao corretor — não é boleto a cliente.
+- UI: `CommissionsPanel` em Finanças lista comissões e registra pagamento
+  (`/api/finance/commissions/mark-paid`), usando o repo já existente.
+
+**Fora ainda:** persistência real Supabase/RLS (próximo), split automático no Asaas,
+cobrança recorrente de cartão.
 
 ---
 

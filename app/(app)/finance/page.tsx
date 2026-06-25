@@ -13,6 +13,11 @@ import {
   type BillingRow,
 } from "@/components/domain/finance/billing-panel";
 import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
+import {
+  CommissionsPanel,
+  type CommissionRow,
+} from "@/components/domain/finance/commissions-panel";
+import { store } from "@/lib/mock-data";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export const metadata = { title: "Finanças" };
@@ -21,6 +26,20 @@ export default function FinancePage() {
   const { ctx } = guardPage("finance");
   const summary = financeRepository.summary(ctx);
   const overdue = rentalsRepository.listOverdue(ctx);
+
+  const commissionRows: CommissionRow[] = financeRepository
+    .listCommissions(ctx)
+    .map((c) => {
+      const broker = store.users.find((u) => u.id === c.brokerUserId);
+      return {
+        id: c.id,
+        brokerName: broker?.displayName ?? "Corretor",
+        amountLabel: formatBRL(c.amount),
+        pctLabel: `${c.pct}% de comissão`,
+        status: c.status,
+        paidAtLabel: c.paidAt ? formatDate(c.paidAt) : null,
+      };
+    });
   const repasses = financeRepository.listRepasses(ctx);
 
   // Billing rows: unpaid installments + any charge already emitted for them.
@@ -106,6 +125,8 @@ export default function FinancePage() {
           ))}
         </CardContent>
       </Card>
+
+      <CommissionsPanel rows={commissionRows} />
     </div>
   );
 }
