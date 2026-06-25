@@ -6,11 +6,13 @@ import { guardPage } from "@/lib/guard-page";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
 import { financeRepository } from "@/lib/repositories/finance.repository";
 import { billingRepository } from "@/lib/repositories/billing.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { INSTALLMENT_STATUS_LABELS } from "@/lib/types/domain";
 import {
   BillingPanel,
   type BillingRow,
 } from "@/components/domain/finance/billing-panel";
+import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export const metadata = { title: "Finanças" };
@@ -55,6 +57,12 @@ export default function FinancePage() {
         <StatCard label="Repasses pendentes" value={formatBRL(summary.pendingRepasses)} accent="warning" />
         <StatCard label="Comissões a pagar" value={formatBRL(summary.pendingCommissions)} accent="warning" />
       </div>
+
+      <NewChargeForm
+        clients={clientsRepository
+          .list(ctx)
+          .map((c) => ({ id: c.id, name: c.name }))}
+      />
 
       <BillingPanel rows={billingRows} />
 

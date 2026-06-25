@@ -5,10 +5,19 @@ import { z } from "zod";
 import { billingRepository } from "@/lib/repositories/billing.repository";
 import { getSessionUser } from "@/lib/session";
 
-const bodySchema = z.object({
-  installmentId: z.string().min(1),
-  method: z.enum(["boleto", "pix", "cartao"]),
-});
+const method = z.enum(["boleto", "pix", "cartao"]);
+
+// Either emit for a rental installment, or a standalone charge to a client.
+const bodySchema = z.union([
+  z.object({ installmentId: z.string().min(1), method }),
+  z.object({
+    clientId: z.string().min(1),
+    amount: z.number().positive(),
+    dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "use yyyy-mm-dd"),
+    method,
+    description: z.string().max(200).optional(),
+  }),
+]);
 
 export async function POST(request: Request) {
   const user = getSessionUser();
@@ -23,14 +32,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const charge = await billingRepository.emitForInstallment(
-    ctx,
-    parsed.data.installmentId,
-    parsed.data.method,
-  );
+  const charge =
+    "installmentId" in parsed.data
+      ? await billingRepository.emitForInstallment(
+          ctx,
+          parsed.data.installmentId,
+          parsed.data.method,
+        )
+      : await billingRepository.emitStandalone(ctx, parsed.data);
+
   if (!charge) {
     return NextResponse.json(
-      { error: "Parcela não encontrada." },
+      { error: "Parcela ou cliente não encontrado." },
       { status: 404 },
     );
   }

@@ -16,7 +16,10 @@ import { financeRepository } from "./finance.repository";
 import { clientsRepository } from "./clients.repository";
 import { getBillingAdapter } from "@/lib/billing/adapter";
 import { chargeStatusAsOf } from "@/lib/billing/charge-logic";
-import { round2 } from "@/lib/utils";
+import { getWhatsAppAdapter } from "@/lib/whatsapp/provider";
+import { whatsappRepository } from "./whatsapp.repository";
+import { renderTemplate } from "@/lib/whatsapp/templates";
+import { formatBRL, formatDate, round2 } from "@/lib/utils";
 
 const charges = new MockCollection<Charge>("charges");
 const reminders = new MockCollection<ChargeReminder>("chargeReminders");
@@ -78,55 +81,120 @@ export const billingRepository = {
       ? clientsRepository.get(ctx, contract.tenantClientId)
       : null;
 
-    const adapter = getBillingAdapter();
-    let result;
-    try {
-      result = await adapter.createCharge({
-        reference: installment.id,
-        method,
-        amount: round2(installment.amount),
-        dueDate: installment.dueDate,
-        customerName: tenant?.name,
-        customerDocument: tenant?.document ?? undefined,
-        description: `Aluguel ${installment.referenceMonth}`,
-      });
-    } catch {
-      const failed = charges.create(ctx, {
-        sourceType: "installment",
-        sourceId: installment.id,
-        method,
-        amount: round2(installment.amount),
-        dueDate: installment.dueDate,
-        status: "falha",
-        provider: adapter.provider,
-        externalId: null,
-        boletoUrl: null,
-        pixPayload: null,
-        paidAt: null,
-        paidAmount: null,
-      });
-      return withEffectiveStatus(failed);
-    }
-
-    const charge = charges.create(ctx, {
+    const charge = await this.createChargeRecord(ctx, {
       sourceType: "installment",
       sourceId: installment.id,
+      clientId: tenant?.id ?? null,
+      customerName: tenant?.name ?? null,
+      customerDocument: tenant?.document ?? null,
+      description: `Aluguel ${installment.referenceMonth}`,
       method,
       amount: round2(installment.amount),
       dueDate: installment.dueDate,
-      status: "pendente",
-      provider: adapter.provider,
-      externalId: result.externalId,
-      boletoUrl: result.boletoUrl,
-      pixPayload: result.pixPayload,
-      paidAt: null,
-      paidAmount: null,
     });
 
     // Link the charge to the installment (1:1 active charge).
-    rentalsRepository.setInstallmentCharge(ctx, installment.id, charge.id);
+    if (charge.status !== "falha") {
+      rentalsRepository.setInstallmentCharge(ctx, installment.id, charge.id);
+    }
 
-    return withEffectiveStatus(charge);
+    return charge;
+  },
+
+  // Emit a standalone charge addressed to a client (receita direta, no repasse).
+  async emitStandalone(
+    ctx: RepoContext,
+    input: {
+      clientId: string;
+      amount: number;
+      dueDate: string;
+      method: ChargeMethod;
+      description?: string;
+    },
+  ): Promise<ChargeView | null> {
+    const client = clientsRepository.get(ctx, input.clientId);
+    if (!client) return null;
+
+    return this.createChargeRecord(ctx, {
+      sourceType: "avulsa",
+      sourceId: client.id,
+      clientId: client.id,
+      customerName: client.name,
+      customerDocument: client.document ?? null,
+      description: input.description ?? "Cobrança avulsa",
+      method: input.method,
+      amount: round2(input.amount),
+      dueDate: input.dueDate,
+    });
+  },
+
+  // Shared emission: calls the gateway and persists the charge (or a "falha"
+  // record if the gateway rejects). Returns the charge with effective status.
+  async createChargeRecord(
+    ctx: RepoContext,
+    input: {
+      sourceType: Charge["sourceType"];
+      sourceId: string;
+      clientId: string | null;
+      customerName: string | null;
+      customerDocument: string | null;
+      description: string;
+      method: ChargeMethod;
+      amount: number;
+      dueDate: string;
+    },
+  ): Promise<ChargeView> {
+    const adapter = getBillingAdapter();
+    // A stable reference makes gateway-side reconciliation idempotent.
+    const reference =
+      input.sourceType === "installment"
+        ? input.sourceId
+        : `avulsa-${input.sourceId}-${input.dueDate}-${Math.round(input.amount * 100)}`;
+
+    const base = {
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      clientId: input.clientId,
+      description: input.description,
+      customerName: input.customerName,
+      method: input.method,
+      amount: round2(input.amount),
+      dueDate: input.dueDate,
+      provider: adapter.provider,
+      paidAt: null,
+      paidAmount: null,
+    };
+
+    try {
+      const result = await adapter.createCharge({
+        reference,
+        method: input.method,
+        amount: round2(input.amount),
+        dueDate: input.dueDate,
+        customerName: input.customerName ?? undefined,
+        customerDocument: input.customerDocument ?? undefined,
+        description: input.description,
+      });
+      return withEffectiveStatus(
+        charges.create(ctx, {
+          ...base,
+          status: "pendente",
+          externalId: result.externalId,
+          boletoUrl: result.boletoUrl,
+          pixPayload: result.pixPayload,
+        }),
+      );
+    } catch {
+      return withEffectiveStatus(
+        charges.create(ctx, {
+          ...base,
+          status: "falha",
+          externalId: null,
+          boletoUrl: null,
+          pixPayload: null,
+        }),
+      );
+    }
   },
 
   // --- Reconciliation (webhook / manual) ---
@@ -152,10 +220,14 @@ export const billingRepository = {
     });
     if (!updated) return null;
 
-    // Cascade: installment paid → repasse pending.
-    const installment = rentalsRepository
-      .listInstallments(ctx)
-      .find((i) => i.id === updated.sourceId);
+    // Cascade only for rental charges: installment paid → repasse pending.
+    // Standalone (avulsa) charges are receita direta — no repasse.
+    const installment =
+      updated.sourceType === "installment"
+        ? rentalsRepository
+            .listInstallments(ctx)
+            .find((i) => i.id === updated.sourceId)
+        : null;
     if (installment) {
       rentalsRepository.markInstallmentPaid(
         ctx,
@@ -211,5 +283,54 @@ export const billingRepository = {
       channel: "whatsapp",
       templateKey,
     });
+  },
+
+  // --- Delivery ---
+
+  // Send the charge (boleto/PIX) to the client over WhatsApp using the delivery
+  // template, and log it to the conversation. Returns false when there is no
+  // phone to send to.
+  async sendChargeWhatsApp(
+    ctx: RepoContext,
+    chargeId: string,
+  ): Promise<{ sent: boolean; reason?: string }> {
+    const charge = charges.find(ctx, chargeId);
+    if (!charge) return { sent: false, reason: "cobrança não encontrada" };
+
+    const client = charge.clientId
+      ? clientsRepository.get(ctx, charge.clientId)
+      : null;
+    const phone = client?.whatsapp ?? client?.phone ?? null;
+    if (!phone) return { sent: false, reason: "cliente sem telefone" };
+
+    const templateKey = "rental.boleto_delivery" as const;
+    const body = renderTemplate(templateKey, {
+      nome: charge.customerName ?? client?.name ?? "",
+      referencia: charge.description ?? "",
+      vencimento: formatDate(charge.dueDate),
+      valor: formatBRL(charge.amount),
+    });
+    const link = charge.boletoUrl ?? charge.pixPayload ?? "";
+    const fullBody = link ? `${body}\n${link}` : body;
+
+    try {
+      await getWhatsAppAdapter().sendMessage(phone, fullBody);
+      const conversation = whatsappRepository.upsertConversation(ctx, phone, "financeiro");
+      whatsappRepository.appendMessage(ctx, {
+        conversationId: conversation.id,
+        direction: "out",
+        body: fullBody,
+        mediaUrl: null,
+        templateKey,
+        externalId: null,
+        sentAt: new Date().toISOString(),
+        deliveredAt: null,
+        readAt: null,
+        sentBy: "system",
+      });
+      return { sent: true };
+    } catch {
+      return { sent: false, reason: "falha no envio" };
+    }
   },
 };

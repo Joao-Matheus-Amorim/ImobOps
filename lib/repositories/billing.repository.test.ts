@@ -36,6 +36,49 @@ describe("billingRepository emission", () => {
   });
 });
 
+describe("billingRepository standalone (avulsa)", () => {
+  it("emits a charge addressed to a client", async () => {
+    const charge = await billingRepository.emitStandalone(ctx, {
+      clientId: "client-00000002",
+      amount: 500,
+      dueDate: "2026-07-10",
+      method: "boleto",
+      description: "Taxa de contrato",
+    });
+    expect(charge?.sourceType).toBe("avulsa");
+    expect(charge?.clientId).toBe("client-00000002");
+    expect(charge?.amount).toBe(500);
+  });
+
+  it("does not create a repasse when an avulsa charge is paid", async () => {
+    const charge = await billingRepository.emitStandalone(ctx, {
+      clientId: "client-00000002",
+      amount: 333,
+      dueDate: "2026-08-10",
+      method: "pix",
+    });
+    const before = financeRepository.listRepasses(ctx).length;
+    billingRepository.reconcileByExternalId(
+      ctx,
+      charge!.externalId!,
+      333,
+      "2026-08-11T10:00:00.000Z",
+    );
+    const after = financeRepository.listRepasses(ctx).length;
+    expect(after).toBe(before);
+  });
+
+  it("returns null for an unknown client", async () => {
+    const charge = await billingRepository.emitStandalone(ctx, {
+      clientId: "client-does-not-exist",
+      amount: 100,
+      dueDate: "2026-07-10",
+      method: "pix",
+    });
+    expect(charge).toBeNull();
+  });
+});
+
 describe("billingRepository reconciliation", () => {
   it("pays charge → installment paid → repasse pending, idempotently", async () => {
     const inst = pickOpenInstallment();

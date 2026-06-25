@@ -225,14 +225,18 @@ export const CHARGE_METHOD_LABELS: Record<ChargeMethod, string> = {
   cartao: "Cartão",
 };
 
-// Origem da cobrança. No 1º corte é sempre uma parcela de locação.
-export type ChargeSourceType = "installment";
+// Origem da cobrança: parcela de locação (gera repasse ao proprietário) ou avulsa
+// destinada a um cliente (receita direta da imobiliária, sem repasse).
+export type ChargeSourceType = "installment" | "avulsa";
 
 export type BillingProvider = "asaas" | "mock";
 
 export interface Charge extends BaseEntity {
   sourceType: ChargeSourceType;
-  sourceId: string; // installment.id
+  sourceId: string; // installment.id (installment) | client.id (avulsa)
+  clientId: string | null; // destinatário (sempre preenchido em avulsa)
+  description: string | null; // descrição livre (avulsa)
+  customerName: string | null; // nome para exibição sem buscar o cliente
   method: ChargeMethod;
   amount: number;
   dueDate: string; // yyyy-mm-dd

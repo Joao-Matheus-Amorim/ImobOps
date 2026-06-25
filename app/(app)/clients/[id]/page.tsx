@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { guardPage } from "@/lib/guard-page";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { BUSINESS_ROLE_LABELS } from "@/lib/types/domain";
+import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 
 export default function ClientDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = guardPage("clients");
@@ -55,6 +56,8 @@ export default function ClientDetailPage({ params }: { params: { id: string } })
           </CardContent>
         </Card>
       ) : null}
+
+      <NewChargeForm fixedClientId={client.id} fixedClientName={client.name} />
     </div>
   );
 }
