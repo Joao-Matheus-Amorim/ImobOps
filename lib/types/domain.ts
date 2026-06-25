@@ -233,9 +233,9 @@ export const CHARGE_METHOD_LABELS: Record<ChargeMethod, string> = {
   cartao: "Cartão",
 };
 
-// Origem da cobrança: parcela de locação (gera repasse ao proprietário) ou avulsa
-// destinada a um cliente (receita direta da imobiliária, sem repasse).
-export type ChargeSourceType = "installment" | "avulsa";
+// Origem da cobrança: parcela de locação (gera repasse ao proprietário), taxa de
+// condomínio (sem repasse) ou avulsa destinada a um cliente (receita direta).
+export type ChargeSourceType = "installment" | "condo_fee" | "avulsa";
 
 export type BillingProvider = "asaas" | "mock";
 
@@ -372,6 +372,7 @@ export interface CondoFee extends BaseEntity {
   status: CondoFeeStatus;
   paidAt: string | null;
   receiptDocumentId: string | null;
+  chargeId: string | null; // cobrança ativa (boleto/PIX via gateway)
 }
 
 export type Apportionment = "igual" | "fracao_ideal";

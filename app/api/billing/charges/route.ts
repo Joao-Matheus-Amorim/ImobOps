@@ -7,9 +7,10 @@ import { getSessionUser } from "@/lib/session";
 
 const method = z.enum(["boleto", "pix", "cartao"]);
 
-// Either emit for a rental installment, or a standalone charge to a client.
+// Emit for a rental installment, a condo fee, or a standalone charge to a client.
 const bodySchema = z.union([
   z.object({ installmentId: z.string().min(1), method }),
+  z.object({ condoFeeId: z.string().min(1), method }),
   z.object({
     clientId: z.string().min(1),
     amount: z.number().positive(),
@@ -39,7 +40,13 @@ export async function POST(request: Request) {
           parsed.data.installmentId,
           parsed.data.method,
         )
-      : await billingRepository.emitStandalone(ctx, parsed.data);
+      : "condoFeeId" in parsed.data
+        ? await billingRepository.emitForCondoFee(
+            ctx,
+            parsed.data.condoFeeId,
+            parsed.data.method,
+          )
+        : await billingRepository.emitStandalone(ctx, parsed.data);
 
   if (!charge) {
     return NextResponse.json(

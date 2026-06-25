@@ -18,6 +18,7 @@ import { MockCollection, type RepoContext } from "./base";
 import { rentalsRepository } from "./rentals.repository";
 import { financeRepository } from "./finance.repository";
 import { clientsRepository } from "./clients.repository";
+import { condosRepository } from "./condos.repository";
 import { getBillingAdapter } from "@/lib/billing/adapter";
 import { chargeStatusAsOf } from "@/lib/billing/charge-logic";
 import { computeLateCharge } from "@/lib/billing/late-charges";
@@ -135,6 +136,47 @@ export const billingRepository = {
       rentalsRepository.setInstallmentCharge(ctx, installment.id, charge.id);
     }
 
+    return charge;
+  },
+
+  forCondoFee(ctx: RepoContext, feeId: string): ChargeView | null {
+    const c = charges
+      .list(ctx, (x) => x.sourceId === feeId && x.status !== "cancelada")
+      .at(0);
+    return c ? withEffectiveStatus(c) : null;
+  },
+
+  // Emit a charge for a condo fee. Receita do condomínio — não gera repasse.
+  // Idempotent: returns the existing active charge for that fee.
+  async emitForCondoFee(
+    ctx: RepoContext,
+    feeId: string,
+    method: ChargeMethod,
+  ): Promise<ChargeView | null> {
+    const existing = this.forCondoFee(ctx, feeId);
+    if (existing && existing.status !== "falha") return existing;
+
+    const fee = condosRepository.getFee(ctx, feeId);
+    if (!fee) return null;
+    const unit = condosRepository.getUnit(ctx, fee.unitId);
+    const payerId = unit?.currentResidentClientId ?? unit?.ownerClientId ?? null;
+    const payer = payerId ? clientsRepository.get(ctx, payerId) : null;
+
+    const charge = await this.createChargeRecord(ctx, {
+      sourceType: "condo_fee",
+      sourceId: fee.id,
+      clientId: payer?.id ?? null,
+      customerName: payer?.name ?? null,
+      customerDocument: payer?.document ?? null,
+      description: `Condomínio ${fee.referenceMonth}${unit ? ` — ${unit.label}` : ""}`,
+      method,
+      amount: round2(fee.amount),
+      dueDate: fee.dueDate,
+    });
+
+    if (charge.status !== "falha") {
+      condosRepository.setFeeCharge(ctx, fee.id, charge.id);
+    }
     return charge;
   },
 
@@ -257,25 +299,24 @@ export const billingRepository = {
     });
     if (!updated) return null;
 
-    // Cascade only for rental charges: installment paid → repasse pending.
-    // Standalone (avulsa) charges are receita direta — no repasse.
-    const installment =
-      updated.sourceType === "installment"
-        ? rentalsRepository
-            .listInstallments(ctx)
-            .find((i) => i.id === updated.sourceId)
-        : null;
-    if (installment) {
-      rentalsRepository.markInstallmentPaid(
-        ctx,
-        installment.id,
-        round2(paidAmount),
-      );
-      financeRepository.computeRepasse(
-        ctx,
-        installment.contractId,
-        installment.referenceMonth,
-      );
+    // Cascade by source type:
+    //  - installment → marca parcela paga + gera repasse pendente.
+    //  - condo_fee   → marca taxa paga (receita do condomínio, sem repasse).
+    //  - avulsa      → nada além da baixa (receita direta).
+    if (updated.sourceType === "installment") {
+      const installment = rentalsRepository
+        .listInstallments(ctx)
+        .find((i) => i.id === updated.sourceId);
+      if (installment) {
+        rentalsRepository.markInstallmentPaid(ctx, installment.id, round2(paidAmount));
+        financeRepository.computeRepasse(
+          ctx,
+          installment.contractId,
+          installment.referenceMonth,
+        );
+      }
+    } else if (updated.sourceType === "condo_fee") {
+      condosRepository.markFeePaid(ctx, updated.sourceId);
     }
 
     return withEffectiveStatus(updated);

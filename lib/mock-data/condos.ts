@@ -80,6 +80,7 @@ export const mockCondoFees: CondoFee[] = mockUnits.map((u, idx) => ({
   status: idx === 0 ? "atrasado" : idx === 3 ? "a_vencer" : "pago",
   paidAt: idx === 1 || idx === 2 ? "2026-06-08T10:00:00.000Z" : null,
   receiptDocumentId: null,
+  chargeId: null,
 }));
 
 export const mockCondoExpenses: CondoExpense[] = [

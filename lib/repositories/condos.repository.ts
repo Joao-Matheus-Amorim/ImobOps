@@ -37,6 +37,10 @@ export const condosRepository = {
     return units.create(ctx, data);
   },
 
+  getUnit(ctx: RepoContext, id: string): Unit | null {
+    return units.find(ctx, id);
+  },
+
   // --- Fees ---
 
   listFees(ctx: RepoContext, condoId?: string): CondoFee[] {
@@ -63,6 +67,7 @@ export const condosRepository = {
         status: "a_vencer",
         paidAt: null,
         receiptDocumentId: null,
+        chargeId: null,
       });
     }
     return this.listFees(ctx, condoId);
@@ -70,6 +75,15 @@ export const condosRepository = {
 
   markFeePaid(ctx: RepoContext, id: string): CondoFee | null {
     return fees.update(ctx, id, { status: "pago", paidAt: new Date().toISOString() });
+  },
+
+  getFee(ctx: RepoContext, id: string): CondoFee | null {
+    return fees.find(ctx, id);
+  },
+
+  // Link a fee to its active charge (1:1). Used by billing emission.
+  setFeeCharge(ctx: RepoContext, feeId: string, chargeId: string | null): CondoFee | null {
+    return fees.update(ctx, feeId, { chargeId });
   },
 
   // --- Expenses + apportionment ---

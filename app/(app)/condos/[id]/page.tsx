@@ -5,6 +5,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { guardPage } from "@/lib/guard-page";
 import { condosRepository } from "@/lib/repositories/condos.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
+import { billingRepository } from "@/lib/repositories/billing.repository";
+import {
+  CondoFeesPanel,
+  type CondoFeeRow,
+} from "@/components/domain/condos/condo-fees-panel";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export default function CondoDetailPage({ params }: { params: { id: string } }) {
@@ -16,6 +21,25 @@ export default function CondoDetailPage({ params }: { params: { id: string } }) 
   const fees = condosRepository.listFees(ctx, condo.id);
   const expenses = condosRepository.listExpenses(ctx, condo.id);
   const meetings = condosRepository.listMeetings(ctx, condo.id);
+
+  const feeRows: CondoFeeRow[] = fees.map((f) => {
+    const unit = units.find((u) => u.id === f.unitId);
+    const charge = billingRepository.forCondoFee(ctx, f.id);
+    return {
+      feeId: f.id,
+      label: `${unit?.label ?? "Unidade"} · ${formatReferenceMonth(f.referenceMonth)} · venc. ${formatDate(f.dueDate)}`,
+      amountLabel: formatBRL(f.amount),
+      status: f.status,
+      charge: charge
+        ? {
+            id: charge.id,
+            method: charge.method,
+            effectiveStatus: charge.effectiveStatus,
+            boletoUrl: charge.boletoUrl,
+          }
+        : null,
+    };
+  });
 
   return (
     <div className="space-y-4">
@@ -38,20 +62,7 @@ export default function CondoDetailPage({ params }: { params: { id: string } }) 
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Taxas do mês</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {fees.map((f) => (
-            <div key={f.id} className="flex items-center justify-between border-b border-border/60 pb-2 last:border-0">
-              <span>{formatReferenceMonth(f.referenceMonth)} · venc. {formatDate(f.dueDate)}</span>
-              <div className="flex items-center gap-3">
-                <span className="font-semibold">{formatBRL(f.amount)}</span>
-                <StatusBadge status={f.status} />
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+      <CondoFeesPanel rows={feeRows} />
 
       <Card>
         <CardHeader><CardTitle>Despesas</CardTitle></CardHeader>
