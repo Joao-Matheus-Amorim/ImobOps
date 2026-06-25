@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
+import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
 import { guardPage } from "@/lib/guard-page";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
+import { EditRentalDialog } from "@/components/domain/rentals/edit-rental-dialog";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export default async function RentalDetailPage({ params }: { params: { id: string } }) {
@@ -23,7 +26,19 @@ export default async function RentalDetailPage({ params }: { params: { id: strin
       <PageHeader
         title={property?.address ?? "Contrato de locação"}
         description={`${formatBRL(contract.monthlyValue)}/mês · taxa adm ${contract.adminFeePct}%`}
-        action={<StatusBadge status={contract.status} />}
+        action={
+          <div className="flex items-center gap-3">
+            <StatusBadge status={contract.status} />
+            <EditRentalDialog
+              contract={contract}
+              trigger={
+                <Button size="sm" variant="outline">
+                  <Pencil /> Editar
+                </Button>
+              }
+            />
+          </div>
+        }
       />
 
       <Card>

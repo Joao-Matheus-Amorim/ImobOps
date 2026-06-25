@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
-import { BedDouble, Bath, Car, Ruler } from "lucide-react";
+import { BedDouble, Bath, Car, Ruler, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
 import { guardPage } from "@/lib/guard-page";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
+import { NewPropertyDialog } from "@/components/domain/properties/new-property-dialog";
 
 export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("properties");
@@ -15,7 +17,23 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
 
   return (
     <div className="space-y-4">
-      <PageHeader title={property.address} description={property.kind} action={<StatusBadge status={property.status} />} />
+      <PageHeader
+        title={property.address}
+        description={property.kind}
+        action={
+          <div className="flex items-center gap-3">
+            <StatusBadge status={property.status} />
+            <NewPropertyDialog
+              property={property}
+              trigger={
+                <Button size="sm" variant="outline">
+                  <Pencil /> Editar
+                </Button>
+              }
+            />
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Feature icon={<Ruler className="size-4" />} label="Área" value={`${property.areaM2 ?? "—"} m²`} />

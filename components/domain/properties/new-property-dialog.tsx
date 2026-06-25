@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { PropertyAvailability, PropertyKind } from "@/lib/types/domain";
+import type { Property, PropertyAvailability, PropertyKind } from "@/lib/types/domain";
 
 const KIND_OPTIONS: { value: PropertyKind; label: string }[] = [
   { value: "apartamento", label: "Apartamento" },
@@ -23,26 +23,35 @@ const AVAILABILITY_OPTIONS: { value: PropertyAvailability; label: string }[] = [
   { value: "condominio_only", label: "Só condomínio" },
 ];
 
-export function NewPropertyDialog() {
+export function NewPropertyDialog({
+  property,
+  trigger,
+}: {
+  property?: Property;
+  trigger?: ReactNode;
+}) {
   const router = useRouter();
+  const isEdit = Boolean(property);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [kind, setKind] = useState<PropertyKind>("apartamento");
-  const [address, setAddress] = useState("");
-  const [areaM2, setAreaM2] = useState("");
-  const [bedrooms, setBedrooms] = useState("");
-  const [bathrooms, setBathrooms] = useState("");
-  const [availability, setAvailability] = useState<PropertyAvailability>("locacao");
+  const [kind, setKind] = useState<PropertyKind>(property?.kind ?? "apartamento");
+  const [address, setAddress] = useState(property?.address ?? "");
+  const [areaM2, setAreaM2] = useState(property?.areaM2 != null ? String(property.areaM2) : "");
+  const [bedrooms, setBedrooms] = useState(property?.bedrooms != null ? String(property.bedrooms) : "");
+  const [bathrooms, setBathrooms] = useState(property?.bathrooms != null ? String(property.bathrooms) : "");
+  const [availability, setAvailability] = useState<PropertyAvailability>(
+    property?.availability ?? "locacao",
+  );
 
   function reset() {
-    setKind("apartamento");
-    setAddress("");
-    setAreaM2("");
-    setBedrooms("");
-    setBathrooms("");
-    setAvailability("locacao");
+    setKind(property?.kind ?? "apartamento");
+    setAddress(property?.address ?? "");
+    setAreaM2(property?.areaM2 != null ? String(property.areaM2) : "");
+    setBedrooms(property?.bedrooms != null ? String(property.bedrooms) : "");
+    setBathrooms(property?.bathrooms != null ? String(property.bathrooms) : "");
+    setAvailability(property?.availability ?? "locacao");
     setError(null);
   }
 
@@ -55,48 +64,69 @@ export function NewPropertyDialog() {
 
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/properties", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind,
-        address: address.trim(),
-        areaM2: areaM2 ? Number(areaM2) : null,
-        bedrooms: bedrooms ? Number(bedrooms) : null,
-        bathrooms: bathrooms ? Number(bathrooms) : null,
-        availability,
-      }),
-    });
+    const res = await fetch(
+      isEdit ? `/api/properties/${property!.id}` : "/api/properties",
+      {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind,
+          address: address.trim(),
+          areaM2: areaM2 ? Number(areaM2) : null,
+          bedrooms: bedrooms ? Number(bedrooms) : null,
+          bathrooms: bathrooms ? Number(bathrooms) : null,
+          availability,
+        }),
+      },
+    );
     setBusy(false);
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar o imóvel.");
+      setError(
+        body?.error ??
+          (isEdit
+            ? "Não foi possível salvar as alterações."
+            : "Não foi possível criar o imóvel."),
+      );
       return;
     }
 
     setOpen(false);
-    reset();
+    if (!isEdit) reset();
     router.refresh();
   }
 
   return (
     <>
-      <Button
-        size="sm"
-        onClick={() => {
-          reset();
-          setOpen(true);
-        }}
-      >
-        <Plus /> Novo imóvel
-      </Button>
+      {trigger ? (
+        <span
+          onClick={() => {
+            reset();
+            setOpen(true);
+          }}
+        >
+          {trigger}
+        </span>
+      ) : (
+        <Button
+          size="sm"
+          onClick={() => {
+            reset();
+            setOpen(true);
+          }}
+        >
+          <Plus /> Novo imóvel
+        </Button>
+      )}
 
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-primary/18 bg-[#102f4d] p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Novo imóvel</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                {isEdit ? "Editar imóvel" : "Novo imóvel"}
+              </h2>
               <button
                 type="button"
                 aria-label="Fechar"
@@ -196,7 +226,7 @@ export function NewPropertyDialog() {
                 </Button>
                 <Button type="submit" disabled={busy}>
                   {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                  Salvar imóvel
+                  {isEdit ? "Salvar alterações" : "Salvar imóvel"}
                 </Button>
               </div>
             </form>

@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
+import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
 import { guardPage } from "@/lib/guard-page";
 import { condosRepository } from "@/lib/repositories/condos.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
@@ -10,6 +12,7 @@ import {
   CondoFeesPanel,
   type CondoFeeRow,
 } from "@/components/domain/condos/condo-fees-panel";
+import { NewCondoDialog } from "@/components/domain/condos/new-condo-dialog";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export default async function CondoDetailPage({ params }: { params: { id: string } }) {
@@ -47,7 +50,20 @@ export default async function CondoDetailPage({ params }: { params: { id: string
 
   return (
     <div className="space-y-4">
-      <PageHeader title={condo.name} description={condo.address} />
+      <PageHeader
+        title={condo.name}
+        description={condo.address}
+        action={
+          <NewCondoDialog
+            condo={condo}
+            trigger={
+              <Button size="sm" variant="outline">
+                <Pencil /> Editar
+              </Button>
+            }
+          />
+        }
+      />
 
       <Card>
         <CardHeader><CardTitle>Unidades ({units.length})</CardTitle></CardHeader>

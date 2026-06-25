@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
+import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
 import { guardPage } from "@/lib/guard-page";
 import { salesRepository } from "@/lib/repositories/sales.repository";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
+import { EditListingDialog } from "@/components/domain/sales/edit-listing-dialog";
 import { formatBRL, formatDate } from "@/lib/utils";
 
 export default async function SaleDetailPage({ params }: { params: { id: string } }) {
@@ -22,7 +25,19 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
       <PageHeader
         title={property?.address ?? "Listagem"}
         description={`${formatBRL(listing.askingPrice)} · comissão ${listing.commissionPct}%`}
-        action={<StatusBadge status={listing.status} />}
+        action={
+          <div className="flex items-center gap-3">
+            <StatusBadge status={listing.status} />
+            <EditListingDialog
+              listing={listing}
+              trigger={
+                <Button size="sm" variant="outline">
+                  <Pencil /> Editar
+                </Button>
+              }
+            />
+          </div>
+        }
       />
 
       <Card>

@@ -28,6 +28,14 @@ export const salesRepository = {
     return listings.create(ctx, data);
   },
 
+  updateListing(
+    ctx: RepoContext,
+    id: string,
+    patch: Partial<SaleListing>,
+  ): Promise<SaleListing | null> {
+    return listings.update(ctx, id, patch);
+  },
+
   // --- Proposals ---
 
   async listProposals(ctx: RepoContext, listingId?: string): Promise<Proposal[]> {

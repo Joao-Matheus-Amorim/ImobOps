@@ -32,6 +32,10 @@ export const condosRepository = {
     return condos.create(ctx, data);
   },
 
+  update(ctx: RepoContext, id: string, patch: Partial<Condo>): Promise<Condo | null> {
+    return condos.update(ctx, id, patch);
+  },
+
   // --- Units ---
 
   async listUnits(ctx: RepoContext, condoId: string): Promise<Unit[]> {
