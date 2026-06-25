@@ -174,8 +174,16 @@ export interface RentalContract extends BaseEntity {
   durationMonths: number;
   indexType: IndexType;
   adminFeePct: number;
+  // Encargos de atraso (configuráveis por contrato). Padrão de mercado BR:
+  // 2% de multa fixa + 1% a.m. de juros, calculados pro rata por dia de atraso.
+  lateFeePct: number; // multa fixa sobre o valor (ex.: 2)
+  lateInterestPctMonth: number; // juros ao mês (ex.: 1), aplicado pro rata/dia
   status: RentalStatus;
 }
+
+// Default de encargos quando o contrato não especifica (retrocompat de seed/mock).
+export const DEFAULT_LATE_FEE_PCT = 2;
+export const DEFAULT_LATE_INTEREST_PCT_MONTH = 1;
 
 export type InstallmentStatus = "a_vencer" | "pago" | "atrasado" | "cancelado";
 

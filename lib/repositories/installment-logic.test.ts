@@ -19,6 +19,8 @@ const contract: RentalContract = {
   durationMonths: 12,
   indexType: "igpm",
   adminFeePct: 10,
+  lateFeePct: 2,
+  lateInterestPctMonth: 1,
   status: "ativo",
 };
 

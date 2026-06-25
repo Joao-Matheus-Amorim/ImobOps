@@ -2,6 +2,10 @@ import { z } from "zod";
 import { defineTool, repoCtx } from "./helpers";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
 import { financeRepository } from "@/lib/repositories/finance.repository";
+import {
+  DEFAULT_LATE_FEE_PCT,
+  DEFAULT_LATE_INTEREST_PCT_MONTH,
+} from "@/lib/types/domain";
 import { formatBRL } from "@/lib/utils";
 
 export const rentalTools = [
@@ -37,6 +41,8 @@ export const rentalTools = [
         durationMonths: p.durationMonths,
         indexType: "igpm",
         adminFeePct: p.adminFeePct,
+        lateFeePct: DEFAULT_LATE_FEE_PCT,
+        lateInterestPctMonth: DEFAULT_LATE_INTEREST_PCT_MONTH,
         status: "ativo",
       });
     },

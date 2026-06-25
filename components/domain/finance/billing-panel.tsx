@@ -14,6 +14,7 @@ export interface BillingRow {
   dueDateLabel: string;
   amountLabel: string;
   installmentStatus: string;
+  lateLabel: string | null;
   charge: {
     id: string;
     method: string;
@@ -101,6 +102,9 @@ export function BillingPanel({ rows }: { rows: BillingRow[] }) {
                   {row.referenceLabel} · venc. {row.dueDateLabel}
                 </p>
                 <p className="text-xs text-muted-foreground">{row.amountLabel}</p>
+                {row.lateLabel ? (
+                  <p className="text-xs font-medium text-destructive">{row.lateLabel}</p>
+                ) : null}
               </div>
 
               <div className="flex items-center gap-2">

@@ -10,12 +10,17 @@ import type {
   ChargeStatus,
   ReminderTrigger,
 } from "@/lib/types/domain";
+import {
+  DEFAULT_LATE_FEE_PCT,
+  DEFAULT_LATE_INTEREST_PCT_MONTH,
+} from "@/lib/types/domain";
 import { MockCollection, type RepoContext } from "./base";
 import { rentalsRepository } from "./rentals.repository";
 import { financeRepository } from "./finance.repository";
 import { clientsRepository } from "./clients.repository";
 import { getBillingAdapter } from "@/lib/billing/adapter";
 import { chargeStatusAsOf } from "@/lib/billing/charge-logic";
+import { computeLateCharge } from "@/lib/billing/late-charges";
 import { getWhatsAppAdapter } from "@/lib/whatsapp/provider";
 import { whatsappRepository } from "./whatsapp.repository";
 import { renderTemplate } from "@/lib/whatsapp/templates";
@@ -59,6 +64,24 @@ export const billingRepository = {
     return c ? withEffectiveStatus(c) : null;
   },
 
+  // Up-to-date late breakdown (multa + juros) for an installment as of today.
+  // Returns null when not late or the installment/contract is missing.
+  lateBreakdownForInstallment(ctx: RepoContext, installmentId: string) {
+    const installment = rentalsRepository
+      .listInstallments(ctx)
+      .find((i) => i.id === installmentId);
+    if (!installment || installment.status === "pago") return null;
+    const contract = rentalsRepository.get(ctx, installment.contractId);
+    const b = computeLateCharge(
+      installment.amount,
+      installment.dueDate,
+      today(),
+      contract?.lateFeePct ?? DEFAULT_LATE_FEE_PCT,
+      contract?.lateInterestPctMonth ?? DEFAULT_LATE_INTEREST_PCT_MONTH,
+    );
+    return b.daysLate > 0 ? b : null;
+  },
+
   // --- Emission ---
 
   // Create a charge for an installment. Idempotent: returns the existing active
@@ -81,15 +104,29 @@ export const billingRepository = {
       ? clientsRepository.get(ctx, contract.tenantClientId)
       : null;
 
+    // If the installment is already past due, the boleto carries the encargos
+    // (multa + juros pro rata) per the contract's configured rates.
+    const late = computeLateCharge(
+      installment.amount,
+      installment.dueDate,
+      today(),
+      contract?.lateFeePct ?? DEFAULT_LATE_FEE_PCT,
+      contract?.lateInterestPctMonth ?? DEFAULT_LATE_INTEREST_PCT_MONTH,
+    );
+    const description =
+      late.daysLate > 0
+        ? `Aluguel ${installment.referenceMonth} (+ multa/juros ${late.daysLate}d)`
+        : `Aluguel ${installment.referenceMonth}`;
+
     const charge = await this.createChargeRecord(ctx, {
       sourceType: "installment",
       sourceId: installment.id,
       clientId: tenant?.id ?? null,
       customerName: tenant?.name ?? null,
       customerDocument: tenant?.document ?? null,
-      description: `Aluguel ${installment.referenceMonth}`,
+      description,
       method,
-      amount: round2(installment.amount),
+      amount: late.total,
       dueDate: installment.dueDate,
     });
 

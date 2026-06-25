@@ -24,6 +24,8 @@ export const mockRentalContracts: RentalContract[] = [
     durationMonths: 12,
     indexType: "igpm",
     adminFeePct: 8,
+    lateFeePct: 2,
+    lateInterestPctMonth: 1,
     status: "ativo",
   },
 ];

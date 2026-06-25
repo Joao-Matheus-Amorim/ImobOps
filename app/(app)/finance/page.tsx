@@ -29,12 +29,16 @@ export default function FinancePage() {
     .filter((i) => i.status !== "pago" && i.status !== "cancelado")
     .map((i) => {
       const charge = billingRepository.forInstallment(ctx, i.id);
+      const late = billingRepository.lateBreakdownForInstallment(ctx, i.id);
       return {
         installmentId: i.id,
         referenceLabel: formatReferenceMonth(i.referenceMonth),
         dueDateLabel: formatDate(i.dueDate),
         amountLabel: formatBRL(i.amount),
         installmentStatus: INSTALLMENT_STATUS_LABELS[i.status],
+        lateLabel: late
+          ? `+ multa/juros ${late.daysLate}d · total ${formatBRL(late.total)}`
+          : null,
         charge: charge
           ? {
               id: charge.id,
