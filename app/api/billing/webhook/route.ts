@@ -5,10 +5,13 @@ import { NextResponse } from "next/server";
 import { getBillingAdapter } from "@/lib/billing/adapter";
 import { billingRepository } from "@/lib/repositories/billing.repository";
 import { DEMO_TENANCY_ID } from "@/lib/constants";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 // Single-tenant mode: all events belong to the demo tenancy. In SaaS mode the
 // gateway account → tenancy mapping resolves this.
 const SYSTEM_CTX = { tenancyId: DEMO_TENANCY_ID, userId: "system" };
+const WEBHOOK_LIMIT = 120;
+const WEBHOOK_WINDOW_MS = 60_000;
 
 function tokenValid(request: Request): boolean {
   const expected = process.env.ASAAS_WEBHOOK_TOKEN;
@@ -17,6 +20,13 @@ function tokenValid(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
+  const limit = rateLimit(
+    `ip:${clientIp(request)}:/api/billing/webhook`,
+    WEBHOOK_LIMIT,
+    WEBHOOK_WINDOW_MS,
+  );
+  if (!limit.ok) return tooManyRequests(limit);
+
   if (!tokenValid(request)) {
     return NextResponse.json({ error: "Token inválido." }, { status: 401 });
   }

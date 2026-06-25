@@ -22,7 +22,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ) {
-  const auth = await requireContext();
+  const auth = await requireContext(request);
   if ("error" in auth) return auth.error;
   const { ctx } = auth;
 

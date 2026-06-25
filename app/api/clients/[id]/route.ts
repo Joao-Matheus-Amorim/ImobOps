@@ -33,7 +33,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ) {
-  const auth = await requireContext();
+  const auth = await requireContext(request);
   if ("error" in auth) return auth.error;
   const { ctx } = auth;
 
@@ -69,10 +69,10 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: { id: string } },
 ) {
-  const auth = await requireContext();
+  const auth = await requireContext(request);
   if ("error" in auth) return auth.error;
   const { ctx } = auth;
 

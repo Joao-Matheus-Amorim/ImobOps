@@ -22,7 +22,7 @@ const bodySchema = z.union([
 ]);
 
 export async function POST(request: Request) {
-  const auth = await requireContext();
+  const auth = await requireContext(request);
   if ("error" in auth) return auth.error;
   const { ctx } = auth;
 
