@@ -34,18 +34,34 @@ export interface DashboardData {
 }
 
 // Assemble all dashboard metrics for the current tenancy + user.
-export function buildDashboardData(ctx: RepoContext): DashboardData {
+export async function buildDashboardData(ctx: RepoContext): Promise<DashboardData> {
   const month = new Date().toISOString().slice(0, 7);
 
-  const properties = propertiesRepository.list(ctx);
-  const rentals = rentalsRepository.list(ctx);
-  const installments = rentalsRepository.listInstallments(ctx);
-  const overdueInstallments = rentalsRepository.listOverdue(ctx);
-  const summary = financeRepository.summary(ctx);
-  const proposals = salesRepository.listProposals(ctx);
-  const leads = crmRepository.listLeads(ctx);
-  const condos = condosRepository.list(ctx);
-  const condoFees = condosRepository.listFees(ctx);
+  const [
+    properties,
+    rentals,
+    installments,
+    overdueInstallments,
+    summary,
+    proposals,
+    leads,
+    condos,
+    condoFees,
+    clients,
+    upcoming,
+  ] = await Promise.all([
+    propertiesRepository.list(ctx),
+    rentalsRepository.list(ctx),
+    rentalsRepository.listInstallments(ctx),
+    rentalsRepository.listOverdue(ctx),
+    financeRepository.summary(ctx),
+    salesRepository.listProposals(ctx),
+    crmRepository.listLeads(ctx),
+    condosRepository.list(ctx),
+    condosRepository.listFees(ctx),
+    clientsRepository.list(ctx),
+    condosRepository.upcomingMeetings(ctx),
+  ]);
 
   const rentedCount = properties.filter((p) => p.status === "alugado").length;
   const occupancyPct = properties.length
@@ -65,16 +81,19 @@ export function buildDashboardData(ctx: RepoContext): DashboardData {
     .filter((f) => f.status === "atrasado")
     .reduce((s, f) => s + f.amount, 0);
 
-  const condoExpensesMonth = condos
-    .flatMap((c) => condosRepository.listExpenses(ctx, c.id))
+  const expenseLists = await Promise.all(
+    condos.map((c) => condosRepository.listExpenses(ctx, c.id)),
+  );
+  const condoExpensesMonth = expenseLists
+    .flat()
     .filter((e) => e.referenceMonth === month)
     .reduce((s, e) => s + e.totalAmount, 0);
 
-  const upcomingMeetings = condosRepository.upcomingMeetings(ctx).length;
+  const upcomingMeetings = upcoming.length;
 
   return {
     propertyCount: properties.length,
-    clientCount: clientsRepository.list(ctx).length,
+    clientCount: clients.length,
     rentalCount: rentals.length,
     leadCount: leads.length,
     rentedCount,

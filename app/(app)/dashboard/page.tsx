@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) redirect(routes.login);
   const ctx = { tenancyId: user.tenancyId, userId: user.id };
-  const data = buildDashboardData(ctx);
+  const data = await buildDashboardData(ctx);
 
   return (
     <div className="space-y-5">

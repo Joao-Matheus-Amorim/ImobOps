@@ -26,7 +26,10 @@ function displayName(phone: string, index: number) {
 
 export default async function WhatsAppPage() {
   const { ctx } = await guardPage("whatsapp");
-  const conversations = whatsappRepository.listConversations(ctx);
+  const conversations = await whatsappRepository.listConversations(ctx);
+  const conversationMessages = await Promise.all(
+    conversations.map((c) => whatsappRepository.listMessages(ctx, c.id)),
+  );
   const configured = isWhatsAppConfigured();
 
   return (
@@ -91,7 +94,7 @@ export default async function WhatsAppPage() {
           <Card className="overflow-hidden rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-0">
             <div className="max-h-[620px] space-y-2 overflow-y-auto p-3 thin-scrollbar">
               {conversations.map((conversation, index) => {
-                const messages = whatsappRepository.listMessages(ctx, conversation.id);
+                const messages = conversationMessages[index];
                 const last = messages.at(-1);
                 const unread = index === 0 ? 2 : index === 1 ? 1 : 0;
 

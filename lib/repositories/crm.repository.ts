@@ -1,27 +1,37 @@
 import type { CrmLead, CrmActivity, FunnelStage } from "@/lib/types/domain";
-import { MockCollection, type RepoContext } from "./base";
+import { type RepoContext } from "./base";
+import { Collection } from "./collection";
 
-const leads = new MockCollection<CrmLead>("leads");
-const activities = new MockCollection<CrmActivity>("activities");
+const leads = new Collection<CrmLead>("leads", "crm_leads");
+const activities = new Collection<CrmActivity>("activities", "crm_activities");
 
 export const crmRepository = {
-  listLeads(ctx: RepoContext): CrmLead[] {
-    return leads.list(ctx).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  async listLeads(ctx: RepoContext): Promise<CrmLead[]> {
+    const rows = await leads.list(ctx);
+    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
-  getLead(ctx: RepoContext, id: string): CrmLead | null {
+  getLead(ctx: RepoContext, id: string): Promise<CrmLead | null> {
     return leads.find(ctx, id);
   },
 
-  createLead(ctx: RepoContext, data: Omit<CrmLead, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): CrmLead {
+  createLead(
+    ctx: RepoContext,
+    data: Omit<CrmLead, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<CrmLead> {
     return leads.create(ctx, data);
   },
 
-  assignLead(ctx: RepoContext, id: string, userId: string): CrmLead | null {
+  assignLead(ctx: RepoContext, id: string, userId: string): Promise<CrmLead | null> {
     return leads.update(ctx, id, { assignedToUserId: userId });
   },
 
-  moveStage(ctx: RepoContext, id: string, stage: FunnelStage, lostReason?: string): CrmLead | null {
+  moveStage(
+    ctx: RepoContext,
+    id: string,
+    stage: FunnelStage,
+    lostReason?: string,
+  ): Promise<CrmLead | null> {
     return leads.update(ctx, id, {
       funnelStage: stage,
       lostReason: stage === "fechado_perdido" ? lostReason ?? null : null,
@@ -30,18 +40,25 @@ export const crmRepository = {
 
   // --- Activities ---
 
-  listActivities(ctx: RepoContext, leadId?: string): CrmActivity[] {
-    return activities
-      .list(ctx, (a) => (leadId ? a.leadId === leadId : true))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  async listActivities(ctx: RepoContext, leadId?: string): Promise<CrmActivity[]> {
+    const rows = await activities.list(ctx, (a) => (leadId ? a.leadId === leadId : true));
+    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
-  logActivity(ctx: RepoContext, data: Omit<CrmActivity, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): CrmActivity {
+  logActivity(
+    ctx: RepoContext,
+    data: Omit<CrmActivity, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<CrmActivity> {
     return activities.create(ctx, data);
   },
 
-  scheduleVisit(ctx: RepoContext, leadId: string, scheduledAt: string, description: string): CrmActivity {
-    const activity = activities.create(ctx, {
+  async scheduleVisit(
+    ctx: RepoContext,
+    leadId: string,
+    scheduledAt: string,
+    description: string,
+  ): Promise<CrmActivity> {
+    const activity = await activities.create(ctx, {
       leadId,
       kind: "visita",
       description,
@@ -49,7 +66,7 @@ export const crmRepository = {
       doneAt: null,
       byUserId: ctx.userId,
     });
-    leads.update(ctx, leadId, { funnelStage: "visita_agendada" });
+    await leads.update(ctx, leadId, { funnelStage: "visita_agendada" });
     return activity;
   },
 };

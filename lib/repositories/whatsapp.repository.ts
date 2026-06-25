@@ -3,26 +3,36 @@ import type {
   WhatsAppMessage,
   TriageClassification,
 } from "@/lib/types/domain";
-import { MockCollection, type RepoContext } from "./base";
+import { type RepoContext } from "./base";
+import { Collection } from "./collection";
 
-const conversations = new MockCollection<WhatsAppConversation>("conversations");
-const messages = new MockCollection<WhatsAppMessage>("messages");
+const conversations = new Collection<WhatsAppConversation>(
+  "conversations",
+  "whatsapp_conversations",
+);
+const messages = new Collection<WhatsAppMessage>("messages", "whatsapp_messages");
 
 export const whatsappRepository = {
-  listConversations(ctx: RepoContext, query?: string): WhatsAppConversation[] {
+  async listConversations(ctx: RepoContext, query?: string): Promise<WhatsAppConversation[]> {
     const q = query?.trim().toLowerCase();
-    return conversations
-      .list(ctx, (c) => (q ? c.phone.toLowerCase().includes(q) : true))
-      .sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+    const rows = await conversations.list(ctx, (c) =>
+      q ? c.phone.toLowerCase().includes(q) : true,
+    );
+    return rows.sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
   },
 
-  getConversation(ctx: RepoContext, id: string): WhatsAppConversation | null {
+  getConversation(ctx: RepoContext, id: string): Promise<WhatsAppConversation | null> {
     return conversations.find(ctx, id);
   },
 
   // Find or create a conversation for a phone number.
-  upsertConversation(ctx: RepoContext, phone: string, classification?: TriageClassification): WhatsAppConversation {
-    const existing = conversations.list(ctx, (c) => c.phone === phone).at(0);
+  async upsertConversation(
+    ctx: RepoContext,
+    phone: string,
+    classification?: TriageClassification,
+  ): Promise<WhatsAppConversation> {
+    const list = await conversations.list(ctx, (c) => c.phone === phone);
+    const existing = list.at(0);
     if (existing) return existing;
     return conversations.create(ctx, {
       clientId: null,
@@ -34,15 +44,17 @@ export const whatsappRepository = {
     });
   },
 
-  listMessages(ctx: RepoContext, conversationId: string): WhatsAppMessage[] {
-    return messages
-      .list(ctx, (m) => m.conversationId === conversationId)
-      .sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+  async listMessages(ctx: RepoContext, conversationId: string): Promise<WhatsAppMessage[]> {
+    const rows = await messages.list(ctx, (m) => m.conversationId === conversationId);
+    return rows.sort((a, b) => a.sentAt.localeCompare(b.sentAt));
   },
 
-  appendMessage(ctx: RepoContext, data: Omit<WhatsAppMessage, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): WhatsAppMessage {
-    const msg = messages.create(ctx, data);
-    conversations.update(ctx, data.conversationId, { lastMessageAt: msg.sentAt });
+  async appendMessage(
+    ctx: RepoContext,
+    data: Omit<WhatsAppMessage, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<WhatsAppMessage> {
+    const msg = await messages.create(ctx, data);
+    await conversations.update(ctx, data.conversationId, { lastMessageAt: msg.sentAt });
     return msg;
   },
 };

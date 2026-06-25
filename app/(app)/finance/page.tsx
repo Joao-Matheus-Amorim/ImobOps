@@ -24,32 +24,38 @@ export const metadata = { title: "Finanças" };
 
 export default async function FinancePage() {
   const { ctx } = await guardPage("finance");
-  const summary = financeRepository.summary(ctx);
-  const overdue = rentalsRepository.listOverdue(ctx);
+  const summary = await financeRepository.summary(ctx);
+  const overdue = await rentalsRepository.listOverdue(ctx);
 
-  const commissionRows: CommissionRow[] = financeRepository
-    .listCommissions(ctx)
-    .map((c) => {
-      const broker = store.users.find((u) => u.id === c.brokerUserId);
-      return {
-        id: c.id,
-        brokerName: broker?.displayName ?? "Corretor",
-        amountLabel: formatBRL(c.amount),
-        pctLabel: `${c.pct}% de comissão`,
-        status: c.status,
-        paidAtLabel: c.paidAt ? formatDate(c.paidAt) : null,
-      };
-    });
-  const repasses = financeRepository.listRepasses(ctx);
+  const commissions = await financeRepository.listCommissions(ctx);
+  const commissionRows: CommissionRow[] = commissions.map((c) => {
+    const broker = store.users.find((u) => u.id === c.brokerUserId);
+    return {
+      id: c.id,
+      brokerName: broker?.displayName ?? "Corretor",
+      amountLabel: formatBRL(c.amount),
+      pctLabel: `${c.pct}% de comissão`,
+      status: c.status,
+      paidAtLabel: c.paidAt ? formatDate(c.paidAt) : null,
+    };
+  });
+  const repasses = await financeRepository.listRepasses(ctx);
 
   // Billing rows: unpaid installments + any charge already emitted for them.
-  const billingRows: BillingRow[] = rentalsRepository
-    .listInstallments(ctx)
-    .filter((i) => i.status !== "pago" && i.status !== "cancelado")
-    .map((i) => {
-      const charge = billingRepository.forInstallment(ctx, i.id);
-      const late = billingRepository.lateBreakdownForInstallment(ctx, i.id);
-      return {
+  const allInstallments = await rentalsRepository.listInstallments(ctx);
+  const openInstallments = allInstallments.filter(
+    (i) => i.status !== "pago" && i.status !== "cancelado",
+  );
+  const installmentCharges = await Promise.all(
+    openInstallments.map((i) => billingRepository.forInstallment(ctx, i.id)),
+  );
+  const installmentLate = await Promise.all(
+    openInstallments.map((i) => billingRepository.lateBreakdownForInstallment(ctx, i.id)),
+  );
+  const billingRows: BillingRow[] = openInstallments.map((i, index) => {
+    const charge = installmentCharges[index];
+    const late = installmentLate[index];
+    return {
         installmentId: i.id,
         referenceLabel: formatReferenceMonth(i.referenceMonth),
         dueDateLabel: formatDate(i.dueDate),
@@ -82,9 +88,7 @@ export default async function FinancePage() {
       </div>
 
       <NewChargeForm
-        clients={clientsRepository
-          .list(ctx)
-          .map((c) => ({ id: c.id, name: c.name }))}
+        clients={(await clientsRepository.list(ctx)).map((c) => ({ id: c.id, name: c.name }))}
       />
 
       <BillingPanel rows={billingRows} />

@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, event: event.event });
   }
 
-  const charge = billingRepository.reconcileByExternalId(
+  const charge = await billingRepository.reconcileByExternalId(
     SYSTEM_CTX,
     event.externalId,
     event.paidAmount,

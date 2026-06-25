@@ -15,8 +15,8 @@ export const whatsappTools = [
     run: async ({ to, body }, ctx) => {
       const adapter = getWhatsAppAdapter();
       const sent = await adapter.sendMessage(to, body);
-      const conversation = whatsappRepository.upsertConversation(repoCtx(ctx), to);
-      whatsappRepository.appendMessage(repoCtx(ctx), {
+      const conversation = await whatsappRepository.upsertConversation(repoCtx(ctx), to);
+      await whatsappRepository.appendMessage(repoCtx(ctx), {
         conversationId: conversation.id,
         direction: "out",
         body,
@@ -47,8 +47,8 @@ export const whatsappTools = [
     run: async ({ to, templateKey, vars }, ctx) => {
       const adapter = getWhatsAppAdapter();
       const sent = await adapter.sendTemplate(to, templateKey, vars ?? {});
-      const conversation = whatsappRepository.upsertConversation(repoCtx(ctx), to);
-      whatsappRepository.appendMessage(repoCtx(ctx), {
+      const conversation = await whatsappRepository.upsertConversation(repoCtx(ctx), to);
+      await whatsappRepository.appendMessage(repoCtx(ctx), {
         conversationId: conversation.id,
         direction: "out",
         body: `[template:${templateKey}]`,

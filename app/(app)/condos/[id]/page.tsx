@@ -14,17 +14,21 @@ import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export default async function CondoDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("condos");
-  const condo = condosRepository.get(ctx, params.id);
+  const condo = await condosRepository.get(ctx, params.id);
   if (!condo) notFound();
 
-  const units = condosRepository.listUnits(ctx, condo.id);
-  const fees = condosRepository.listFees(ctx, condo.id);
-  const expenses = condosRepository.listExpenses(ctx, condo.id);
-  const meetings = condosRepository.listMeetings(ctx, condo.id);
+  const units = await condosRepository.listUnits(ctx, condo.id);
+  const fees = await condosRepository.listFees(ctx, condo.id);
+  const expenses = await condosRepository.listExpenses(ctx, condo.id);
+  const meetings = await condosRepository.listMeetings(ctx, condo.id);
+  const feeCharges = await Promise.all(fees.map((f) => billingRepository.forCondoFee(ctx, f.id)));
+  const unitOwners = await Promise.all(
+    units.map((u) => (u.ownerClientId ? clientsRepository.get(ctx, u.ownerClientId) : null)),
+  );
 
-  const feeRows: CondoFeeRow[] = fees.map((f) => {
+  const feeRows: CondoFeeRow[] = fees.map((f, index) => {
     const unit = units.find((u) => u.id === f.unitId);
-    const charge = billingRepository.forCondoFee(ctx, f.id);
+    const charge = feeCharges[index];
     return {
       feeId: f.id,
       label: `${unit?.label ?? "Unidade"} · ${formatReferenceMonth(f.referenceMonth)} · venc. ${formatDate(f.dueDate)}`,
@@ -48,8 +52,8 @@ export default async function CondoDetailPage({ params }: { params: { id: string
       <Card>
         <CardHeader><CardTitle>Unidades ({units.length})</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          {units.map((u) => {
-            const owner = u.ownerClientId ? clientsRepository.get(ctx, u.ownerClientId) : null;
+          {units.map((u, index) => {
+            const owner = unitOwners[index];
             return (
               <div key={u.id} className="flex justify-between border-b border-border/60 pb-2 last:border-0">
                 <div>

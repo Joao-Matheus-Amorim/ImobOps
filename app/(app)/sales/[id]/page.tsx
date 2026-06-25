@@ -10,11 +10,12 @@ import { formatBRL, formatDate } from "@/lib/utils";
 
 export default async function SaleDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("sales");
-  const listing = salesRepository.getListing(ctx, params.id);
+  const listing = await salesRepository.getListing(ctx, params.id);
   if (!listing) notFound();
 
-  const property = propertiesRepository.get(ctx, listing.propertyId);
-  const proposals = salesRepository.listProposals(ctx, listing.id);
+  const property = await propertiesRepository.get(ctx, listing.propertyId);
+  const proposals = await salesRepository.listProposals(ctx, listing.id);
+  const buyers = await Promise.all(proposals.map((p) => clientsRepository.get(ctx, p.buyerClientId)));
 
   return (
     <div className="space-y-4">
@@ -30,8 +31,8 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
           {proposals.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sem propostas registradas.</p>
           ) : (
-            proposals.map((p) => {
-              const buyer = clientsRepository.get(ctx, p.buyerClientId);
+            proposals.map((p, index) => {
+              const buyer = buyers[index];
               return (
                 <div key={p.id} className="space-y-2 rounded-xl border border-border p-3">
                   <div className="flex items-center justify-between">

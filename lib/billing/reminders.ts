@@ -29,23 +29,24 @@ export async function runReminderLadder(
 ): Promise<ReminderResult[]> {
   const out: ReminderResult[] = [];
   const adapter = getWhatsAppAdapter();
-  const installments = rentalsRepository.listInstallments(ctx);
+  const installments = await rentalsRepository.listInstallments(ctx);
+  const charges = await billingRepository.list(ctx);
 
-  for (const charge of billingRepository.list(ctx)) {
+  for (const charge of charges) {
     const trigger = dueReminderTrigger(charge, todayIso);
     if (!trigger) continue;
 
-    if (billingRepository.reminderAlreadySent(ctx, charge.id, trigger)) {
+    if (await billingRepository.reminderAlreadySent(ctx, charge.id, trigger)) {
       out.push({ chargeId: charge.id, trigger, phone: null, sent: false, reason: "já enviado" });
       continue;
     }
 
     const installment = installments.find((i) => i.id === charge.sourceId);
     const contract = installment
-      ? rentalsRepository.get(ctx, installment.contractId)
+      ? await rentalsRepository.get(ctx, installment.contractId)
       : null;
     const tenant = contract
-      ? clientsRepository.get(ctx, contract.tenantClientId)
+      ? await clientsRepository.get(ctx, contract.tenantClientId)
       : null;
     const phone = tenant?.whatsapp ?? tenant?.phone ?? null;
     if (!phone) {
@@ -63,8 +64,8 @@ export async function runReminderLadder(
 
     try {
       await adapter.sendMessage(phone, body);
-      const conversation = whatsappRepository.upsertConversation(ctx, phone, "financeiro");
-      whatsappRepository.appendMessage(ctx, {
+      const conversation = await whatsappRepository.upsertConversation(ctx, phone, "financeiro");
+      await whatsappRepository.appendMessage(ctx, {
         conversationId: conversation.id,
         direction: "out",
         body,
@@ -76,7 +77,7 @@ export async function runReminderLadder(
         readAt: null,
         sentBy: "system",
       });
-      billingRepository.recordReminder(ctx, charge.id, trigger, templateKey);
+      await billingRepository.recordReminder(ctx, charge.id, trigger, templateKey);
       out.push({ chargeId: charge.id, trigger, phone, sent: true });
     } catch {
       out.push({ chargeId: charge.id, trigger, phone, sent: false, reason: "falha no envio" });

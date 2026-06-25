@@ -12,7 +12,14 @@ export const metadata = { title: "CRM" };
 export default async function CrmPage() {
   const { ctx } = await guardPage("crm");
   const principal = await getPrincipalCan();
-  const leads = filterAllowed(principal, "crm", crmRepository.listLeads(ctx));
+  const leads = filterAllowed(principal, "crm", await crmRepository.listLeads(ctx));
+  const clientsById = new Map(
+    await Promise.all(
+      leads
+        .filter((l) => l.clientId)
+        .map(async (l) => [l.clientId as string, await clientsRepository.get(ctx, l.clientId as string)] as const),
+    ),
+  );
 
   return (
     <div className="space-y-4">
@@ -32,7 +39,7 @@ export default async function CrmPage() {
                   <p className="text-xs text-muted-foreground">Vazio</p>
                 ) : (
                   stageLeads.map((l) => {
-                    const client = l.clientId ? clientsRepository.get(ctx, l.clientId) : null;
+                    const client = l.clientId ? clientsById.get(l.clientId) ?? null : null;
                     return (
                       <div key={l.id} className="rounded-lg border border-border p-2.5 text-sm">
                         <p className="font-medium">{client?.name ?? "Lead sem cadastro"}</p>

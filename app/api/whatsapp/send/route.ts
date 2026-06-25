@@ -38,8 +38,8 @@ export async function POST(request: Request) {
     ? await adapter.sendTemplate(to, templateKey, vars ?? {})
     : await adapter.sendMessage(to, body!);
 
-  const conversation = whatsappRepository.upsertConversation(ctx, to);
-  whatsappRepository.appendMessage(ctx, {
+  const conversation = await whatsappRepository.upsertConversation(ctx, to);
+  await whatsappRepository.appendMessage(ctx, {
     conversationId: conversation.id,
     direction: "out",
     body: body ?? `[template:${templateKey}]`,

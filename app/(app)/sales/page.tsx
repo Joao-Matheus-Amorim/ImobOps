@@ -14,7 +14,9 @@ export const metadata = { title: "Vendas" };
 
 export default async function SalesPage() {
   const { ctx } = await guardPage("sales");
-  const listings = salesRepository.listListings(ctx);
+  const listings = await salesRepository.listListings(ctx);
+  const properties = await Promise.all(listings.map((l) => propertiesRepository.get(ctx, l.propertyId)));
+  const proposalLists = await Promise.all(listings.map((l) => salesRepository.listProposals(ctx, l.id)));
 
   return (
     <div className="space-y-4">
@@ -23,9 +25,9 @@ export default async function SalesPage() {
         <EmptyState title="Nenhuma listagem de venda" icon={<Handshake className="size-8" />} />
       ) : (
         <div className="space-y-2">
-          {listings.map((l) => {
-            const property = propertiesRepository.get(ctx, l.propertyId);
-            const proposals = salesRepository.listProposals(ctx, l.id);
+          {listings.map((l, index) => {
+            const property = properties[index];
+            const proposals = proposalLists[index];
             return (
               <ListItem
                 key={l.id}

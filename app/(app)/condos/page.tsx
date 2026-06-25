@@ -12,7 +12,8 @@ export const metadata = { title: "Condomínios" };
 
 export default async function CondosPage() {
   const { ctx } = await guardPage("condos");
-  const condos = condosRepository.list(ctx);
+  const condos = await condosRepository.list(ctx);
+  const condoFees = await Promise.all(condos.map((c) => condosRepository.listFees(ctx, c.id)));
 
   return (
     <div className="space-y-4">
@@ -21,8 +22,8 @@ export default async function CondosPage() {
         <EmptyState title="Nenhum condomínio" icon={<Building className="size-8" />} />
       ) : (
         <div className="space-y-2">
-          {condos.map((c) => {
-            const fees = condosRepository.listFees(ctx, c.id);
+          {condos.map((c, index) => {
+            const fees = condoFees[index];
             const overdue = fees.filter((f) => f.status === "atrasado").length;
             return (
               <ListItem

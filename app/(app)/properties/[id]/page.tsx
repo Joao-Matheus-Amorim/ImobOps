@@ -9,9 +9,9 @@ import { clientsRepository } from "@/lib/repositories/clients.repository";
 
 export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("properties");
-  const property = propertiesRepository.get(ctx, params.id);
+  const property = await propertiesRepository.get(ctx, params.id);
   if (!property) notFound();
-  const owner = property.ownerClientId ? clientsRepository.get(ctx, property.ownerClientId) : null;
+  const owner = property.ownerClientId ? await clientsRepository.get(ctx, property.ownerClientId) : null;
 
   return (
     <div className="space-y-4">

@@ -5,61 +5,74 @@ import type {
   CondoExpense,
   CondoMeeting,
 } from "@/lib/types/domain";
-import { MockCollection, type RepoContext } from "./base";
+import { type RepoContext } from "./base";
+import { Collection } from "./collection";
 import { round2 } from "@/lib/utils";
 
-const condos = new MockCollection<Condo>("condos");
-const units = new MockCollection<Unit>("units");
-const fees = new MockCollection<CondoFee>("condoFees");
-const expenses = new MockCollection<CondoExpense>("condoExpenses");
-const meetings = new MockCollection<CondoMeeting>("condoMeetings");
+const condos = new Collection<Condo>("condos", "condos");
+const units = new Collection<Unit>("units", "units");
+const fees = new Collection<CondoFee>("condoFees", "condo_fees");
+const expenses = new Collection<CondoExpense>("condoExpenses", "condo_expenses");
+const meetings = new Collection<CondoMeeting>("condoMeetings", "condo_meetings");
 
 export const condosRepository = {
-  list(ctx: RepoContext): Condo[] {
-    return condos.list(ctx).sort((a, b) => a.name.localeCompare(b.name));
+  async list(ctx: RepoContext): Promise<Condo[]> {
+    const rows = await condos.list(ctx);
+    return rows.sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  get(ctx: RepoContext, id: string): Condo | null {
+  get(ctx: RepoContext, id: string): Promise<Condo | null> {
     return condos.find(ctx, id);
   },
 
-  create(ctx: RepoContext, data: Omit<Condo, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): Condo {
+  create(
+    ctx: RepoContext,
+    data: Omit<Condo, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<Condo> {
     return condos.create(ctx, data);
   },
 
   // --- Units ---
 
-  listUnits(ctx: RepoContext, condoId: string): Unit[] {
-    return units.list(ctx, (u) => u.condoId === condoId).sort((a, b) => a.label.localeCompare(b.label));
+  async listUnits(ctx: RepoContext, condoId: string): Promise<Unit[]> {
+    const rows = await units.list(ctx, (u) => u.condoId === condoId);
+    return rows.sort((a, b) => a.label.localeCompare(b.label));
   },
 
-  addUnit(ctx: RepoContext, data: Omit<Unit, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): Unit {
+  addUnit(
+    ctx: RepoContext,
+    data: Omit<Unit, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<Unit> {
     return units.create(ctx, data);
   },
 
-  getUnit(ctx: RepoContext, id: string): Unit | null {
+  getUnit(ctx: RepoContext, id: string): Promise<Unit | null> {
     return units.find(ctx, id);
   },
 
   // --- Fees ---
 
-  listFees(ctx: RepoContext, condoId?: string): CondoFee[] {
+  async listFees(ctx: RepoContext, condoId?: string): Promise<CondoFee[]> {
     const unitIds = condoId
-      ? new Set(this.listUnits(ctx, condoId).map((u) => u.id))
+      ? new Set((await this.listUnits(ctx, condoId)).map((u) => u.id))
       : null;
-    return fees
-      .list(ctx, (f) => (unitIds ? unitIds.has(f.unitId) : true))
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const rows = await fees.list(ctx, (f) => (unitIds ? unitIds.has(f.unitId) : true));
+    return rows.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   },
 
-  generateFees(ctx: RepoContext, condoId: string, referenceMonth: string, dueDate: string, amount: number): CondoFee[] {
-    const us = this.listUnits(ctx, condoId);
-    const existing = new Set(
-      fees.list(ctx, (f) => f.referenceMonth === referenceMonth).map((f) => f.unitId),
-    );
+  async generateFees(
+    ctx: RepoContext,
+    condoId: string,
+    referenceMonth: string,
+    dueDate: string,
+    amount: number,
+  ): Promise<CondoFee[]> {
+    const us = await this.listUnits(ctx, condoId);
+    const monthFees = await fees.list(ctx, (f) => f.referenceMonth === referenceMonth);
+    const existing = new Set(monthFees.map((f) => f.unitId));
     for (const u of us) {
       if (existing.has(u.id)) continue;
-      fees.create(ctx, {
+      await fees.create(ctx, {
         unitId: u.id,
         referenceMonth,
         dueDate,
@@ -73,34 +86,44 @@ export const condosRepository = {
     return this.listFees(ctx, condoId);
   },
 
-  markFeePaid(ctx: RepoContext, id: string): CondoFee | null {
+  markFeePaid(ctx: RepoContext, id: string): Promise<CondoFee | null> {
     return fees.update(ctx, id, { status: "pago", paidAt: new Date().toISOString() });
   },
 
-  getFee(ctx: RepoContext, id: string): CondoFee | null {
+  getFee(ctx: RepoContext, id: string): Promise<CondoFee | null> {
     return fees.find(ctx, id);
   },
 
   // Link a fee to its active charge (1:1). Used by billing emission.
-  setFeeCharge(ctx: RepoContext, feeId: string, chargeId: string | null): CondoFee | null {
+  setFeeCharge(
+    ctx: RepoContext,
+    feeId: string,
+    chargeId: string | null,
+  ): Promise<CondoFee | null> {
     return fees.update(ctx, feeId, { chargeId });
   },
 
   // --- Expenses + apportionment ---
 
-  listExpenses(ctx: RepoContext, condoId: string): CondoExpense[] {
+  listExpenses(ctx: RepoContext, condoId: string): Promise<CondoExpense[]> {
     return expenses.list(ctx, (e) => e.condoId === condoId);
   },
 
-  registerExpense(ctx: RepoContext, data: Omit<CondoExpense, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): CondoExpense {
+  registerExpense(
+    ctx: RepoContext,
+    data: Omit<CondoExpense, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<CondoExpense> {
     return expenses.create(ctx, data);
   },
 
   // Apportion an expense across units, returning the per-unit charge.
-  apportionExpense(ctx: RepoContext, expenseId: string): { unitId: string; label: string; amount: number }[] {
-    const exp = expenses.find(ctx, expenseId);
+  async apportionExpense(
+    ctx: RepoContext,
+    expenseId: string,
+  ): Promise<{ unitId: string; label: string; amount: number }[]> {
+    const exp = await expenses.find(ctx, expenseId);
     if (!exp) return [];
-    const us = this.listUnits(ctx, exp.condoId);
+    const us = await this.listUnits(ctx, exp.condoId);
     let result: { unitId: string; label: string; amount: number }[];
     if (exp.apportionment === "igual") {
       const share = round2(exp.totalAmount / Math.max(1, us.length));
@@ -113,20 +136,19 @@ export const condosRepository = {
         amount: round2((exp.totalAmount * u.fractionPct) / totalFraction),
       }));
     }
-    expenses.update(ctx, expenseId, { status: "rateada" });
+    await expenses.update(ctx, expenseId, { status: "rateada" });
     return result;
   },
 
   // --- Meetings ---
 
-  listMeetings(ctx: RepoContext, condoId?: string): CondoMeeting[] {
-    return meetings
-      .list(ctx, (m) => (condoId ? m.condoId === condoId : true))
-      .sort((a, b) => a.date.localeCompare(b.date));
+  async listMeetings(ctx: RepoContext, condoId?: string): Promise<CondoMeeting[]> {
+    const rows = await meetings.list(ctx, (m) => (condoId ? m.condoId === condoId : true));
+    return rows.sort((a, b) => a.date.localeCompare(b.date));
   },
 
-  upcomingMeetings(ctx: RepoContext): CondoMeeting[] {
+  async upcomingMeetings(ctx: RepoContext): Promise<CondoMeeting[]> {
     const today = new Date().toISOString().slice(0, 10);
-    return this.listMeetings(ctx).filter((m) => m.date >= today);
+    return (await this.listMeetings(ctx)).filter((m) => m.date >= today);
   },
 };

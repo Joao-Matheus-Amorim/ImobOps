@@ -14,7 +14,7 @@ export const metadata = { title: "Imóveis" };
 export default async function PropertiesPage() {
   const { ctx } = await guardPage("properties");
   const principal = await getPrincipalCan();
-  const properties = filterAllowed(principal, "properties", propertiesRepository.list(ctx));
+  const properties = filterAllowed(principal, "properties", await propertiesRepository.list(ctx));
 
   return (
     <div className="space-y-4">

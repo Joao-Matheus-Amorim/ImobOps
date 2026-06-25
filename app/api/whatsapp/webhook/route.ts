@@ -29,14 +29,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ignored: true });
   }
 
-  const triage = triageInbound(SYSTEM_CTX, inbound.body);
-  const conversation = whatsappRepository.upsertConversation(
+  const triage = await triageInbound(SYSTEM_CTX, inbound.body);
+  const conversation = await whatsappRepository.upsertConversation(
     SYSTEM_CTX,
     inbound.phone,
     triage.classification,
   );
 
-  whatsappRepository.appendMessage(SYSTEM_CTX, {
+  await whatsappRepository.appendMessage(SYSTEM_CTX, {
     conversationId: conversation.id,
     direction: "in",
     body: inbound.body,

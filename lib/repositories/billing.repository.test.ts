@@ -12,15 +12,14 @@ import { DEMO_TENANCY_ID, DEMO_USERS } from "@/lib/constants";
 const ctx = { tenancyId: DEMO_TENANCY_ID, userId: DEMO_USERS.finance };
 
 // Pick an installment that is not yet paid so we can drive a fresh charge.
-function pickOpenInstallment() {
-  return rentalsRepository
-    .listInstallments(ctx)
-    .find((i) => i.status === "a_vencer");
+async function pickOpenInstallment() {
+  const installments = await rentalsRepository.listInstallments(ctx);
+  return installments.find((i) => i.status === "a_vencer");
 }
 
 describe("billingRepository emission", () => {
   it("is idempotent: re-emitting returns the same active charge", async () => {
-    const inst = pickOpenInstallment();
+    const inst = await pickOpenInstallment();
     expect(inst).toBeTruthy();
     const first = await billingRepository.emitForInstallment(ctx, inst!.id, "pix");
     const second = await billingRepository.emitForInstallment(ctx, inst!.id, "boleto");
@@ -28,11 +27,10 @@ describe("billingRepository emission", () => {
   });
 
   it("links the charge back to the installment", async () => {
-    const inst = pickOpenInstallment();
+    const inst = await pickOpenInstallment();
     const charge = await billingRepository.emitForInstallment(ctx, inst!.id, "pix");
-    const reloaded = rentalsRepository
-      .listInstallments(ctx)
-      .find((i) => i.id === inst!.id);
+    const installments = await rentalsRepository.listInstallments(ctx);
+    const reloaded = installments.find((i) => i.id === inst!.id);
     expect(reloaded?.chargeId).toBe(charge?.id);
   });
 });
@@ -58,14 +56,14 @@ describe("billingRepository standalone (avulsa)", () => {
       dueDate: "2026-08-10",
       method: "pix",
     });
-    const before = financeRepository.listRepasses(ctx).length;
-    billingRepository.reconcileByExternalId(
+    const before = (await financeRepository.listRepasses(ctx)).length;
+    await billingRepository.reconcileByExternalId(
       ctx,
       charge!.externalId!,
       333,
       "2026-08-11T10:00:00.000Z",
     );
-    const after = financeRepository.listRepasses(ctx).length;
+    const after = (await financeRepository.listRepasses(ctx)).length;
     expect(after).toBe(before);
   });
 
@@ -82,16 +80,15 @@ describe("billingRepository standalone (avulsa)", () => {
 
 describe("billingRepository condo fee", () => {
   it("emits a charge for a condo fee without creating a repasse", async () => {
-    const fee = condosRepository
-      .listFees(ctx)
-      .find((f) => f.status !== "pago");
+    const fees = await condosRepository.listFees(ctx);
+    const fee = fees.find((f) => f.status !== "pago");
     expect(fee).toBeTruthy();
 
     const charge = await billingRepository.emitForCondoFee(ctx, fee!.id, "boleto");
     expect(charge?.sourceType).toBe("condo_fee");
 
-    const before = financeRepository.listRepasses(ctx).length;
-    const paid = billingRepository.reconcileByExternalId(
+    const before = (await financeRepository.listRepasses(ctx)).length;
+    const paid = await billingRepository.reconcileByExternalId(
       ctx,
       charge!.externalId!,
       fee!.amount,
@@ -99,19 +96,19 @@ describe("billingRepository condo fee", () => {
     );
     expect(paid?.status).toBe("paga");
 
-    const reloadedFee = condosRepository.getFee(ctx, fee!.id);
+    const reloadedFee = await condosRepository.getFee(ctx, fee!.id);
     expect(reloadedFee?.status).toBe("pago");
-    expect(financeRepository.listRepasses(ctx).length).toBe(before);
+    expect((await financeRepository.listRepasses(ctx)).length).toBe(before);
   });
 });
 
 describe("billingRepository reconciliation", () => {
   it("pays charge → installment paid → repasse pending, idempotently", async () => {
-    const inst = pickOpenInstallment();
+    const inst = await pickOpenInstallment();
     const charge = await billingRepository.emitForInstallment(ctx, inst!.id, "boleto");
     expect(charge?.externalId).toBeTruthy();
 
-    const paid = billingRepository.reconcileByExternalId(
+    const paid = await billingRepository.reconcileByExternalId(
       ctx,
       charge!.externalId!,
       inst!.amount,
@@ -119,18 +116,16 @@ describe("billingRepository reconciliation", () => {
     );
     expect(paid?.status).toBe("paga");
 
-    const reloaded = rentalsRepository
-      .listInstallments(ctx)
-      .find((i) => i.id === inst!.id);
+    const installments = await rentalsRepository.listInstallments(ctx);
+    const reloaded = installments.find((i) => i.id === inst!.id);
     expect(reloaded?.status).toBe("pago");
 
-    const repasse = financeRepository
-      .listRepasses(ctx)
-      .find((r) => r.referenceMonth === inst!.referenceMonth);
+    const repasses = await financeRepository.listRepasses(ctx);
+    const repasse = repasses.find((r) => r.referenceMonth === inst!.referenceMonth);
     expect(repasse).toBeTruthy();
 
     // Idempotent: a second webhook for the same charge changes nothing.
-    const again = billingRepository.reconcileByExternalId(
+    const again = await billingRepository.reconcileByExternalId(
       ctx,
       charge!.externalId!,
       inst!.amount,

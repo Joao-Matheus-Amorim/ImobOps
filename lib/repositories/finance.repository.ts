@@ -1,10 +1,11 @@
 import type { Repasse, Commission } from "@/lib/types/domain";
-import { MockCollection, type RepoContext } from "./base";
+import { type RepoContext } from "./base";
+import { Collection } from "./collection";
 import { rentalsRepository } from "./rentals.repository";
 import { buildRepasse } from "./installment-logic";
 
-const repasses = new MockCollection<Repasse>("repasses");
-const commissions = new MockCollection<Commission>("commissions");
+const repasses = new Collection<Repasse>("repasses", "repasses");
+const commissions = new Collection<Commission>("commissions", "commissions");
 
 export interface FinanceSummary {
   receivableThisMonth: number;
@@ -16,50 +17,62 @@ export interface FinanceSummary {
 export const financeRepository = {
   // --- Repasses ---
 
-  listRepasses(ctx: RepoContext): Repasse[] {
-    return repasses.list(ctx).sort((a, b) => b.referenceMonth.localeCompare(a.referenceMonth));
+  async listRepasses(ctx: RepoContext): Promise<Repasse[]> {
+    const rows = await repasses.list(ctx);
+    return rows.sort((a, b) => b.referenceMonth.localeCompare(a.referenceMonth));
   },
 
   // Compute (and persist if missing) a repasse for a paid installment month.
-  computeRepasse(ctx: RepoContext, contractId: string, referenceMonth: string): Repasse | null {
-    const contract = rentalsRepository.get(ctx, contractId);
+  async computeRepasse(
+    ctx: RepoContext,
+    contractId: string,
+    referenceMonth: string,
+  ): Promise<Repasse | null> {
+    const contract = await rentalsRepository.get(ctx, contractId);
     if (!contract) return null;
-    const installment = rentalsRepository
-      .listInstallments(ctx, contractId)
-      .find((i) => i.referenceMonth === referenceMonth && i.status === "pago");
+    const installmentList = await rentalsRepository.listInstallments(ctx, contractId);
+    const installment = installmentList.find(
+      (i) => i.referenceMonth === referenceMonth && i.status === "pago",
+    );
     if (!installment) return null;
 
-    const existing = repasses
-      .list(ctx, (r) => r.contractId === contractId && r.referenceMonth === referenceMonth)
-      .at(0);
+    const existingList = await repasses.list(
+      ctx,
+      (r) => r.contractId === contractId && r.referenceMonth === referenceMonth,
+    );
+    const existing = existingList.at(0);
     if (existing) return existing;
 
     const r = buildRepasse(contract, installment, ctx.tenancyId, ctx.userId);
     return repasses.create(ctx, r);
   },
 
-  markRepassePaid(ctx: RepoContext, id: string): Repasse | null {
+  markRepassePaid(ctx: RepoContext, id: string): Promise<Repasse | null> {
     return repasses.update(ctx, id, { status: "pago", paidAt: new Date().toISOString() });
   },
 
   // --- Commissions ---
 
-  listCommissions(ctx: RepoContext): Commission[] {
-    return commissions.list(ctx).sort((a, b) => (a.status > b.status ? 1 : -1));
+  async listCommissions(ctx: RepoContext): Promise<Commission[]> {
+    const rows = await commissions.list(ctx);
+    return rows.sort((a, b) => (a.status > b.status ? 1 : -1));
   },
 
-  recordCommissionPayment(ctx: RepoContext, id: string): Commission | null {
+  recordCommissionPayment(ctx: RepoContext, id: string): Promise<Commission | null> {
     return commissions.update(ctx, id, { status: "paga", paidAt: new Date().toISOString() });
   },
 
-  createCommission(ctx: RepoContext, data: Omit<Commission, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): Commission {
+  createCommission(
+    ctx: RepoContext,
+    data: Omit<Commission, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<Commission> {
     return commissions.create(ctx, data);
   },
 
   // --- Summary used by finance dashboard ---
 
-  summary(ctx: RepoContext): FinanceSummary {
-    const insts = rentalsRepository.listInstallments(ctx);
+  async summary(ctx: RepoContext): Promise<FinanceSummary> {
+    const insts = await rentalsRepository.listInstallments(ctx);
     const month = new Date().toISOString().slice(0, 7);
     const receivableThisMonth = insts
       .filter((i) => i.referenceMonth === month && i.status !== "pago" && i.status !== "cancelado")
@@ -67,10 +80,12 @@ export const financeRepository = {
     const overdueAmount = insts
       .filter((i) => i.status === "atrasado")
       .reduce((s, i) => s + i.amount, 0);
-    const pendingRepasses = this.listRepasses(ctx)
+    const repasseList = await this.listRepasses(ctx);
+    const pendingRepasses = repasseList
       .filter((r) => r.status === "pendente")
       .reduce((s, r) => s + r.netAmount, 0);
-    const pendingCommissions = this.listCommissions(ctx)
+    const commissionList = await this.listCommissions(ctx);
+    const pendingCommissions = commissionList
       .filter((c) => c.status === "pendente")
       .reduce((s, c) => s + c.amount, 0);
     return { receivableThisMonth, overdueAmount, pendingRepasses, pendingCommissions };

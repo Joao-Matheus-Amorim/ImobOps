@@ -14,7 +14,9 @@ export const metadata = { title: "Locação" };
 
 export default async function RentalsPage() {
   const { ctx } = await guardPage("rentals");
-  const contracts = rentalsRepository.list(ctx);
+  const contracts = await rentalsRepository.list(ctx);
+  const properties = await Promise.all(contracts.map((c) => propertiesRepository.get(ctx, c.propertyId)));
+  const tenants = await Promise.all(contracts.map((c) => clientsRepository.get(ctx, c.tenantClientId)));
 
   return (
     <div className="space-y-4">
@@ -23,9 +25,9 @@ export default async function RentalsPage() {
         <EmptyState title="Nenhum contrato de locação" icon={<KeyRound className="size-8" />} />
       ) : (
         <div className="space-y-2">
-          {contracts.map((c) => {
-            const property = propertiesRepository.get(ctx, c.propertyId);
-            const tenant = clientsRepository.get(ctx, c.tenantClientId);
+          {contracts.map((c, index) => {
+            const property = properties[index];
+            const tenant = tenants[index];
             return (
               <ListItem
                 key={c.id}

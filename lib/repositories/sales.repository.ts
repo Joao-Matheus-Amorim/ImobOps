@@ -4,41 +4,55 @@ import type {
   SaleContract,
   ProposalStatus,
 } from "@/lib/types/domain";
-import { MockCollection, type RepoContext } from "./base";
+import { type RepoContext } from "./base";
+import { Collection } from "./collection";
 
-const listings = new MockCollection<SaleListing>("listings");
-const proposals = new MockCollection<Proposal>("proposals");
-const saleContracts = new MockCollection<SaleContract>("saleContracts");
+const listings = new Collection<SaleListing>("listings", "sale_listings");
+const proposals = new Collection<Proposal>("proposals", "proposals");
+const saleContracts = new Collection<SaleContract>("saleContracts", "sale_contracts");
 
 export const salesRepository = {
-  listListings(ctx: RepoContext): SaleListing[] {
-    return listings.list(ctx).sort((a, b) => b.askingPrice - a.askingPrice);
+  async listListings(ctx: RepoContext): Promise<SaleListing[]> {
+    const rows = await listings.list(ctx);
+    return rows.sort((a, b) => b.askingPrice - a.askingPrice);
   },
 
-  getListing(ctx: RepoContext, id: string): SaleListing | null {
+  getListing(ctx: RepoContext, id: string): Promise<SaleListing | null> {
     return listings.find(ctx, id);
   },
 
-  createListing(ctx: RepoContext, data: Omit<SaleListing, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): SaleListing {
+  createListing(
+    ctx: RepoContext,
+    data: Omit<SaleListing, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<SaleListing> {
     return listings.create(ctx, data);
   },
 
   // --- Proposals ---
 
-  listProposals(ctx: RepoContext, listingId?: string): Proposal[] {
-    return proposals
-      .list(ctx, (p) => (listingId ? p.listingId === listingId : true))
-      .sort((a, b) => b.offeredPrice - a.offeredPrice);
+  async listProposals(ctx: RepoContext, listingId?: string): Promise<Proposal[]> {
+    const rows = await proposals.list(ctx, (p) =>
+      listingId ? p.listingId === listingId : true,
+    );
+    return rows.sort((a, b) => b.offeredPrice - a.offeredPrice);
   },
 
-  registerProposal(ctx: RepoContext, data: Omit<Proposal, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): Proposal {
-    const p = proposals.create(ctx, data);
-    listings.update(ctx, p.listingId, { status: "sob_proposta" });
+  async registerProposal(
+    ctx: RepoContext,
+    data: Omit<Proposal, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<Proposal> {
+    const p = await proposals.create(ctx, data);
+    await listings.update(ctx, p.listingId, { status: "sob_proposta" });
     return p;
   },
 
-  moveProposal(ctx: RepoContext, id: string, status: ProposalStatus, note?: string): Proposal | null {
-    const p = proposals.find(ctx, id);
+  async moveProposal(
+    ctx: RepoContext,
+    id: string,
+    status: ProposalStatus,
+    note?: string,
+  ): Promise<Proposal | null> {
+    const p = await proposals.find(ctx, id);
     if (!p) return null;
     const history = [
       ...p.history,
@@ -49,13 +63,16 @@ export const salesRepository = {
 
   // --- Sale contracts ---
 
-  listSaleContracts(ctx: RepoContext): SaleContract[] {
+  listSaleContracts(ctx: RepoContext): Promise<SaleContract[]> {
     return saleContracts.list(ctx);
   },
 
-  closeSaleContract(ctx: RepoContext, data: Omit<SaleContract, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): SaleContract {
-    const contract = saleContracts.create(ctx, data);
-    listings.update(ctx, contract.listingId, { status: "vendida" });
+  async closeSaleContract(
+    ctx: RepoContext,
+    data: Omit<SaleContract, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<SaleContract> {
+    const contract = await saleContracts.create(ctx, data);
+    await listings.update(ctx, contract.listingId, { status: "vendida" });
     return contract;
   },
 };

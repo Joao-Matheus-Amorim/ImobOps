@@ -3,48 +3,57 @@ import type {
   Installment,
   InstallmentStatus,
 } from "@/lib/types/domain";
-import { MockCollection, type RepoContext } from "./base";
+import { type RepoContext } from "./base";
+import { Collection } from "./collection";
 import { generateInstallments } from "./installment-logic";
 
-const contracts = new MockCollection<RentalContract>("rentalContracts");
-const installments = new MockCollection<Installment>("installments");
+const contracts = new Collection<RentalContract>("rentalContracts", "rental_contracts");
+const installments = new Collection<Installment>("installments", "installments");
 
 export const rentalsRepository = {
-  list(ctx: RepoContext): RentalContract[] {
-    return contracts.list(ctx).sort((a, b) => b.startDate.localeCompare(a.startDate));
+  async list(ctx: RepoContext): Promise<RentalContract[]> {
+    const rows = await contracts.list(ctx);
+    return rows.sort((a, b) => b.startDate.localeCompare(a.startDate));
   },
 
-  get(ctx: RepoContext, id: string): RentalContract | null {
+  get(ctx: RepoContext, id: string): Promise<RentalContract | null> {
     return contracts.find(ctx, id);
   },
 
-  create(ctx: RepoContext, data: Omit<RentalContract, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">): RentalContract {
+  create(
+    ctx: RepoContext,
+    data: Omit<RentalContract, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<RentalContract> {
     return contracts.create(ctx, data);
   },
 
-  update(ctx: RepoContext, id: string, patch: Partial<RentalContract>): RentalContract | null {
+  update(
+    ctx: RepoContext,
+    id: string,
+    patch: Partial<RentalContract>,
+  ): Promise<RentalContract | null> {
     return contracts.update(ctx, id, patch);
   },
 
   // --- Installments ---
 
-  listInstallments(ctx: RepoContext, contractId?: string): Installment[] {
-    return installments
-      .list(ctx, (i) => (contractId ? i.contractId === contractId : true))
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  async listInstallments(ctx: RepoContext, contractId?: string): Promise<Installment[]> {
+    const rows = await installments.list(ctx, (i) =>
+      contractId ? i.contractId === contractId : true,
+    );
+    return rows.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   },
 
-  generateInstallments(ctx: RepoContext, contractId: string): Installment[] {
-    const contract = contracts.find(ctx, contractId);
+  async generateInstallments(ctx: RepoContext, contractId: string): Promise<Installment[]> {
+    const contract = await contracts.find(ctx, contractId);
     if (!contract) return [];
     // Skip months that already have an installment.
-    const existing = new Set(
-      installments.list(ctx, (i) => i.contractId === contractId).map((i) => i.referenceMonth),
-    );
+    const current = await installments.list(ctx, (i) => i.contractId === contractId);
+    const existing = new Set(current.map((i) => i.referenceMonth));
     const fresh = generateInstallments(contract, ctx.tenancyId, ctx.userId).filter(
       (i) => !existing.has(i.referenceMonth),
     );
-    for (const i of fresh) installments.create(ctx, i);
+    for (const i of fresh) await installments.create(ctx, i);
     return this.listInstallments(ctx, contractId);
   },
 
@@ -53,7 +62,7 @@ export const rentalsRepository = {
     installmentId: string,
     paidAmount: number,
     receiptDocumentId?: string,
-  ): Installment | null {
+  ): Promise<Installment | null> {
     return installments.update(ctx, installmentId, {
       status: "pago" as InstallmentStatus,
       paidAt: new Date().toISOString(),
@@ -67,13 +76,12 @@ export const rentalsRepository = {
     ctx: RepoContext,
     installmentId: string,
     chargeId: string | null,
-  ): Installment | null {
+  ): Promise<Installment | null> {
     return installments.update(ctx, installmentId, { chargeId });
   },
 
-  listOverdue(ctx: RepoContext): Installment[] {
-    return installments
-      .list(ctx, (i) => i.status === "atrasado")
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  async listOverdue(ctx: RepoContext): Promise<Installment[]> {
+    const rows = await installments.list(ctx, (i) => i.status === "atrasado");
+    return rows.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   },
 };

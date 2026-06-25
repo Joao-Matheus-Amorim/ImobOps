@@ -11,7 +11,7 @@ import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("clients");
-  const client = clientsRepository.get(ctx, params.id);
+  const client = await clientsRepository.get(ctx, params.id);
   if (!client) notFound();
 
   return (

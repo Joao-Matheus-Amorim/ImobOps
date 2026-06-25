@@ -25,10 +25,10 @@ export function classifyMessage(body: string): TriageClassification {
 }
 
 // Pick the broker with the fewest assigned leads (round-robin-ish).
-function pickBroker(ctx: RepoContext): string | null {
+async function pickBroker(ctx: RepoContext): Promise<string | null> {
   const brokers = store.users.filter((u) => u.tenancyId === ctx.tenancyId && u.role === "broker" && u.active);
   if (brokers.length === 0) return null;
-  const leads = crmRepository.listLeads(ctx);
+  const leads = await crmRepository.listLeads(ctx);
   let best = brokers[0];
   let bestCount = Infinity;
   for (const b of brokers) {
@@ -48,14 +48,14 @@ export interface TriageResult {
 }
 
 // Run triage for an inbound message. Creates a lead for sales/rental intents.
-export function triageInbound(ctx: RepoContext, body: string): TriageResult {
+export async function triageInbound(ctx: RepoContext, body: string): Promise<TriageResult> {
   const classification = classifyMessage(body);
   const shouldCreateLead = classification === "locacao" || classification === "venda";
   if (!shouldCreateLead) {
     return { classification, leadId: null, assignedTo: null };
   }
-  const assignedTo = pickBroker(ctx);
-  const lead = crmRepository.createLead(ctx, {
+  const assignedTo = await pickBroker(ctx);
+  const lead = await crmRepository.createLead(ctx, {
     clientId: null,
     source: "whatsapp",
     interest: classification === "venda" ? "venda" : "locacao",

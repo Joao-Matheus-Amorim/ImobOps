@@ -14,7 +14,8 @@ import {
   DEFAULT_LATE_FEE_PCT,
   DEFAULT_LATE_INTEREST_PCT_MONTH,
 } from "@/lib/types/domain";
-import { MockCollection, type RepoContext } from "./base";
+import { type RepoContext } from "./base";
+import { Collection } from "./collection";
 import { rentalsRepository } from "./rentals.repository";
 import { financeRepository } from "./finance.repository";
 import { clientsRepository } from "./clients.repository";
@@ -27,8 +28,8 @@ import { whatsappRepository } from "./whatsapp.repository";
 import { renderTemplate } from "@/lib/whatsapp/templates";
 import { formatBRL, formatDate, round2 } from "@/lib/utils";
 
-const charges = new MockCollection<Charge>("charges");
-const reminders = new MockCollection<ChargeReminder>("chargeReminders");
+const charges = new Collection<Charge>("charges", "charges");
+const reminders = new Collection<ChargeReminder>("chargeReminders", "charge_reminders");
 
 function today(): string {
   return new Date().toISOString().slice(0, 10);
@@ -46,33 +47,34 @@ function withEffectiveStatus(charge: Charge, asOf = today()): ChargeView {
 export const billingRepository = {
   // --- Reads ---
 
-  list(ctx: RepoContext): ChargeView[] {
-    return charges
-      .list(ctx)
+  async list(ctx: RepoContext): Promise<ChargeView[]> {
+    const rows = await charges.list(ctx);
+    return rows
       .sort((a, b) => b.dueDate.localeCompare(a.dueDate))
       .map((c) => withEffectiveStatus(c));
   },
 
-  get(ctx: RepoContext, id: string): ChargeView | null {
-    const c = charges.find(ctx, id);
+  async get(ctx: RepoContext, id: string): Promise<ChargeView | null> {
+    const c = await charges.find(ctx, id);
     return c ? withEffectiveStatus(c) : null;
   },
 
-  forInstallment(ctx: RepoContext, installmentId: string): ChargeView | null {
-    const c = charges
-      .list(ctx, (x) => x.sourceId === installmentId && x.status !== "cancelada")
-      .at(0);
+  async forInstallment(ctx: RepoContext, installmentId: string): Promise<ChargeView | null> {
+    const list = await charges.list(
+      ctx,
+      (x) => x.sourceId === installmentId && x.status !== "cancelada",
+    );
+    const c = list.at(0);
     return c ? withEffectiveStatus(c) : null;
   },
 
   // Up-to-date late breakdown (multa + juros) for an installment as of today.
   // Returns null when not late or the installment/contract is missing.
-  lateBreakdownForInstallment(ctx: RepoContext, installmentId: string) {
-    const installment = rentalsRepository
-      .listInstallments(ctx)
-      .find((i) => i.id === installmentId);
+  async lateBreakdownForInstallment(ctx: RepoContext, installmentId: string) {
+    const installmentList = await rentalsRepository.listInstallments(ctx);
+    const installment = installmentList.find((i) => i.id === installmentId);
     if (!installment || installment.status === "pago") return null;
-    const contract = rentalsRepository.get(ctx, installment.contractId);
+    const contract = await rentalsRepository.get(ctx, installment.contractId);
     const b = computeLateCharge(
       installment.amount,
       installment.dueDate,
@@ -92,17 +94,16 @@ export const billingRepository = {
     installmentId: string,
     method: ChargeMethod,
   ): Promise<ChargeView | null> {
-    const existing = this.forInstallment(ctx, installmentId);
+    const existing = await this.forInstallment(ctx, installmentId);
     if (existing && existing.status !== "falha") return existing;
 
-    const installment = rentalsRepository
-      .listInstallments(ctx)
-      .find((i) => i.id === installmentId);
+    const installmentList = await rentalsRepository.listInstallments(ctx);
+    const installment = installmentList.find((i) => i.id === installmentId);
     if (!installment) return null;
 
-    const contract = rentalsRepository.get(ctx, installment.contractId);
+    const contract = await rentalsRepository.get(ctx, installment.contractId);
     const tenant = contract
-      ? clientsRepository.get(ctx, contract.tenantClientId)
+      ? await clientsRepository.get(ctx, contract.tenantClientId)
       : null;
 
     // If the installment is already past due, the boleto carries the encargos
@@ -133,16 +134,18 @@ export const billingRepository = {
 
     // Link the charge to the installment (1:1 active charge).
     if (charge.status !== "falha") {
-      rentalsRepository.setInstallmentCharge(ctx, installment.id, charge.id);
+      await rentalsRepository.setInstallmentCharge(ctx, installment.id, charge.id);
     }
 
     return charge;
   },
 
-  forCondoFee(ctx: RepoContext, feeId: string): ChargeView | null {
-    const c = charges
-      .list(ctx, (x) => x.sourceId === feeId && x.status !== "cancelada")
-      .at(0);
+  async forCondoFee(ctx: RepoContext, feeId: string): Promise<ChargeView | null> {
+    const list = await charges.list(
+      ctx,
+      (x) => x.sourceId === feeId && x.status !== "cancelada",
+    );
+    const c = list.at(0);
     return c ? withEffectiveStatus(c) : null;
   },
 
@@ -153,14 +156,14 @@ export const billingRepository = {
     feeId: string,
     method: ChargeMethod,
   ): Promise<ChargeView | null> {
-    const existing = this.forCondoFee(ctx, feeId);
+    const existing = await this.forCondoFee(ctx, feeId);
     if (existing && existing.status !== "falha") return existing;
 
-    const fee = condosRepository.getFee(ctx, feeId);
+    const fee = await condosRepository.getFee(ctx, feeId);
     if (!fee) return null;
-    const unit = condosRepository.getUnit(ctx, fee.unitId);
+    const unit = await condosRepository.getUnit(ctx, fee.unitId);
     const payerId = unit?.currentResidentClientId ?? unit?.ownerClientId ?? null;
-    const payer = payerId ? clientsRepository.get(ctx, payerId) : null;
+    const payer = payerId ? await clientsRepository.get(ctx, payerId) : null;
 
     const charge = await this.createChargeRecord(ctx, {
       sourceType: "condo_fee",
@@ -175,7 +178,7 @@ export const billingRepository = {
     });
 
     if (charge.status !== "falha") {
-      condosRepository.setFeeCharge(ctx, fee.id, charge.id);
+      await condosRepository.setFeeCharge(ctx, fee.id, charge.id);
     }
     return charge;
   },
@@ -191,7 +194,7 @@ export const billingRepository = {
       description?: string;
     },
   ): Promise<ChargeView | null> {
-    const client = clientsRepository.get(ctx, input.clientId);
+    const client = await clientsRepository.get(ctx, input.clientId);
     if (!client) return null;
 
     return this.createChargeRecord(ctx, {
@@ -255,7 +258,7 @@ export const billingRepository = {
         description: input.description,
       });
       return withEffectiveStatus(
-        charges.create(ctx, {
+        await charges.create(ctx, {
           ...base,
           status: "pendente",
           externalId: result.externalId,
@@ -265,7 +268,7 @@ export const billingRepository = {
       );
     } catch {
       return withEffectiveStatus(
-        charges.create(ctx, {
+        await charges.create(ctx, {
           ...base,
           status: "falha",
           externalId: null,
@@ -280,19 +283,18 @@ export const billingRepository = {
 
   // Mark a charge paid by its gateway externalId. Idempotent: a charge already
   // paid is returned unchanged. Drives installment payment + repasse.
-  reconcileByExternalId(
+  async reconcileByExternalId(
     ctx: RepoContext,
     externalId: string,
     paidAmount: number,
     paidAtIso: string,
-  ): ChargeView | null {
-    const charge = charges
-      .list(ctx, (c) => c.externalId === externalId)
-      .at(0);
+  ): Promise<ChargeView | null> {
+    const list = await charges.list(ctx, (c) => c.externalId === externalId);
+    const charge = list.at(0);
     if (!charge) return null;
     if (charge.status === "paga") return withEffectiveStatus(charge); // idempotent
 
-    const updated = charges.update(ctx, charge.id, {
+    const updated = await charges.update(ctx, charge.id, {
       status: "paga",
       paidAt: paidAtIso,
       paidAmount: round2(paidAmount),
@@ -304,27 +306,26 @@ export const billingRepository = {
     //  - condo_fee   → marca taxa paga (receita do condomínio, sem repasse).
     //  - avulsa      → nada além da baixa (receita direta).
     if (updated.sourceType === "installment") {
-      const installment = rentalsRepository
-        .listInstallments(ctx)
-        .find((i) => i.id === updated.sourceId);
+      const installmentList = await rentalsRepository.listInstallments(ctx);
+      const installment = installmentList.find((i) => i.id === updated.sourceId);
       if (installment) {
-        rentalsRepository.markInstallmentPaid(ctx, installment.id, round2(paidAmount));
-        financeRepository.computeRepasse(
+        await rentalsRepository.markInstallmentPaid(ctx, installment.id, round2(paidAmount));
+        await financeRepository.computeRepasse(
           ctx,
           installment.contractId,
           installment.referenceMonth,
         );
       }
     } else if (updated.sourceType === "condo_fee") {
-      condosRepository.markFeePaid(ctx, updated.sourceId);
+      await condosRepository.markFeePaid(ctx, updated.sourceId);
     }
 
     return withEffectiveStatus(updated);
   },
 
   // Manual reconciliation from the UI (fallback when no gateway webhook).
-  markPaidManually(ctx: RepoContext, chargeId: string): ChargeView | null {
-    const charge = charges.find(ctx, chargeId);
+  async markPaidManually(ctx: RepoContext, chargeId: string): Promise<ChargeView | null> {
+    const charge = await charges.find(ctx, chargeId);
     if (!charge || !charge.externalId) return null;
     return this.reconcileByExternalId(
       ctx,
@@ -336,16 +337,16 @@ export const billingRepository = {
 
   // --- Reminders (idempotency for the ladder) ---
 
-  reminderAlreadySent(
+  async reminderAlreadySent(
     ctx: RepoContext,
     chargeId: string,
     trigger: ReminderTrigger,
-  ): boolean {
-    return (
-      reminders
-        .list(ctx, (r) => r.chargeId === chargeId && r.trigger === trigger)
-        .length > 0
+  ): Promise<boolean> {
+    const list = await reminders.list(
+      ctx,
+      (r) => r.chargeId === chargeId && r.trigger === trigger,
     );
+    return list.length > 0;
   },
 
   recordReminder(
@@ -353,7 +354,7 @@ export const billingRepository = {
     chargeId: string,
     trigger: ReminderTrigger,
     templateKey: string,
-  ): ChargeReminder {
+  ): Promise<ChargeReminder> {
     return reminders.create(ctx, {
       chargeId,
       trigger,
@@ -372,11 +373,11 @@ export const billingRepository = {
     ctx: RepoContext,
     chargeId: string,
   ): Promise<{ sent: boolean; reason?: string }> {
-    const charge = charges.find(ctx, chargeId);
+    const charge = await charges.find(ctx, chargeId);
     if (!charge) return { sent: false, reason: "cobrança não encontrada" };
 
     const client = charge.clientId
-      ? clientsRepository.get(ctx, charge.clientId)
+      ? await clientsRepository.get(ctx, charge.clientId)
       : null;
     const phone = client?.whatsapp ?? client?.phone ?? null;
     if (!phone) return { sent: false, reason: "cliente sem telefone" };
@@ -393,8 +394,8 @@ export const billingRepository = {
 
     try {
       await getWhatsAppAdapter().sendMessage(phone, fullBody);
-      const conversation = whatsappRepository.upsertConversation(ctx, phone, "financeiro");
-      whatsappRepository.appendMessage(ctx, {
+      const conversation = await whatsappRepository.upsertConversation(ctx, phone, "financeiro");
+      await whatsappRepository.appendMessage(ctx, {
         conversationId: conversation.id,
         direction: "out",
         body: fullBody,

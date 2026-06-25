@@ -31,13 +31,18 @@ type ClientHealth = {
   paymentLabel: string;
 };
 
-function buildClientHealth(ctx: { tenancyId: string; userId: string }, clientId: string): ClientHealth {
-  const contracts = rentalsRepository
-    .list(ctx)
-    .filter((c) => c.tenantClientId === clientId || c.landlordClientId === clientId);
-  const installments = contracts.flatMap((contract) =>
-    rentalsRepository.listInstallments(ctx, contract.id),
+async function buildClientHealth(
+  ctx: { tenancyId: string; userId: string },
+  clientId: string,
+): Promise<ClientHealth> {
+  const allContracts = await rentalsRepository.list(ctx);
+  const contracts = allContracts.filter(
+    (c) => c.tenantClientId === clientId || c.landlordClientId === clientId,
   );
+  const installmentLists = await Promise.all(
+    contracts.map((contract) => rentalsRepository.listInstallments(ctx, contract.id)),
+  );
+  const installments = installmentLists.flat();
   const open = installments.filter((i) => i.status === "a_vencer" || i.status === "atrasado");
   const overdue = installments.filter((i) => i.status === "atrasado");
   const next = open.find((i) => i.status === "a_vencer") ?? open[0];
@@ -57,8 +62,11 @@ function buildClientHealth(ctx: { tenancyId: string; userId: string }, clientId:
 export default async function ClientsPage() {
   const { ctx } = await guardPage("clients");
   const principal = await getPrincipalCan();
-  const clients = filterAllowed(principal, "clients", clientsRepository.list(ctx));
+  const clients = filterAllowed(principal, "clients", await clientsRepository.list(ctx));
   const canCreate = Boolean(principal);
+  const healthByClient = new Map(
+    await Promise.all(clients.map(async (c) => [c.id, await buildClientHealth(ctx, c.id)] as const)),
+  );
 
   return (
     <div className="space-y-7">
@@ -121,7 +129,7 @@ export default async function ClientsPage() {
             <div className="divide-y divide-primary/10">
               {clients.map((c) => {
                 const primaryRole = c.rolesInBusiness[0];
-                const health = buildClientHealth(ctx, c.id);
+                const health = healthByClient.get(c.id)!;
                 const healthBadge = health.score === "critico" ? "destructive" : "default";
 
                 return (

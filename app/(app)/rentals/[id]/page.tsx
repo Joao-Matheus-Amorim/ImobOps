@@ -10,13 +10,13 @@ import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export default async function RentalDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("rentals");
-  const contract = rentalsRepository.get(ctx, params.id);
+  const contract = await rentalsRepository.get(ctx, params.id);
   if (!contract) notFound();
 
-  const property = propertiesRepository.get(ctx, contract.propertyId);
-  const landlord = clientsRepository.get(ctx, contract.landlordClientId);
-  const tenant = clientsRepository.get(ctx, contract.tenantClientId);
-  const installments = rentalsRepository.listInstallments(ctx, contract.id);
+  const property = await propertiesRepository.get(ctx, contract.propertyId);
+  const landlord = await clientsRepository.get(ctx, contract.landlordClientId);
+  const tenant = await clientsRepository.get(ctx, contract.tenantClientId);
+  const installments = await rentalsRepository.listInstallments(ctx, contract.id);
 
   return (
     <div className="space-y-4">
