@@ -6,6 +6,11 @@ function toSnake(key: string): string {
   return key.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`);
 }
 
+// Public single-key variant for building SQL column references from domain fields.
+export function toSnakeKey(key: string): string {
+  return toSnake(key);
+}
+
 function toCamel(key: string): string {
   return key.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
 }

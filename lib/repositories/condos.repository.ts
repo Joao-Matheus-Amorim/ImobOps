@@ -53,10 +53,13 @@ export const condosRepository = {
   // --- Fees ---
 
   async listFees(ctx: RepoContext, condoId?: string): Promise<CondoFee[]> {
-    const unitIds = condoId
-      ? new Set((await this.listUnits(ctx, condoId)).map((u) => u.id))
-      : null;
-    const rows = await fees.list(ctx, (f) => (unitIds ? unitIds.has(f.unitId) : true));
+    if (condoId) {
+      const unitIds = (await this.listUnits(ctx, condoId)).map((u) => u.id);
+      if (unitIds.length === 0) return [];
+      const rows = await fees.list(ctx, undefined, { in: { unitId: unitIds } });
+      return rows.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    }
+    const rows = await fees.list(ctx);
     return rows.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   },
 
