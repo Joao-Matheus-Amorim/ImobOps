@@ -208,8 +208,35 @@ CRON_SECRET=             # protege /api/cron/billing-daily
   parcela paga → repasse. Testado em mock.
 - **Onda D — Régua + cron:** `reminders.ts` + `/api/cron/billing-daily` +
   `vercel.json`. Templates completados.
-- **Onda E — Asaas real:** `asaas.ts` implementa a interface; smoke em sandbox;
-  documentação de configuração. *(Só aqui entra credencial/custo.)*
+- **Onda E — Asaas real:** ✅ `asaas.ts` implementa a interface real (HTTP v3:
+  `ensureCustomer` → `POST /payments` → `GET /pixQrCode`; `DELETE /payments/{id}`),
+  com header `access_token` e fallback mock intacto. Falta apenas configuração e
+  smoke em sandbox (ação operacional, não código — ver §11).
+
+---
+
+## 11. Ativando o Asaas (ação operacional)
+
+O código já emite de verdade assim que houver chave. Sem `ASAAS_API_KEY`, o app
+continua subindo em modo mock — nada quebra.
+
+1. Criar conta no Asaas e obter a **API Key** (sandbox para testar, produção após
+   aprovação do KYC da imobiliária).
+2. Preencher no ambiente (`.env.local` em dev, variáveis na Vercel em prod):
+   ```
+   ASAAS_API_KEY=<sua chave>
+   ASAAS_BASE_URL=https://sandbox.asaas.com/api/v3   # ou https://api.asaas.com/v3 em prod
+   ASAAS_WEBHOOK_TOKEN=<token forte>
+   CRON_SECRET=<segredo forte>
+   ```
+3. No painel Asaas, cadastrar o **webhook** apontando para
+   `https://<seu-dominio>/api/billing/webhook`, enviando o header
+   `asaas-access-token` = `ASAAS_WEBHOOK_TOKEN`.
+4. Smoke: emitir um boleto/PIX pela tela de Finanças → pagar no sandbox → confirmar
+   que o webhook deu baixa na parcela e gerou o repasse.
+
+> **Bloqueio externo conhecido:** boleto registrado em **produção** depende da
+> aprovação da conta Asaas (KYC). O sandbox funciona na hora. Isso não é código.
 
 Cortes seguintes (fora deste plano): condomínio, comissões, multa/juros, split
 automático, canal e-mail.

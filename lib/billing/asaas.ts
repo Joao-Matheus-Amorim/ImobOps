@@ -11,45 +11,118 @@ import type {
 } from "./provider";
 import { MockBillingAdapter } from "./mock";
 
-// Asaas billing types maps our internal method to Asaas billingType.
+// Maps our internal method to the Asaas billingType. PIX/boleto share the BOLETO
+// flow at creation (Asaas returns both a bank slip and a PIX QR for it); we request
+// the explicit type so the right payload is populated.
 const BILLING_TYPE: Record<CreateChargeRequest["method"], string> = {
   boleto: "BOLETO",
   pix: "PIX",
   cartao: "CREDIT_CARD",
 };
 
+// Strip non-digits from a cpf/cnpj for Asaas.
+function onlyDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export class AsaasBillingAdapter implements BillingAdapter {
   readonly provider = "asaas" as const;
   private readonly fallback = new MockBillingAdapter();
 
-  // baseUrl is wired in Onda E (live HTTP calls); kept for typed configuration.
   constructor(
     private readonly apiKey = process.env.ASAAS_API_KEY ?? "",
     private readonly baseUrl = process.env.ASAAS_BASE_URL ??
       "https://api.asaas.com/v3",
   ) {}
 
-  // The payments endpoint used by Onda E.
-  private get paymentsUrl(): string {
-    return `${this.baseUrl}/payments`;
-  }
-
   private get configured(): boolean {
     return Boolean(this.apiKey);
   }
 
+  // Authenticated JSON request against the Asaas API. Throws on non-2xx with the
+  // gateway error message so the repository can record a "falha" charge.
+  private async api<T>(
+    path: string,
+    init: { method: string; body?: unknown },
+  ): Promise<T> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method: init.method,
+      headers: {
+        "content-type": "application/json",
+        access_token: this.apiKey,
+      },
+      body: init.body ? JSON.stringify(init.body) : undefined,
+    });
+    const text = await res.text();
+    const json = text ? JSON.parse(text) : {};
+    if (!res.ok) {
+      const msg =
+        json?.errors?.[0]?.description ?? `Asaas ${res.status} em ${path}`;
+      throw new Error(msg);
+    }
+    return json as T;
+  }
+
+  // Find an existing customer by document, or create one. Asaas requires a
+  // customer id to open a payment.
+  private async ensureCustomer(req: CreateChargeRequest): Promise<string> {
+    const doc = req.customerDocument ? onlyDigits(req.customerDocument) : "";
+    if (doc) {
+      const found = await this.api<{ data?: Array<{ id: string }> }>(
+        `/customers?cpfCnpj=${doc}`,
+        { method: "GET" },
+      );
+      const existing = found.data?.[0]?.id;
+      if (existing) return existing;
+    }
+    const created = await this.api<{ id: string }>("/customers", {
+      method: "POST",
+      body: {
+        name: req.customerName ?? "Cliente",
+        cpfCnpj: doc || undefined,
+      },
+    });
+    return created.id;
+  }
+
   async createCharge(req: CreateChargeRequest): Promise<CreateChargeResult> {
     if (!this.configured) return this.fallback.createCharge(req);
-    // Onda E: POST `${paymentsUrl}` with access_token header and
-    // { billingType: BILLING_TYPE[req.method], value, dueDate, externalReference }.
-    void BILLING_TYPE;
-    void this.paymentsUrl;
-    throw new Error("AsaasBillingAdapter.createCharge ainda não implementado (Onda E).");
+
+    const customer = await this.ensureCustomer(req);
+    const payment = await this.api<{ id: string; bankSlipUrl?: string | null }>(
+      "/payments",
+      {
+        method: "POST",
+        body: {
+          customer,
+          billingType: BILLING_TYPE[req.method],
+          value: req.amount,
+          dueDate: req.dueDate,
+          description: req.description,
+          externalReference: req.reference,
+        },
+      },
+    );
+
+    let pixPayload: string | null = null;
+    if (req.method === "pix") {
+      const pix = await this.api<{ payload?: string }>(
+        `/payments/${payment.id}/pixQrCode`,
+        { method: "GET" },
+      ).catch(() => ({ payload: undefined }));
+      pixPayload = pix.payload ?? null;
+    }
+
+    return {
+      externalId: payment.id,
+      boletoUrl: payment.bankSlipUrl ?? null,
+      pixPayload,
+    };
   }
 
   async cancelCharge(externalId: string): Promise<void> {
     if (!this.configured) return this.fallback.cancelCharge(externalId);
-    throw new Error("AsaasBillingAdapter.cancelCharge ainda não implementado (Onda E).");
+    await this.api(`/payments/${externalId}`, { method: "DELETE" });
   }
 
   // Asaas posts { event, payment: { id, value, paymentDate, externalReference } }.
