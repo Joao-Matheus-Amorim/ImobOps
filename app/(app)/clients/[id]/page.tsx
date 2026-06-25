@@ -9,8 +9,8 @@ import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { BUSINESS_ROLE_LABELS } from "@/lib/types/domain";
 import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 
-export default function ClientDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = guardPage("clients");
+export default async function ClientDetailPage({ params }: { params: { id: string } }) {
+  const { ctx } = await guardPage("clients");
   const client = clientsRepository.get(ctx, params.id);
   if (!client) notFound();
 

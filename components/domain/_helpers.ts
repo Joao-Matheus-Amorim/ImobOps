@@ -5,9 +5,12 @@ import type { Principal } from "@/lib/permissions/enforce";
 
 export { filterAllowedFn as filterAllowed };
 
-// The current principal (for scope filtering and gating inside pages).
-export function getPrincipalCan(): Principal {
-  return getPrincipal();
+// The current principal (for scope filtering and gating inside pages). Pages call
+// this after guardPage, which already redirects unauthenticated users, so a null
+// here means no session — return a safe empty principal that sees nothing.
+export async function getPrincipalCan(): Promise<Principal> {
+  const p = await getPrincipal();
+  return p ?? { id: "", role: "viewer", teamMemberIds: [] };
 }
 
 export const can = canFn;

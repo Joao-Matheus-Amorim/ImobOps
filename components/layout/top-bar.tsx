@@ -3,7 +3,8 @@ import { Bell, Command, Search } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { RoleSwitcher } from "./role-switcher";
-import { APP_NAME } from "@/lib/constants";
+import { LogoutButton } from "./logout-button";
+import { APP_NAME, isSupabaseConfigured } from "@/lib/constants";
 import { ROLE_LABELS, type Role } from "@/lib/types/permissions";
 import { routes } from "@/lib/routes";
 
@@ -40,9 +41,12 @@ export function TopBar({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden md:block">
-            <RoleSwitcher current={role} />
-          </div>
+          {/* Role switcher is a demo-mode affordance only. */}
+          {!isSupabaseConfigured() ? (
+            <div className="hidden md:block">
+              <RoleSwitcher current={role} />
+            </div>
+          ) : null}
           <ThemeToggle />
           <button className="relative grid size-10 place-items-center rounded-full border border-primary/20 bg-card/45 text-muted-foreground transition hover:border-primary/55 hover:text-primary hover:shadow-glow-sm">
             <Bell className="size-4" />
@@ -57,6 +61,7 @@ export function TopBar({
               <p className="text-xs text-muted-foreground">{ROLE_LABELS[role]}</p>
             </div>
           </div>
+          <LogoutButton />
         </div>
       </div>
     </header>

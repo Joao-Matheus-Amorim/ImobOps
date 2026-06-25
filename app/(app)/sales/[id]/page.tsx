@@ -8,8 +8,8 @@ import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { formatBRL, formatDate } from "@/lib/utils";
 
-export default function SaleDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = guardPage("sales");
+export default async function SaleDetailPage({ params }: { params: { id: string } }) {
+  const { ctx } = await guardPage("sales");
   const listing = salesRepository.getListing(ctx, params.id);
   if (!listing) notFound();
 

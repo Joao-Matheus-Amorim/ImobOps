@@ -24,8 +24,11 @@ Use as ferramentas disponíveis. Ações de escrita exigem confirmação do usu�
 Responda em português brasileiro, de forma objetiva.`;
 
 export async function POST(request: Request) {
-  const principal = getPrincipal();
-  const user = getSessionUser();
+  const principal = await getPrincipal();
+  const user = await getSessionUser();
+  if (!principal || !user) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
 
   const json = await request.json().catch(() => ({}));
   const parsed = bodySchema.safeParse(json);

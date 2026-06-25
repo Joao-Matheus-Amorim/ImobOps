@@ -15,8 +15,11 @@ const bodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const principal = getPrincipal();
-  const user = getSessionUser();
+  const principal = await getPrincipal();
+  const user = await getSessionUser();
+  if (!principal || !user) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
   if (!can(principal, "whatsapp", "create")) {
     return NextResponse.json({ error: "Permissão negada." }, { status: 403 });
   }

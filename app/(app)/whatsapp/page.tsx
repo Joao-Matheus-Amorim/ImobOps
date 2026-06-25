@@ -24,8 +24,8 @@ function displayName(phone: string, index: number) {
   return names[index] ?? phone;
 }
 
-export default function WhatsAppPage() {
-  const { ctx } = guardPage("whatsapp");
+export default async function WhatsAppPage() {
+  const { ctx } = await guardPage("whatsapp");
   const conversations = whatsappRepository.listConversations(ctx);
   const configured = isWhatsAppConfigured();
 

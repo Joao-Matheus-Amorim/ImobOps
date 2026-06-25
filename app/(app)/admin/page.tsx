@@ -11,8 +11,8 @@ import { isSupabaseConfigured, aiProvider, isWhatsAppConfigured } from "@/lib/co
 
 export const metadata = { title: "Administração" };
 
-export default function AdminPage() {
-  const { ctx } = guardPage("admin");
+export default async function AdminPage() {
+  const { ctx } = await guardPage("admin");
   const users = store.users.filter((u) => u.tenancyId === ctx.tenancyId);
   const aiActions = aiActionsRepository.list(ctx).slice(0, 8);
 

@@ -9,9 +9,9 @@ import { FUNNEL_ORDER, FUNNEL_STAGE_LABELS } from "@/lib/types/domain";
 
 export const metadata = { title: "CRM" };
 
-export default function CrmPage() {
-  const { ctx } = guardPage("crm");
-  const principal = getPrincipalCan();
+export default async function CrmPage() {
+  const { ctx } = await guardPage("crm");
+  const principal = await getPrincipalCan();
   const leads = filterAllowed(principal, "crm", crmRepository.listLeads(ctx));
 
   return (

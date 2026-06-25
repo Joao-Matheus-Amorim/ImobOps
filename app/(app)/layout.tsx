@@ -1,13 +1,15 @@
+import { redirect } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { getSessionUser, getPrincipal } from "@/lib/session";
 import { can } from "@/lib/permissions/enforce";
-import { PRIMARY_NAV, NAV_GROUPS } from "@/lib/routes";
+import { PRIMARY_NAV, NAV_GROUPS, routes } from "@/lib/routes";
 
 // Server layout for the authenticated app. Filters nav entries by permission so
 // the UI hides what the user cannot access.
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = getSessionUser();
-  const principal = getPrincipal();
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await getSessionUser();
+  const principal = await getPrincipal();
+  if (!user || !principal) redirect(routes.login);
 
   const primaryNav = PRIMARY_NAV.filter((e) => can(principal, e.feature, "view"));
 

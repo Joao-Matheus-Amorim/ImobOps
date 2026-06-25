@@ -8,8 +8,8 @@ import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
-export default function RentalDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = guardPage("rentals");
+export default async function RentalDetailPage({ params }: { params: { id: string } }) {
+  const { ctx } = await guardPage("rentals");
   const contract = rentalsRepository.get(ctx, params.id);
   if (!contract) notFound();
 

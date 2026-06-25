@@ -4,13 +4,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { financeRepository } from "@/lib/repositories/finance.repository";
-import { getSessionUser } from "@/lib/session";
+import { requireContext } from "@/lib/api-auth";
 
 const bodySchema = z.object({ commissionId: z.string().min(1) });
 
 export async function POST(request: Request) {
-  const user = getSessionUser();
-  const ctx = { tenancyId: user.tenancyId, userId: user.id };
+  const auth = await requireContext();
+  if ("error" in auth) return auth.error;
+  const { ctx } = auth;
 
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);

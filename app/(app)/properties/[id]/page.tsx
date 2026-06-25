@@ -7,8 +7,8 @@ import { guardPage } from "@/lib/guard-page";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 
-export default function PropertyDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = guardPage("properties");
+export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
+  const { ctx } = await guardPage("properties");
   const property = propertiesRepository.get(ctx, params.id);
   if (!property) notFound();
   const owner = property.ownerClientId ? clientsRepository.get(ctx, property.ownerClientId) : null;

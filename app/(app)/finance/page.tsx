@@ -22,8 +22,8 @@ import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export const metadata = { title: "Finanças" };
 
-export default function FinancePage() {
-  const { ctx } = guardPage("finance");
+export default async function FinancePage() {
+  const { ctx } = await guardPage("finance");
   const summary = financeRepository.summary(ctx);
   const overdue = rentalsRepository.listOverdue(ctx);
 

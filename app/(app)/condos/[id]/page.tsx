@@ -12,8 +12,8 @@ import {
 } from "@/components/domain/condos/condo-fees-panel";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
-export default function CondoDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = guardPage("condos");
+export default async function CondoDetailPage({ params }: { params: { id: string } }) {
+  const { ctx } = await guardPage("condos");
   const condo = condosRepository.get(ctx, params.id);
   if (!condo) notFound();
 

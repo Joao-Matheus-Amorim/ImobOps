@@ -11,9 +11,9 @@ import { routes } from "@/lib/routes";
 
 export const metadata = { title: "Imóveis" };
 
-export default function PropertiesPage() {
-  const { ctx } = guardPage("properties");
-  const principal = getPrincipalCan();
+export default async function PropertiesPage() {
+  const { ctx } = await guardPage("properties");
+  const principal = await getPrincipalCan();
   const properties = filterAllowed(principal, "properties", propertiesRepository.list(ctx));
 
   return (

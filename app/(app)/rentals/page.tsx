@@ -12,8 +12,8 @@ import { routes } from "@/lib/routes";
 
 export const metadata = { title: "Locação" };
 
-export default function RentalsPage() {
-  const { ctx } = guardPage("rentals");
+export default async function RentalsPage() {
+  const { ctx } = await guardPage("rentals");
   const contracts = rentalsRepository.list(ctx);
 
   return (

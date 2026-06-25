@@ -24,8 +24,11 @@ export async function POST(
   request: Request,
   { params }: { params: { tool: string } },
 ) {
-  const principal = getPrincipal();
-  const user = getSessionUser();
+  const principal = await getPrincipal();
+  const user = await getSessionUser();
+  if (!principal || !user) {
+    return NextResponse.json({ ok: false, error: "Não autenticado." }, { status: 401 });
+  }
   const tool = getTool(params.tool);
   if (!tool) {
     return NextResponse.json({ ok: false, error: "Tool não encontrada." }, { status: 404 });

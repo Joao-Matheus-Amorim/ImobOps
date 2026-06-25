@@ -54,9 +54,9 @@ function buildClientHealth(ctx: { tenancyId: string; userId: string }, clientId:
   };
 }
 
-export default function ClientsPage() {
-  const { ctx } = guardPage("clients");
-  const principal = getPrincipalCan();
+export default async function ClientsPage() {
+  const { ctx } = await guardPage("clients");
+  const principal = await getPrincipalCan();
   const clients = filterAllowed(principal, "clients", clientsRepository.list(ctx));
   const canCreate = Boolean(principal);
 

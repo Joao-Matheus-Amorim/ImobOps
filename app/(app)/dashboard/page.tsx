@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSessionUser } from "@/lib/session";
+import { routes } from "@/lib/routes";
 import { buildDashboardData } from "@/components/domain/dashboard/dashboard-data";
 import {
   AdminDashboard,
@@ -20,8 +22,9 @@ const GREETING: Record<string, string> = {
   viewer: "Resumo da operação",
 };
 
-export default function DashboardPage() {
-  const user = getSessionUser();
+export default async function DashboardPage() {
+  const user = await getSessionUser();
+  if (!user) redirect(routes.login);
   const ctx = { tenancyId: user.tenancyId, userId: user.id };
   const data = buildDashboardData(ctx);
 

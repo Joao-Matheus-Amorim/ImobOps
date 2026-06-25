@@ -69,8 +69,8 @@ function SummaryCard({
   );
 }
 
-export default function CalendarPage() {
-  guardPage("calendar");
+export default async function CalendarPage() {
+  await guardPage("calendar");
 
   return (
     <div className="space-y-7">

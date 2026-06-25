@@ -1,15 +1,10 @@
-import Link from "next/link";
 import { Building2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { APP_NAME, APP_TAGLINE, isSupabaseConfigured } from "@/lib/constants";
-import { routes } from "@/lib/routes";
+import { LoginForm } from "@/components/domain/auth/login-form";
 
 export const metadata = { title: "Entrar" };
 
-// Login screen. In mock mode any credentials proceed straight to the dashboard.
 export default function LoginPage() {
   const mock = !isSupabaseConfigured();
   return (
@@ -24,23 +19,8 @@ export default function LoginPage() {
         </div>
 
         <Card>
-          <CardContent className="space-y-4 pt-6">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" placeholder="voce@imobiliaria.com" defaultValue="admin@imobops.demo" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" placeholder="••••••••" defaultValue="demo" />
-            </div>
-            <Button asChild className="w-full" size="lg">
-              <Link href={routes.dashboard}>Entrar</Link>
-            </Button>
-            {mock ? (
-              <p className="text-center text-xs text-muted-foreground">
-                Modo demonstração — sem Supabase configurado. Qualquer credencial entra.
-              </p>
-            ) : null}
+          <CardContent className="pt-6">
+            <LoginForm mock={mock} />
           </CardContent>
         </Card>
       </div>

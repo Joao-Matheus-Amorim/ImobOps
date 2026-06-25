@@ -12,8 +12,8 @@ import { routes } from "@/lib/routes";
 
 export const metadata = { title: "Vendas" };
 
-export default function SalesPage() {
-  const { ctx } = guardPage("sales");
+export default async function SalesPage() {
+  const { ctx } = await guardPage("sales");
   const listings = salesRepository.listListings(ctx);
 
   return (

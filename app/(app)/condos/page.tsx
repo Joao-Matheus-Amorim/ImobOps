@@ -10,8 +10,8 @@ import { routes } from "@/lib/routes";
 
 export const metadata = { title: "Condomínios" };
 
-export default function CondosPage() {
-  const { ctx } = guardPage("condos");
+export default async function CondosPage() {
+  const { ctx } = await guardPage("condos");
   const condos = condosRepository.list(ctx);
 
   return (
