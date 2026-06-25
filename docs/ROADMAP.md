@@ -113,19 +113,32 @@ repositories.
 
 ---
 
-## Corte 7 — Cobrança e repasse operacionais ⬜
+## Corte 7 — Cobrança e repasse operacionais (Asaas) ⬜
 
-**Objetivo:** ciclo financeiro completo em produção.
+**Objetivo:** ciclo de cobrança de **locação** automatizado — boleto/PIX, baixa por
+webhook e repasse — via gateway Asaas, mantendo o princípio mock-first. **Prioridade
+nº 1 do produto.** Plano detalhado: [pm/07_PLANO_DE_COBRANCA.md](pm/07_PLANO_DE_COBRANCA.md).
 
-**Escopo:**
-- Upload de comprovante para Storage e vínculo à parcela.
-- Sequência de lembretes via templates (3 dias / vencimento / 1º / 2º aviso).
-- Geração e baixa de repasses com comprovante.
+**Escopo (1º corte — somente locação):**
+- Entidade `Charge` + adapter `lib/billing` (Asaas; mock sem env), espelhando os
+  adapters de WhatsApp/IA.
+- Emissão de boleto registrado/PIX para a parcela; `boletoUrl`/`pixPayload`
+  persistidos.
+- Webhook de pagamento (`/api/billing/webhook`) → baixa automática **idempotente** →
+  repasse pendente.
+- Status `vencida`/`atrasado` calculado **na leitura** (correto sem depender de cron).
+- Régua de lembretes WhatsApp via Vercel Cron (D-3 / vencimento / D+1 / D+5).
+- UI de cobrança na página de Finanças (emitir, status, baixa manual de fallback).
 
 **Critérios de aceite:**
-- Marcar parcela paga atualiza status e dispara repasse.
-- Lembretes enviados conforme cronograma.
-- Inadimplência reflete em tempo real no dashboard.
+- App ainda sobe sem nenhuma env (billing em mock); build/typecheck/lint/test verdes.
+- Emitir cobrança cria `Charge` vinculada à parcela (payload determinístico em mock).
+- Webhook marca parcela paga → dispara repasse, sem duplicar em reenvio.
+- Inadimplência reflete em tempo real no dashboard **sem** depender do cron.
+- Testes puros de status de atraso, conciliação idempotente e régua verdes.
+
+**Fora deste corte (cortes seguintes):** cobrança de condomínio e comissões,
+multa/juros/correção, split automático no Asaas, canal e-mail.
 
 ---
 

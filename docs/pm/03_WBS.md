@@ -63,6 +63,21 @@ Decomposição do trabalho em pacotes entregáveis. Numeração hierárquica.
 - **7.4** Rotas webhook e send.
 - **7.5** Teste de classificação.
 
+## 7-B. Cobrança (Billing — Asaas)
+
+- **7B.1** Tipo `Charge` + vínculo `chargeId` na parcela (`lib/types/domain.ts`).
+- **7B.2** Lógica pura de cobrança (`charge-logic.ts`): status de atraso na leitura,
+  mapeamento parcela↔cobrança, idempotência de conciliação.
+- **7B.3** Interface de adapter + implementações (`provider.ts`, `mock.ts`,
+  `asaas.ts`, `adapter.ts`) + `isBillingConfigured()`.
+- **7B.4** `billingRepository` (emitir, listar, conciliar) e disparo de repasse.
+- **7B.5** Régua de lembretes (`reminders.ts`) reusando templates WhatsApp.
+- **7B.6** Rotas `/api/billing/webhook`, `/api/billing/charges`,
+  `/api/cron/billing-daily` + `vercel.json` (cron).
+- **7B.7** UI de cobrança na página de Finanças (emitir, status, baixa manual).
+- **7B.8** Testes: status de atraso (bordas de data), conciliação idempotente,
+  seleção de template da régua.
+
 ## 8. Banco de dados (SQL)
 
 - **8.1** Schema core multi-tenant (`001`).

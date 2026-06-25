@@ -23,8 +23,11 @@ estabelecendo as fronteiras para gestão de mudanças.
 - Contratos com locador, locatário, fiador, valor, dia de vencimento, índice e taxa
   de administração.
 - Geração de parcelas mensais.
-- Cobrança manual assistida (boleto/PIX por upload + marcação de pagamento).
-- Repasse ao proprietário descontando a taxa de administração.
+- **Cobrança operacional via gateway (Asaas):** emissão de boleto registrado/PIX,
+  baixa automática por webhook, régua de lembretes e status de atraso. Cobrança
+  manual por upload permanece como caminho alternativo. Ver
+  [07_PLANO_DE_COBRANCA.md](07_PLANO_DE_COBRANCA.md).
+- Repasse ao proprietário descontando a taxa de administração, disparado pela baixa.
 
 ### 2.3 Venda
 - Listagens com preço pedido e comissão.
@@ -41,6 +44,8 @@ estabelecendo as fronteiras para gestão de mudanças.
 ### 2.5 Integrações
 - **WhatsApp** via adapter (Evolution API; stub Meta).
 - **IA** via adapter agnóstico (OpenAI/Anthropic/mock) com tool calling.
+- **Cobrança** via adapter (Asaas; mock sem env) — boleto/PIX, webhook de
+  pagamento, repasse. Ver [07_PLANO_DE_COBRANCA.md](07_PLANO_DE_COBRANCA.md).
 
 ## 3. Entregáveis
 
@@ -58,7 +63,10 @@ estabelecendo as fronteiras para gestão de mudanças.
 ## 4. Fora de escopo
 
 - Portal externo para inquilino, proprietário ou comprador.
-- Geração/registro de boleto bancário automatizado.
+- ~~Geração/registro de boleto bancário automatizado.~~ **Movido para escopo em
+  2026-06-25** (mudança aprovada) — ver §2.2 e
+  [07_PLANO_DE_COBRANCA.md](07_PLANO_DE_COBRANCA.md). Passa a ser a prioridade nº 1
+  do produto, via gateway Asaas.
 - Integração fiscal/contábil (NF-e, SPED).
 - Aplicativo nativo (o produto é PWA mobile-first).
 - Assinatura eletrônica de contratos.
@@ -90,3 +98,9 @@ Ver `03_WBS.md` para a decomposição completa do trabalho.
 Mudanças seguem o fluxo: solicitação → avaliação de impacto (prazo, esforço,
 risco) → aprovação do patrocinador → atualização desta declaração e da WBS. Itens
 "fora de escopo" só entram via mudança aprovada.
+
+### Registro de mudanças
+
+| Data | Mudança | Impacto | Aprovação |
+|------|---------|---------|-----------|
+| 2026-06-25 | Boleto/PIX automatizado (gateway Asaas) movido de "fora de escopo" para escopo, como prioridade nº 1. Nova entidade `Charge`, adapter `lib/billing`, webhook de baixa, régua de lembretes, repasse automático. 1º corte: **somente locação**; condomínio, comissões e multa/juros em cortes seguintes. | Novo adapter + entidade + rotas; mantém princípio mock-first (sem env → mock). Plano em [07_PLANO_DE_COBRANCA.md](07_PLANO_DE_COBRANCA.md). | Patrocinador (proprietário do produto) |
