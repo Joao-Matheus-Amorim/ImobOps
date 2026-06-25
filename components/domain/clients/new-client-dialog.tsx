@@ -1,27 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BUSINESS_ROLE_LABELS, type BusinessRole, type ClientKind } from "@/lib/types/domain";
+import {
+  BUSINESS_ROLE_LABELS,
+  type BusinessRole,
+  type Client,
+  type ClientKind,
+} from "@/lib/types/domain";
 
 const ROLE_OPTIONS = Object.entries(BUSINESS_ROLE_LABELS) as [BusinessRole, string][];
 
-export function NewClientDialog() {
+// Doubles as create (no `client`) and edit (with `client`). In edit mode it PATCHes
+// the existing row; otherwise it POSTs a new one. `trigger` lets callers render their
+// own opener (e.g. the pencil icon on the detail page).
+export function NewClientDialog({
+  client,
+  trigger,
+}: {
+  client?: Client;
+  trigger?: ReactNode;
+}) {
   const router = useRouter();
+  const isEdit = Boolean(client);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [kind, setKind] = useState<ClientKind>("pf");
-  const [name, setName] = useState("");
-  const [document, setDocument] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [roles, setRoles] = useState<BusinessRole[]>([]);
+  const [kind, setKind] = useState<ClientKind>(client?.kind ?? "pf");
+  const [name, setName] = useState(client?.name ?? "");
+  const [document, setDocument] = useState(client?.document ?? "");
+  const [email, setEmail] = useState(client?.email ?? "");
+  const [phone, setPhone] = useState(client?.phone ?? "");
+  const [roles, setRoles] = useState<BusinessRole[]>(client?.rolesInBusiness ?? []);
 
   function toggleRole(role: BusinessRole) {
     setRoles((prev) =>
@@ -29,13 +44,14 @@ export function NewClientDialog() {
     );
   }
 
+  // Reset back to the source-of-truth (the client in edit mode, blanks in create).
   function reset() {
-    setKind("pf");
-    setName("");
-    setDocument("");
-    setEmail("");
-    setPhone("");
-    setRoles([]);
+    setKind(client?.kind ?? "pf");
+    setName(client?.name ?? "");
+    setDocument(client?.document ?? "");
+    setEmail(client?.email ?? "");
+    setPhone(client?.phone ?? "");
+    setRoles(client?.rolesInBusiness ?? []);
     setError(null);
   }
 
@@ -46,53 +62,74 @@ export function NewClientDialog() {
       return;
     }
 
+    const payload = {
+      kind,
+      name: name.trim(),
+      document: document.trim() || null,
+      email: email.trim() || null,
+      phone: phone.trim() || null,
+      rolesInBusiness: roles,
+      ...(isEdit ? {} : { whatsapp: null, address: null, tags: [] }),
+    };
+
     setBusy(true);
     setError(null);
-    const res = await fetch("/api/clients", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind,
-        name: name.trim(),
-        document: document.trim() || null,
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        whatsapp: null,
-        address: null,
-        tags: [],
-        rolesInBusiness: roles,
-      }),
-    });
+    const res = await fetch(
+      isEdit ? `/api/clients/${client!.id}` : "/api/clients",
+      {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
     setBusy(false);
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Não foi possível criar o cliente.");
+      setError(
+        body?.error ??
+          (isEdit
+            ? "Não foi possível salvar as alterações."
+            : "Não foi possível criar o cliente."),
+      );
       return;
     }
 
     setOpen(false);
-    reset();
+    if (!isEdit) reset();
     router.refresh();
   }
 
   return (
     <>
-      <Button
-        size="lg"
-        onClick={() => {
-          reset();
-          setOpen(true);
-        }}
-      >
-        <Plus /> Novo cliente
-      </Button>
+      {trigger ? (
+        <span
+          onClick={() => {
+            reset();
+            setOpen(true);
+          }}
+        >
+          {trigger}
+        </span>
+      ) : (
+        <Button
+          size="lg"
+          onClick={() => {
+            reset();
+            setOpen(true);
+          }}
+        >
+          <Plus /> Novo cliente
+        </Button>
+      )}
 
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-primary/18 bg-[#102f4d] p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-foreground">Novo cliente</h2>
+              <h2 className="text-lg font-semibold text-foreground">
+                {isEdit ? "Editar cliente" : "Novo cliente"}
+              </h2>
               <button
                 type="button"
                 aria-label="Fechar"
@@ -189,7 +226,7 @@ export function NewClientDialog() {
                 </Button>
                 <Button type="submit" disabled={busy}>
                   {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-                  Salvar cliente
+                  {isEdit ? "Salvar alterações" : "Salvar cliente"}
                 </Button>
               </div>
             </form>

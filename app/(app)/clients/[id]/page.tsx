@@ -1,13 +1,15 @@
 import { notFound } from "next/navigation";
-import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, MessageCircle, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { guardPage } from "@/lib/guard-page";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { BUSINESS_ROLE_LABELS } from "@/lib/types/domain";
 import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
+import { NewClientDialog } from "@/components/domain/clients/new-client-dialog";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("clients");
@@ -16,7 +18,20 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="space-y-4">
-      <PageHeader title={client.name} description={client.kind === "pf" ? "Pessoa física" : "Pessoa jurídica"} />
+      <PageHeader
+        title={client.name}
+        description={client.kind === "pf" ? "Pessoa física" : "Pessoa jurídica"}
+        action={
+          <NewClientDialog
+            client={client}
+            trigger={
+              <Button size="sm" variant="outline">
+                <Pencil /> Editar
+              </Button>
+            }
+          />
+        }
+      />
 
       <Card>
         <CardContent className="flex items-center gap-4 pt-6">
