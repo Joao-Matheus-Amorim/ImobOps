@@ -3,11 +3,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ListItem } from "@/components/ui/list-item";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Button } from "@/components/ui/button";
 import { guardPage } from "@/lib/guard-page";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { filterAllowed, getPrincipalCan } from "@/components/domain/_helpers";
 import { routes } from "@/lib/routes";
+import { NewPropertyDialog } from "@/components/domain/properties/new-property-dialog";
 
 export const metadata = { title: "Imóveis" };
 
@@ -22,7 +22,7 @@ export default async function PropertiesPage() {
         badge="Carteira"
         title="Imóveis"
         description={`${properties.length} na carteira`}
-        action={<Button size="sm">Novo imóvel</Button>}
+        action={<NewPropertyDialog />}
       />
       {properties.length === 0 ? (
         <EmptyState title="Nenhum imóvel" icon={<Building2 className="size-8" />} />

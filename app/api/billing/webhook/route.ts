@@ -12,7 +12,7 @@ const SYSTEM_CTX = { tenancyId: DEMO_TENANCY_ID, userId: "system" };
 
 function tokenValid(request: Request): boolean {
   const expected = process.env.ASAAS_WEBHOOK_TOKEN;
-  if (!expected) return true; // no token configured → accept (dev/mock)
+  if (!expected) return false; // misconfigured → reject, never accept blindly
   return request.headers.get("asaas-access-token") === expected;
 }
 

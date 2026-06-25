@@ -33,6 +33,10 @@ export const clientsRepository = {
     return col.update(ctx, id, patch);
   },
 
+  remove(ctx: RepoContext, id: string): Promise<boolean> {
+    return col.remove(ctx, id);
+  },
+
   async addTag(ctx: RepoContext, id: string, tag: string): Promise<Client | null> {
     const c = await col.find(ctx, id);
     if (!c) return null;
