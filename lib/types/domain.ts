@@ -195,8 +195,70 @@ export interface Installment extends BaseEntity {
   paidAt: string | null;
   paidAmount: number | null;
   receiptDocumentId: string | null;
-  boletoDocumentId: string | null;
+  boletoDocumentId: string | null; // legacy: PDF avulso enviado manualmente
+  chargeId: string | null; // cobrança ativa (boleto/PIX via gateway)
   notes: string | null;
+}
+
+// --- Charge (cobrança via gateway: boleto registrado / PIX) ---------------
+
+export type ChargeMethod = "boleto" | "pix" | "cartao";
+
+export type ChargeStatus =
+  | "pendente" // criada, aguardando pagamento
+  | "paga" // confirmada (webhook ou baixa manual)
+  | "vencida" // due_date < hoje e ainda não paga
+  | "cancelada" // estornada/cancelada
+  | "falha"; // erro na emissão
+
+export const CHARGE_STATUS_LABELS: Record<ChargeStatus, string> = {
+  pendente: "Pendente",
+  paga: "Paga",
+  vencida: "Vencida",
+  cancelada: "Cancelada",
+  falha: "Falha",
+};
+
+export const CHARGE_METHOD_LABELS: Record<ChargeMethod, string> = {
+  boleto: "Boleto",
+  pix: "PIX",
+  cartao: "Cartão",
+};
+
+// Origem da cobrança. No 1º corte é sempre uma parcela de locação.
+export type ChargeSourceType = "installment";
+
+export type BillingProvider = "asaas" | "mock";
+
+export interface Charge extends BaseEntity {
+  sourceType: ChargeSourceType;
+  sourceId: string; // installment.id
+  method: ChargeMethod;
+  amount: number;
+  dueDate: string; // yyyy-mm-dd
+  status: ChargeStatus;
+  provider: BillingProvider;
+  externalId: string | null; // id da cobrança no gateway
+  boletoUrl: string | null; // PDF / linha digitável
+  pixPayload: string | null; // copia-e-cola / QR
+  paidAt: string | null;
+  paidAmount: number | null;
+}
+
+// Registro de lembrete enviado pela régua de cobrança (idempotência por
+// parcela + gatilho, evitando reenvio no mesmo ciclo).
+export type ReminderTrigger =
+  | "pre_vencimento" // D-3
+  | "vencimento" // D0
+  | "atraso_1" // D+1
+  | "atraso_2"; // D+5
+
+export interface ChargeReminder extends BaseEntity {
+  chargeId: string;
+  trigger: ReminderTrigger;
+  sentAt: string;
+  channel: "whatsapp";
+  templateKey: string;
 }
 
 export type RepasseStatus = "pendente" | "pago";

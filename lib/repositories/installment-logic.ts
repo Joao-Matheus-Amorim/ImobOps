@@ -48,6 +48,7 @@ export function generateInstallments(
       paidAmount: null,
       receiptDocumentId: null,
       boletoDocumentId: null,
+      chargeId: null,
       notes: null,
     });
   }

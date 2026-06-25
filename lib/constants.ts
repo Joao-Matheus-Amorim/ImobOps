@@ -35,5 +35,11 @@ export function isWhatsAppConfigured(): boolean {
   return Boolean(process.env.EVOLUTION_API_URL && process.env.EVOLUTION_API_TOKEN);
 }
 
+// True when the billing gateway (Asaas) is configured; otherwise billing runs in
+// mock mode.
+export function isBillingConfigured(): boolean {
+  return Boolean(process.env.ASAAS_API_KEY);
+}
+
 export const CURRENCY = "BRL";
 export const LOCALE = "pt-BR";

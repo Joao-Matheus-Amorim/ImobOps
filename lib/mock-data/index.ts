@@ -8,6 +8,8 @@ import type {
   RentalContract,
   Installment,
   Repasse,
+  Charge,
+  ChargeReminder,
   SaleListing,
   Proposal,
   SaleContract,
@@ -31,6 +33,7 @@ import { mockClients, mockUsers } from "./clients";
 import { mockProperties } from "./properties";
 import { mockRentalContracts, mockInstallments } from "./rentals";
 import { mockRepasses } from "./finance";
+import { mockCharges, mockChargeReminders } from "./billing";
 import {
   mockListings,
   mockProposals,
@@ -55,6 +58,8 @@ export interface MockStore {
   rentalContracts: RentalContract[];
   installments: Installment[];
   repasses: Repasse[];
+  charges: Charge[];
+  chargeReminders: ChargeReminder[];
   listings: SaleListing[];
   proposals: Proposal[];
   saleContracts: SaleContract[];
@@ -82,6 +87,8 @@ function buildStore(): MockStore {
     rentalContracts: [...mockRentalContracts],
     installments: [...mockInstallments],
     repasses: [...mockRepasses],
+    charges: [...mockCharges],
+    chargeReminders: [...mockChargeReminders],
     listings: [...mockListings],
     proposals: [...mockProposals],
     saleContracts: [...mockSaleContracts],

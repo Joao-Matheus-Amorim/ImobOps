@@ -39,6 +39,9 @@ const VARIANT: Record<string, BadgeProps["variant"]> = {
   aberta: "default",
   em_atendimento: "warning",
   encerrada: "outline",
+  // charges (billing)
+  vencida: "destructive",
+  falha: "destructive",
 };
 
 const LABEL: Record<string, string> = {
@@ -72,6 +75,8 @@ const LABEL: Record<string, string> = {
   aberta: "Aberta",
   em_atendimento: "Em atendimento",
   encerrada: "Encerrada",
+  vencida: "Vencida",
+  falha: "Falha",
 };
 
 export function StatusBadge({ status }: { status: string }) {

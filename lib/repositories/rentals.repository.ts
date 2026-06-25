@@ -62,6 +62,15 @@ export const rentalsRepository = {
     });
   },
 
+  // Link an installment to its active charge (1:1). Used by billing emission.
+  setInstallmentCharge(
+    ctx: RepoContext,
+    installmentId: string,
+    chargeId: string | null,
+  ): Installment | null {
+    return installments.update(ctx, installmentId, { chargeId });
+  },
+
   listOverdue(ctx: RepoContext): Installment[] {
     return installments
       .list(ctx, (i) => i.status === "atrasado")
