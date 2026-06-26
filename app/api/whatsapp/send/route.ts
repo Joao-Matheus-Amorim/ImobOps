@@ -6,6 +6,7 @@ import { getPrincipal, getSessionUser } from "@/lib/session";
 import { can } from "@/lib/permissions/enforce";
 import { getWhatsAppAdapter } from "@/lib/whatsapp/provider";
 import { whatsappRepository } from "@/lib/repositories/whatsapp.repository";
+import { publishWhatsAppEvent } from "@/lib/whatsapp/events";
 
 const bodySchema = z.object({
   to: z.string().min(5),
@@ -68,6 +69,8 @@ export async function POST(request: Request) {
     readAt: null,
     sentBy: "user",
   });
+
+  publishWhatsAppEvent({ type: "message", tenancyId: ctx.tenancyId, conversationId: conversation.id });
 
   return NextResponse.json({ ok: true, externalId: sent.externalId });
 }

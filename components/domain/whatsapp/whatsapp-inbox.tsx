@@ -27,7 +27,8 @@ interface InboxConversation {
   messages: InboxMessage[];
 }
 
-const POLL_MS = 4000;
+// SSE drives instant updates; this slow poll is a safety net if the stream drops.
+const FALLBACK_POLL_MS = 20000;
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -61,9 +62,25 @@ export function WhatsAppInbox({ initial }: { initial: InboxConversation[] }) {
     }
   }, []);
 
-  // Poll for near-real-time updates.
+  // Real-time updates via SSE: the server pushes an event whenever a message is
+  // persisted (inbound, bot reply, or our own send) and we refetch instantly.
   useEffect(() => {
-    const id = setInterval(refresh, POLL_MS);
+    const source = new EventSource("/api/whatsapp/stream");
+    source.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data) as { type?: string };
+        if (data.type === "message") void refresh();
+      } catch {
+        /* ignore malformed event */
+      }
+    };
+    // Browser auto-reconnects on error; nothing to do here.
+    return () => source.close();
+  }, [refresh]);
+
+  // Safety net: a slow poll in case the SSE connection silently drops.
+  useEffect(() => {
+    const id = setInterval(refresh, FALLBACK_POLL_MS);
     return () => clearInterval(id);
   }, [refresh]);
 
