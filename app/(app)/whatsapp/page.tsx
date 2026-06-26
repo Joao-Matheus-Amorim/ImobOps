@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge } from "@/components/ui/badge";
 import { guardPage } from "@/lib/guard-page";
@@ -36,7 +37,9 @@ export default async function WhatsAppPage() {
 
       <ConnectNumber initialConfigured={configured} />
 
-      <WhatsAppInbox initial={initial} templates={templates} />
+      <Suspense fallback={null}>
+        <WhatsAppInbox initial={initial} templates={templates} />
+      </Suspense>
     </div>
   );
 }

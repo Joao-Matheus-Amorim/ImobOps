@@ -26,6 +26,7 @@ import { crmRepository } from "@/lib/repositories/crm.repository";
 import { BUSINESS_ROLE_LABELS, FUNNEL_STAGE_LABELS } from "@/lib/types/domain";
 import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 import { NewClientDialog } from "@/components/domain/clients/new-client-dialog";
+import { OpenWhatsAppButton } from "@/components/domain/clients/open-whatsapp-button";
 import { formatBrazilPhone, formatCpfCnpj, formatBRL } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 
@@ -59,14 +60,17 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         title={client.name}
         description={client.kind === "pf" ? "Pessoa física" : "Pessoa jurídica"}
         action={
-          <NewClientDialog
-            client={client}
-            trigger={
-              <Button size="sm" variant="outline">
-                <Pencil /> Editar
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <OpenWhatsAppButton phone={client.whatsapp ?? client.phone} name={client.name} />
+            <NewClientDialog
+              client={client}
+              trigger={
+                <Button size="sm" variant="outline">
+                  <Pencil /> Editar
+                </Button>
+              }
+            />
+          </div>
         }
       />
 

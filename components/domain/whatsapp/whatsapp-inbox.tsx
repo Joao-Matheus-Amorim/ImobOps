@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { MessageCircle, RefreshCw, Send, MessageSquareText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
@@ -68,8 +69,13 @@ export function WhatsAppInbox({
   initial: InboxConversation[];
   templates?: QuickTemplate[];
 }) {
+  // Deep-link: ?c=<conversationId> (e.g. from a client's "WhatsApp" button)
+  // pre-selects that conversation; otherwise the most recent one.
+  const deepLinkId = useSearchParams().get("c");
   const [conversations, setConversations] = useState<InboxConversation[]>(initial);
-  const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    deepLinkId ?? initial[0]?.id ?? null,
+  );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
