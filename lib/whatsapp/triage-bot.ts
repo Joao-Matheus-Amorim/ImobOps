@@ -5,6 +5,8 @@ import type { RepoContext } from "@/lib/repositories/base";
 import { crmRepository } from "@/lib/repositories/crm.repository";
 import { store } from "@/lib/mock-data";
 import { isSupabaseConfigured } from "@/lib/constants";
+import { getLlmAdapter } from "@/lib/ai/provider";
+import type { ChatMessage } from "@/lib/types/ai";
 
 const KEYWORDS: Record<Exclude<TriageClassification, null | "outro">, string[]> = {
   locacao: ["alugar", "aluguel", "locação", "locacao", "alugo", "inquilino", "fiador"],
@@ -47,6 +49,45 @@ export interface TriageResult {
   classification: TriageClassification;
   leadId: string | null;
   assignedTo: string | null;
+}
+
+const CLASSIFICATION_HINT: Record<NonNullable<TriageClassification>, string> = {
+  locacao: "O lead tem interesse em LOCAÇÃO (alugar um imóvel).",
+  venda: "O lead tem interesse em VENDA (comprar um imóvel).",
+  condominio: "A mensagem é sobre CONDOMÍNIO (taxas, síndico, assembleia).",
+  financeiro: "A mensagem é sobre FINANCEIRO (boleto, pagamento, 2ª via, PIX).",
+  outro: "A intenção da mensagem não foi identificada.",
+};
+
+// Generate a contextual reply for an inbound WhatsApp message using the LLM
+// adapter. Falls back to a safe canned message if the model fails or is in mock
+// mode, so the bot always answers something coherent.
+export async function generateReply(
+  body: string,
+  classification: TriageClassification,
+): Promise<string> {
+  const hint = CLASSIFICATION_HINT[classification ?? "outro"];
+  const messages: ChatMessage[] = [
+    {
+      role: "system",
+      content:
+        "Você é o atendente virtual de uma imobiliária no WhatsApp. " +
+        "Responda em português do Brasil, de forma curta (até 2 frases), cordial e objetiva. " +
+        "Confirme o interesse do cliente e diga que um corretor dará sequência. " +
+        "Não invente preços, endereços, datas ou disponibilidade. " +
+        `Contexto da triagem: ${hint}`,
+    },
+    { role: "user", content: body },
+  ];
+  try {
+    const adapter = getLlmAdapter();
+    const res = await adapter.chat(messages, []);
+    const text = res.content?.trim();
+    if (text) return text;
+  } catch {
+    // fall through to canned reply
+  }
+  return "Recebemos sua mensagem! Um de nossos corretores vai te responder em breve. 🙂";
 }
 
 // Run triage for an inbound message. Creates a lead for sales/rental intents.

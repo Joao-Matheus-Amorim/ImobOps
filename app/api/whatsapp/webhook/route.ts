@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { getWhatsAppAdapter } from "@/lib/whatsapp/provider";
 import { whatsappRepository } from "@/lib/repositories/whatsapp.repository";
-import { triageInbound } from "@/lib/whatsapp/triage-bot";
+import { triageInbound, generateReply } from "@/lib/whatsapp/triage-bot";
 import { defaultSystemTenancyId } from "@/lib/constants";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
@@ -62,9 +62,34 @@ export async function POST(request: Request) {
     sentBy: "user",
   });
 
+  // Close the loop: generate an AI reply and send it back via the adapter. A
+  // send failure must not fail the webhook (Evolution would retry), so we log
+  // and still return 200.
+  let replySent = false;
+  try {
+    const reply = await generateReply(inbound.body, triage.classification);
+    const sent = await adapter.sendMessage(inbound.phone, reply);
+    replySent = true;
+    await whatsappRepository.appendMessage(ctx, {
+      conversationId: conversation.id,
+      direction: "out",
+      body: reply,
+      mediaUrl: null,
+      templateKey: null,
+      externalId: sent.externalId,
+      sentAt: new Date().toISOString(),
+      deliveredAt: null,
+      readAt: null,
+      sentBy: "bot",
+    });
+  } catch (err) {
+    console.error("[whatsapp/webhook] failed to send reply:", err);
+  }
+
   return NextResponse.json({
     ok: true,
     classification: triage.classification,
     leadCreated: Boolean(triage.leadId),
+    replySent,
   });
 }
