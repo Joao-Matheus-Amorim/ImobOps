@@ -1,9 +1,16 @@
 // Evolution API implementation of the WhatsApp adapter. Configured via env:
 // EVOLUTION_API_URL, EVOLUTION_API_TOKEN, EVOLUTION_INSTANCE. In mock mode (no
 // env) sends return a fake externalId so the app stays usable end-to-end.
-import type { WhatsAppAdapter, InboundMessage } from "./adapter";
+import type { WhatsAppAdapter, InboundMessage, ConnectionInfo } from "./adapter";
 import { renderTemplate, type TemplateKey } from "./templates";
 import { isWhatsAppConfigured } from "@/lib/constants";
+
+function normalizeState(state?: string): ConnectionInfo["state"] {
+  if (state === "open") return "open";
+  if (state === "connecting") return "connecting";
+  if (state === "close") return "close";
+  return "unknown";
+}
 
 interface EvolutionWebhook {
   data?: {
@@ -35,8 +42,44 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     return { externalId: data.key?.id ?? `evo-${Date.now()}` };
   }
 
+  private async get(path: string): Promise<unknown> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      headers: { apikey: this.token },
+    });
+    if (!res.ok) throw new Error(`Evolution ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
   sendMessage(to: string, body: string, _mediaUrl?: string) {
     return this.post(`/message/sendText/${this.instance}`, { number: to, text: body });
+  }
+
+  async connectionState(): Promise<ConnectionInfo> {
+    if (!isWhatsAppConfigured()) return { state: "open", qr: null };
+    const data = (await this.get(`/instance/connectionState/${this.instance}`)) as {
+      instance?: { state?: string };
+    };
+    return { state: normalizeState(data.instance?.state), qr: null };
+  }
+
+  async connect(): Promise<ConnectionInfo> {
+    if (!isWhatsAppConfigured()) return { state: "open", qr: null };
+    // Evolution returns either { instance: { state } } when already connected,
+    // or a pairing payload with base64/code when a scan is needed.
+    const data = (await this.get(`/instance/connect/${this.instance}`)) as {
+      instance?: { state?: string };
+      base64?: string;
+      code?: string;
+    };
+    if (data.instance?.state) {
+      return { state: normalizeState(data.instance.state), qr: null };
+    }
+    const qr = data.base64
+      ? data.base64.startsWith("data:")
+        ? data.base64
+        : `data:image/png;base64,${data.base64}`
+      : null;
+    return { state: "connecting", qr };
   }
 
   sendTemplate(to: string, templateKey: string, vars: Record<string, string>) {

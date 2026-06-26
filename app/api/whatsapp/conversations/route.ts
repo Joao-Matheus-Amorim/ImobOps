@@ -11,7 +11,7 @@ export async function GET() {
   if (!principal || !user) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
-  if (!can(principal, "whatsapp", "read")) {
+  if (!can(principal, "whatsapp", "view")) {
     return NextResponse.json({ error: "Permissão negada." }, { status: 403 });
   }
 

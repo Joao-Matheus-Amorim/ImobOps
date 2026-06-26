@@ -9,6 +9,13 @@ export interface InboundMessage {
   timestamp: string;
 }
 
+// Connection state for the inbox "connect number" flow. `qr` is a base64 data
+// URL when the provider needs a scan; null once connected (or when unsupported).
+export interface ConnectionInfo {
+  state: "open" | "connecting" | "close" | "unknown";
+  qr: string | null;
+}
+
 export interface WhatsAppAdapter {
   sendMessage(to: string, body: string, mediaUrl?: string): Promise<{ externalId: string }>;
   sendTemplate(
@@ -17,4 +24,8 @@ export interface WhatsAppAdapter {
     vars: Record<string, string>,
   ): Promise<{ externalId: string }>;
   parseWebhook(payload: unknown): InboundMessage | null;
+  // Current connection state (no QR side effects).
+  connectionState(): Promise<ConnectionInfo>;
+  // Start/resume a connection, returning a QR to scan when not yet connected.
+  connect(): Promise<ConnectionInfo>;
 }
