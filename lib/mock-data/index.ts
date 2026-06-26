@@ -23,6 +23,7 @@ import type {
   CrmActivity,
   WhatsAppConversation,
   WhatsAppMessage,
+  WhatsAppTemplate,
   User,
   DocumentRecord,
   AuditLogEntry,
@@ -73,6 +74,7 @@ export interface MockStore {
   activities: CrmActivity[];
   conversations: WhatsAppConversation[];
   messages: WhatsAppMessage[];
+  whatsappTemplates: WhatsAppTemplate[];
   auditLog: AuditLogEntry[];
   aiActions: AiActionEntry[];
 }
@@ -102,6 +104,7 @@ function buildStore(): MockStore {
     activities: [...mockActivities],
     conversations: [...mockConversations],
     messages: [...mockMessages],
+    whatsappTemplates: [],
     auditLog: [],
     aiActions: [],
   };

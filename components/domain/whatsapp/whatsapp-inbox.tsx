@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MessageCircle, RefreshCw, Send } from "lucide-react";
+import { MessageCircle, RefreshCw, Send, MessageSquareText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,18 @@ interface InboxConversation {
   messages: InboxMessage[];
 }
 
+interface QuickTemplate {
+  id: string;
+  title: string;
+  body: string;
+}
+
+// Fill {nome}/{telefone} placeholders from the conversation's contact.
+function fillTemplate(body: string, c: { contactName: string | null; phone: string }) {
+  const nome = c.contactName?.trim() || "";
+  return body.replace(/\{nome\}/g, nome).replace(/\{telefone\}/g, formatPhone(c.phone));
+}
+
 // SSE drives instant updates; this slow poll is a safety net if the stream drops.
 const FALLBACK_POLL_MS = 20000;
 
@@ -49,12 +61,19 @@ function displayName(c: { contactName: string | null; phone: string }) {
   return c.contactName?.trim() || formatPhone(c.phone);
 }
 
-export function WhatsAppInbox({ initial }: { initial: InboxConversation[] }) {
+export function WhatsAppInbox({
+  initial,
+  templates = [],
+}: {
+  initial: InboxConversation[];
+  templates?: QuickTemplate[];
+}) {
   const [conversations, setConversations] = useState<InboxConversation[]>(initial);
   const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -236,7 +255,47 @@ export function WhatsAppInbox({ initial }: { initial: InboxConversation[] }) {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="flex items-center gap-2 border-t border-primary/12 p-3">
+            <div className="relative flex items-center gap-2 border-t border-primary/12 p-3">
+              {/* Quick-reply templates */}
+              {templates.length > 0 ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    aria-label="Modelos de mensagem"
+                    onClick={() => setTemplatesOpen((v) => !v)}
+                    className={cn(
+                      "grid size-10 shrink-0 place-items-center rounded-xl border transition",
+                      templatesOpen
+                        ? "border-primary/45 bg-primary/10 text-primary"
+                        : "border-primary/18 bg-background/30 text-muted-foreground hover:text-primary",
+                    )}
+                  >
+                    <MessageSquareText className="size-4" />
+                  </button>
+                  {templatesOpen ? (
+                    <div className="absolute bottom-12 left-0 z-20 max-h-72 w-80 overflow-y-auto rounded-2xl border border-primary/18 bg-[#102f4d] p-2 shadow-2xl thin-scrollbar">
+                      <p className="px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Respostas rápidas
+                      </p>
+                      {templates.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => {
+                            setDraft(fillTemplate(t.body, selected));
+                            setTemplatesOpen(false);
+                          }}
+                          className="block w-full rounded-xl px-3 py-2 text-left transition hover:bg-primary/8"
+                        >
+                          <p className="text-sm font-medium text-foreground">{t.title}</p>
+                          <p className="truncate text-xs text-muted-foreground">{t.body}</p>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               <input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}

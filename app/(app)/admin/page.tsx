@@ -16,7 +16,9 @@ import { DEFAULT_PERMISSIONS } from "@/lib/permissions/rules";
 import { ROLE_LABELS, ROLES, FEATURE_LABELS } from "@/lib/types/permissions";
 import { aiActionsRepository } from "@/lib/repositories/audit.repository";
 import { usersRepository } from "@/lib/repositories/users.repository";
+import { whatsappRepository } from "@/lib/repositories/whatsapp.repository";
 import { NewUserDialog } from "@/components/domain/admin/new-user-dialog";
+import { TemplatesManager } from "@/components/domain/admin/templates-manager";
 import { aiProvider, isSupabaseConfigured, isWhatsAppConfigured } from "@/lib/constants";
 import { getRuntimeSummary } from "@/lib/runtime-status";
 
@@ -26,6 +28,7 @@ export default async function AdminPage() {
   const { ctx } = await guardPage("admin");
   const users = await usersRepository.list(ctx);
   const aiActions = (await aiActionsRepository.list(ctx)).slice(0, 8);
+  const templates = await whatsappRepository.listTemplates(ctx);
   const runtime = getRuntimeSummary();
 
   return (
@@ -155,6 +158,8 @@ export default async function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      <TemplatesManager initial={templates} />
 
       <Card>
         <CardHeader>

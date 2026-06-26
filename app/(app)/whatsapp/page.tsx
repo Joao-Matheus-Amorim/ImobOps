@@ -18,6 +18,11 @@ export default async function WhatsAppPage() {
     })),
   );
   const configured = isWhatsAppConfigured();
+  const templates = (await whatsappRepository.listTemplates(ctx, true)).map((t) => ({
+    id: t.id,
+    title: t.title,
+    body: t.body,
+  }));
 
   return (
     <div className="space-y-7">
@@ -30,7 +35,7 @@ export default async function WhatsAppPage() {
 
       <ConnectNumber initialConfigured={configured} />
 
-      <WhatsAppInbox initial={initial} />
+      <WhatsAppInbox initial={initial} templates={templates} />
     </div>
   );
 }

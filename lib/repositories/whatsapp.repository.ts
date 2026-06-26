@@ -1,6 +1,7 @@
 import type {
   WhatsAppConversation,
   WhatsAppMessage,
+  WhatsAppTemplate,
   TriageClassification,
 } from "@/lib/types/domain";
 import { type RepoContext } from "./base";
@@ -11,6 +12,7 @@ const conversations = new Collection<WhatsAppConversation>(
   "whatsapp_conversations",
 );
 const messages = new Collection<WhatsAppMessage>("messages", "whatsapp_messages");
+const templates = new Collection<WhatsAppTemplate>("whatsappTemplates", "whatsapp_templates");
 
 export const whatsappRepository = {
   async listConversations(ctx: RepoContext, query?: string): Promise<WhatsAppConversation[]> {
@@ -65,5 +67,35 @@ export const whatsappRepository = {
     const msg = await messages.create(ctx, data);
     await conversations.update(ctx, data.conversationId, { lastMessageAt: msg.sentAt });
     return msg;
+  },
+
+  // --- Quick-reply templates (admin-editable) ---
+
+  async listTemplates(ctx: RepoContext, onlyActive = false): Promise<WhatsAppTemplate[]> {
+    const rows = await templates.list(ctx, (t) => (onlyActive ? t.active : true));
+    return rows.sort((a, b) => a.title.localeCompare(b.title));
+  },
+
+  getTemplate(ctx: RepoContext, id: string): Promise<WhatsAppTemplate | null> {
+    return templates.find(ctx, id);
+  },
+
+  createTemplate(
+    ctx: RepoContext,
+    data: Omit<WhatsAppTemplate, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<WhatsAppTemplate> {
+    return templates.create(ctx, data);
+  },
+
+  updateTemplate(
+    ctx: RepoContext,
+    id: string,
+    patch: Partial<WhatsAppTemplate>,
+  ): Promise<WhatsAppTemplate | null> {
+    return templates.update(ctx, id, patch);
+  },
+
+  deleteTemplate(ctx: RepoContext, id: string): Promise<boolean> {
+    return templates.remove(ctx, id);
   },
 };

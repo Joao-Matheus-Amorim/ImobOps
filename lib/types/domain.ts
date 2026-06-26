@@ -492,6 +492,14 @@ export interface WhatsAppMessage extends BaseEntity {
   sentBy: MessageSender;
 }
 
+// Admin-editable quick-reply template. Body may contain {nome}/{telefone}
+// placeholders resolved against the conversation's contact at send time.
+export interface WhatsAppTemplate extends BaseEntity {
+  title: string;
+  body: string;
+  active: boolean;
+}
+
 // --- Audit & AI ----------------------------------------------------------
 
 export interface AuditLogEntry {
