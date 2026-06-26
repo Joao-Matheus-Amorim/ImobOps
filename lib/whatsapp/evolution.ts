@@ -27,7 +27,14 @@ interface EvolutionWebhook {
       remoteJidAlt?: string;
       fromMe?: boolean;
     };
-    message?: { conversation?: string; extendedTextMessage?: { text?: string } };
+    message?: {
+      conversation?: string;
+      extendedTextMessage?: { text?: string };
+      imageMessage?: { caption?: string };
+      videoMessage?: { caption?: string };
+      documentMessage?: { caption?: string; fileName?: string };
+    };
+    messageType?: string;
     messageTimestamp?: number;
     pushName?: string;
   };
@@ -56,10 +63,20 @@ interface EvolutionMessageRecord {
   messageTimestamp?: number;
 }
 
-// Human-readable body for an imported message: real text/caption when present,
-// otherwise a placeholder for media so the thread isn't blank.
-function extractBody(r: EvolutionMessageRecord): string | null {
-  const m = r.message ?? {};
+// Media payload shape shared by the webhook and the importer.
+type EvolutionMessagePayload = {
+  conversation?: string;
+  extendedTextMessage?: { text?: string };
+  imageMessage?: { caption?: string };
+  videoMessage?: { caption?: string };
+  documentMessage?: { caption?: string; fileName?: string };
+};
+
+// Human-readable body for a message: real text/caption when present, otherwise a
+// placeholder for media so the thread isn't blank. Used by both the live webhook
+// and the importer so they handle media consistently.
+function extractBody(message: EvolutionMessagePayload | undefined, messageType?: string): string | null {
+  const m = message ?? {};
   const text =
     m.conversation ??
     m.extendedTextMessage?.text ??
@@ -67,7 +84,7 @@ function extractBody(r: EvolutionMessageRecord): string | null {
     m.videoMessage?.caption ??
     m.documentMessage?.caption;
   if (text && text.trim()) return text;
-  switch (r.messageType) {
+  switch (messageType) {
     case "imageMessage":
       return "📷 Imagem";
     case "videoMessage":
@@ -238,7 +255,7 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     const recent = records.slice(0, limit).reverse();
     const out: InboundMessage[] = [];
     for (const r of recent) {
-      const body = extractBody(r);
+      const body = extractBody(r.message, r.messageType);
       if (!body) continue;
       out.push({
         phone,
@@ -263,7 +280,9 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     const p = payload as EvolutionWebhook;
     const data = p?.data;
     const key = data?.key;
-    const body = data?.message?.conversation ?? data?.message?.extendedTextMessage?.text;
+    // Same extraction as the importer: real text/caption, else a media
+    // placeholder — so live photos/audios/stickers show instead of being dropped.
+    const body = extractBody(data?.message, data?.messageType);
     if (!key || !body) return null;
     // Resolve the real phone JID. Newer WhatsApp delivers remoteJid as "<n>@lid"
     // with the real number in remoteJidAlt — accept both LID and standard JIDs.
