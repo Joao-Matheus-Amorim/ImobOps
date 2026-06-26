@@ -40,8 +40,9 @@ function fillTemplate(body: string, c: { contactName: string | null; phone: stri
   return body.replace(/\{nome\}/g, nome).replace(/\{telefone\}/g, formatPhone(c.phone));
 }
 
-// SSE drives instant updates; this slow poll is a safety net if the stream drops.
-const FALLBACK_POLL_MS = 20000;
+// SSE drives instant updates; this poll is a hard safety net (3s) so the screen
+// always catches up within a few seconds even if SSE is blocked/dropped.
+const FALLBACK_POLL_MS = 3000;
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -95,25 +96,49 @@ export function WhatsAppInbox({
   }, []);
 
   // Real-time updates via SSE: the server pushes an event whenever a message is
-  // persisted (inbound, bot reply, or our own send) and we refetch instantly.
+  // persisted and we refetch instantly. Reconnect explicitly if the stream
+  // errors (ngrok/dev can drop it), so it doesn't go silently dead.
   useEffect(() => {
-    const source = new EventSource("/api/whatsapp/stream");
-    source.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data) as { type?: string };
-        if (data.type === "message") void refresh();
-      } catch {
-        /* ignore malformed event */
-      }
+    let source: EventSource | null = null;
+    let retry: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      source = new EventSource("/api/whatsapp/stream");
+      source.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data) as { type?: string };
+          if (data.type === "message") void refresh();
+        } catch {
+          /* ignore */
+        }
+      };
+      source.onerror = () => {
+        source?.close();
+        if (!retry) retry = setTimeout(() => {
+          retry = null;
+          connect();
+        }, 2000);
+      };
     };
-    // Browser auto-reconnects on error; nothing to do here.
-    return () => source.close();
+    connect();
+    return () => {
+      source?.close();
+      if (retry) clearTimeout(retry);
+    };
   }, [refresh]);
 
-  // Safety net: a slow poll in case the SSE connection silently drops.
+  // Hard safety net: poll every few seconds so the screen always catches up even
+  // if SSE is blocked. Also refresh when the tab regains focus.
   useEffect(() => {
     const id = setInterval(refresh, FALLBACK_POLL_MS);
-    return () => clearInterval(id);
+    const onFocus = () => void refresh();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
   }, [refresh]);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
