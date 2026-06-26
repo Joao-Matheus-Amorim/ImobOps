@@ -13,6 +13,7 @@ import {
   type CondoFeeRow,
 } from "@/components/domain/condos/condo-fees-panel";
 import { NewCondoDialog } from "@/components/domain/condos/new-condo-dialog";
+import { CondoActions } from "@/components/domain/condos/condo-actions";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export default async function CondoDetailPage({ params }: { params: { id: string } }) {
@@ -54,14 +55,17 @@ export default async function CondoDetailPage({ params }: { params: { id: string
         title={condo.name}
         description={condo.address}
         action={
-          <NewCondoDialog
-            condo={condo}
-            trigger={
-              <Button size="sm" variant="outline">
-                <Pencil /> Editar
-              </Button>
-            }
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <NewCondoDialog
+              condo={condo}
+              trigger={
+                <Button size="sm" variant="outline">
+                  <Pencil /> Editar
+                </Button>
+              }
+            />
+            <CondoActions condoId={condo.id} unitCount={units.length} />
+          </div>
         }
       />
 
