@@ -12,10 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { guardPage } from "@/lib/guard-page";
-import { store } from "@/lib/mock-data";
 import { DEFAULT_PERMISSIONS } from "@/lib/permissions/rules";
 import { ROLE_LABELS, ROLES, FEATURE_LABELS } from "@/lib/types/permissions";
 import { aiActionsRepository } from "@/lib/repositories/audit.repository";
+import { usersRepository } from "@/lib/repositories/users.repository";
 import { aiProvider, isSupabaseConfigured, isWhatsAppConfigured } from "@/lib/constants";
 import { getRuntimeSummary } from "@/lib/runtime-status";
 
@@ -23,7 +23,7 @@ export const metadata = { title: "Administracao" };
 
 export default async function AdminPage() {
   const { ctx } = await guardPage("admin");
-  const users = store.users.filter((user) => user.tenancyId === ctx.tenancyId);
+  const users = await usersRepository.list(ctx);
   const aiActions = (await aiActionsRepository.list(ctx)).slice(0, 8);
   const runtime = getRuntimeSummary();
 

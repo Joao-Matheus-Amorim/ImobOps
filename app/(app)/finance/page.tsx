@@ -17,7 +17,7 @@ import {
   CommissionsPanel,
   type CommissionRow,
 } from "@/components/domain/finance/commissions-panel";
-import { store } from "@/lib/mock-data";
+import { usersRepository } from "@/lib/repositories/users.repository";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 
 export const metadata = { title: "Finanças" };
@@ -28,11 +28,11 @@ export default async function FinancePage() {
   const overdue = await rentalsRepository.listOverdue(ctx);
 
   const commissions = await financeRepository.listCommissions(ctx);
+  const brokerNames = await usersRepository.displayNames(ctx);
   const commissionRows: CommissionRow[] = commissions.map((c) => {
-    const broker = store.users.find((u) => u.id === c.brokerUserId);
     return {
       id: c.id,
-      brokerName: broker?.displayName ?? "Corretor",
+      brokerName: brokerNames.get(c.brokerUserId) ?? "Corretor",
       amountLabel: formatBRL(c.amount),
       pctLabel: `${c.pct}% de comissão`,
       status: c.status,

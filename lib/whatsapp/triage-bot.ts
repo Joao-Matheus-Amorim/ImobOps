@@ -3,8 +3,7 @@
 import type { TriageClassification } from "@/lib/types/domain";
 import type { RepoContext } from "@/lib/repositories/base";
 import { crmRepository } from "@/lib/repositories/crm.repository";
-import { store } from "@/lib/mock-data";
-import { isSupabaseConfigured } from "@/lib/constants";
+import { usersRepository } from "@/lib/repositories/users.repository";
 import { getLlmAdapter } from "@/lib/ai/provider";
 import type { ChatMessage } from "@/lib/types/ai";
 
@@ -29,8 +28,7 @@ export function classifyMessage(body: string): TriageClassification {
 
 // Pick the broker with the fewest assigned leads (round-robin-ish).
 async function pickBroker(ctx: RepoContext): Promise<string | null> {
-  if (isSupabaseConfigured()) return null;
-  const brokers = store.users.filter((u) => u.tenancyId === ctx.tenancyId && u.role === "broker" && u.active);
+  const brokers = await usersRepository.listByRole(ctx, "broker");
   if (brokers.length === 0) return null;
   const leads = await crmRepository.listLeads(ctx);
   let best = brokers[0];
