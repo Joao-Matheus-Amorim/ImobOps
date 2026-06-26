@@ -16,6 +16,7 @@ import { DEFAULT_PERMISSIONS } from "@/lib/permissions/rules";
 import { ROLE_LABELS, ROLES, FEATURE_LABELS } from "@/lib/types/permissions";
 import { aiActionsRepository } from "@/lib/repositories/audit.repository";
 import { usersRepository } from "@/lib/repositories/users.repository";
+import { NewUserDialog } from "@/components/domain/admin/new-user-dialog";
 import { aiProvider, isSupabaseConfigured, isWhatsAppConfigured } from "@/lib/constants";
 import { getRuntimeSummary } from "@/lib/runtime-status";
 
@@ -108,8 +109,9 @@ export default async function AdminPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
             <CardTitle>Usuarios ({users.length})</CardTitle>
+            <NewUserDialog />
           </CardHeader>
           <CardContent className="space-y-2">
             {users.map((user) => (

@@ -29,4 +29,12 @@ export const usersRepository = {
     const rows = await users.list(ctx);
     return new Map(rows.map((u) => [u.id, u.displayName]));
   },
+
+  // Create a team member profile (no auth account — they can't log in yet).
+  create(
+    ctx: RepoContext,
+    data: Omit<User, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<User> {
+    return users.create(ctx, data);
+  },
 };
