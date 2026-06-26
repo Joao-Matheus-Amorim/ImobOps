@@ -1,21 +1,73 @@
+import Link from "next/link";
+import { Users, Building2, KeyRound, Handshake, MessageCircle, BarChart3 } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatBRL, formatDate } from "@/lib/utils";
 import { FUNNEL_STAGE_LABELS } from "@/lib/types/domain";
+import { routes } from "@/lib/routes";
 import type { DashboardData } from "./dashboard-data";
 
+const QUICK_ACTIONS = [
+  { href: routes.clients, label: "Clientes", icon: Users },
+  { href: routes.properties, label: "Imóveis", icon: Building2 },
+  { href: routes.rentals, label: "Locação", icon: KeyRound },
+  { href: routes.sales, label: "Vendas", icon: Handshake },
+  { href: routes.crm, label: "CRM", icon: BarChart3 },
+  { href: routes.whatsapp, label: "WhatsApp", icon: MessageCircle },
+];
+
+function QuickActions() {
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      {QUICK_ACTIONS.map(({ href, label, icon: Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          className="group flex flex-col items-center gap-2 rounded-xl border border-primary/14 bg-[#102f4d]/60 p-3 transition-all hover:-translate-y-0.5 hover:border-primary/45 hover:bg-primary/8 hover:shadow-glow-sm"
+        >
+          <span className="grid size-9 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
+            <Icon className="size-4" />
+          </span>
+          <span className="text-xs text-muted-foreground group-hover:text-foreground">{label}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+// Per-stage bar color, matching the CRM Kanban accents.
+const FUNNEL_BAR: Record<string, string> = {
+  novo: "bg-sky-400/70",
+  qualificado: "bg-cyan-400/70",
+  visita_agendada: "bg-violet-400/70",
+  proposta: "bg-amber-400/70",
+  fechado_ganho: "bg-emerald-400/70",
+  fechado_perdido: "bg-rose-400/70",
+};
+
 function FunnelSummary({ data }: { data: DashboardData }) {
+  const total = data.funnel.reduce((s, f) => s + f.count, 0);
+  const max = Math.max(1, ...data.funnel.map((f) => f.count));
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between">
         <CardTitle>Leads no funil</CardTitle>
+        <span className="text-sm text-muted-foreground">{total} no total</span>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-2.5">
         {data.funnel.map((f) => (
-          <div key={f.stage} className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{FUNNEL_STAGE_LABELS[f.stage]}</span>
-            <span className="font-semibold">{f.count}</span>
+          <div key={f.stage} className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{FUNNEL_STAGE_LABELS[f.stage]}</span>
+              <span className="font-semibold text-foreground">{f.count}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-background/40">
+              <div
+                className={`h-full rounded-full ${FUNNEL_BAR[f.stage] ?? "bg-primary/70"} transition-all`}
+                style={{ width: `${(f.count / max) * 100}%` }}
+              />
+            </div>
           </div>
         ))}
       </CardContent>
@@ -54,6 +106,7 @@ function OverdueList({ data }: { data: DashboardData }) {
 export function AdminDashboard({ data }: { data: DashboardData }) {
   return (
     <div className="space-y-4">
+      <QuickActions />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Ocupação da carteira" value={`${data.occupancyPct}%`} hint={`${data.rentedCount}/${data.propertyCount} imóveis`} accent="success" />
         <StatCard label="GMV do mês" value={formatBRL(data.gmvMonth)} accent="gold" />
