@@ -1,0 +1,235 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { MessageCircle, RefreshCw, Send } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { cn } from "@/lib/utils";
+
+interface InboxMessage {
+  id: string;
+  direction: "in" | "out";
+  body: string;
+  sentAt: string;
+  sentBy: string;
+}
+
+interface InboxConversation {
+  id: string;
+  phone: string;
+  status: string;
+  lastMessageAt: string;
+  triageClassification: string | null;
+  messages: InboxMessage[];
+}
+
+const POLL_MS = 4000;
+
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(d);
+}
+
+function formatPhone(phone: string) {
+  // 5521984495249 -> +55 21 98449-5249
+  const m = phone.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
+  if (!m) return phone;
+  return `+55 ${m[1]} ${m[2]}-${m[3]}`;
+}
+
+export function WhatsAppInbox({ initial }: { initial: InboxConversation[] }) {
+  const [conversations, setConversations] = useState<InboxConversation[]>(initial);
+  const [selectedId, setSelectedId] = useState<string | null>(initial[0]?.id ?? null);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/whatsapp/conversations", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as { conversations: InboxConversation[] };
+      setConversations(data.conversations);
+    } catch {
+      // keep last good state; next tick retries
+    }
+  }, []);
+
+  // Poll for near-real-time updates.
+  useEffect(() => {
+    const id = setInterval(refresh, POLL_MS);
+    return () => clearInterval(id);
+  }, [refresh]);
+
+  const selected = conversations.find((c) => c.id === selectedId) ?? null;
+
+  // Auto-scroll to the newest message when the open conversation changes.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [selected?.messages.length, selectedId]);
+
+  async function handleSend() {
+    if (!selected || !draft.trim() || sending) return;
+    const body = draft.trim();
+    setSending(true);
+    setDraft("");
+    try {
+      const res = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ to: selected.phone, body }),
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        alert(`Falha ao enviar: ${err.error ?? res.status}`);
+        setDraft(body); // restore so the user doesn't lose the text
+        return;
+      }
+      await refresh();
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function manualRefresh() {
+    setRefreshing(true);
+    await refresh();
+    setRefreshing(false);
+  }
+
+  if (conversations.length === 0) {
+    return <EmptyState title="Sem conversas" icon={<MessageCircle className="size-8" />} />;
+  }
+
+  return (
+    <div className="grid min-h-[620px] gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+      {/* Conversation list */}
+      <Card className="overflow-hidden rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-0">
+        <div className="flex items-center justify-between border-b border-primary/12 px-4 py-3">
+          <p className="section-label text-primary/80">Conversas</p>
+          <button
+            type="button"
+            onClick={manualRefresh}
+            className="text-muted-foreground transition hover:text-primary"
+            aria-label="Atualizar"
+          >
+            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+          </button>
+        </div>
+        <div className="max-h-[620px] space-y-2 overflow-y-auto p-3 thin-scrollbar">
+          {conversations.map((conversation) => {
+            const last = conversation.messages.at(-1);
+            const isActive = conversation.id === selectedId;
+            return (
+              <button
+                type="button"
+                key={conversation.id}
+                onClick={() => setSelectedId(conversation.id)}
+                className={cn(
+                  "flex w-full gap-3 rounded-2xl border p-3 text-left transition",
+                  isActive
+                    ? "border-primary/45 bg-primary/12"
+                    : "border-primary/12 bg-background/22 hover:border-primary/35 hover:bg-primary/8",
+                )}
+              >
+                <Avatar name={formatPhone(conversation.phone)} className="size-9 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {formatPhone(conversation.phone)}
+                    </p>
+                    <span className="shrink-0 text-[10px] text-muted-foreground">
+                      {formatTime(last?.sentAt ?? conversation.lastMessageAt)}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {last?.body ?? "—"}
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <StatusBadge status={conversation.status} />
+                    {conversation.triageClassification ? (
+                      <Badge variant="outline">{conversation.triageClassification}</Badge>
+                    ) : null}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Message panel */}
+      <Card className="flex min-h-[620px] flex-col overflow-hidden rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-0">
+        {!selected ? (
+          <div className="flex flex-1 items-center justify-center p-8">
+            <p className="text-sm text-muted-foreground">Selecione uma conversa.</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 border-b border-primary/12 px-5 py-4">
+              <Avatar name={formatPhone(selected.phone)} className="size-9" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {formatPhone(selected.phone)}
+                </p>
+                <p className="text-xs text-muted-foreground">{selected.status}</p>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-3 overflow-y-auto p-5 thin-scrollbar">
+              {selected.messages.map((message) => {
+                const outbound = message.direction === "out";
+                return (
+                  <div
+                    key={message.id}
+                    className={cn("flex", outbound ? "justify-end" : "justify-start")}
+                  >
+                    <div
+                      className={cn(
+                        "max-w-[78%] rounded-2xl px-4 py-2 text-sm",
+                        outbound
+                          ? "bg-primary/20 text-foreground"
+                          : "border border-primary/14 bg-background/30 text-foreground",
+                      )}
+                    >
+                      <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                      <p className="mt-1 text-right text-[10px] text-muted-foreground">
+                        {outbound && message.sentBy === "bot" ? "🤖 " : ""}
+                        {formatTime(message.sentAt)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div className="flex items-center gap-2 border-t border-primary/12 p-3">
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSend();
+                  }
+                }}
+                placeholder="Escreva uma resposta…"
+                className="flex-1 rounded-xl border border-primary/18 bg-background/30 px-4 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/45"
+              />
+              <Button onClick={() => void handleSend()} disabled={sending || !draft.trim()}>
+                <Send /> Enviar
+              </Button>
+            </div>
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}

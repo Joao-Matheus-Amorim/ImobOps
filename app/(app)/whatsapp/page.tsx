@@ -1,34 +1,23 @@
-import {
-  MessageCircle,
-  QrCode,
-  RefreshCw,
-  Trash2,
-  UserRound,
-} from "lucide-react";
+import { QrCode, RefreshCw, Trash2, UserRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar } from "@/components/ui/avatar";
 import { guardPage } from "@/lib/guard-page";
 import { whatsappRepository } from "@/lib/repositories/whatsapp.repository";
 import { isWhatsAppConfigured } from "@/lib/constants";
-import { formatDate } from "@/lib/utils";
+import { WhatsAppInbox } from "@/components/domain/whatsapp/whatsapp-inbox";
 
 export const metadata = { title: "WhatsApp" };
-
-function displayName(phone: string, index: number) {
-  const names = ["Maria Eduarda", "Suporte ImobOps", "Suporte DL", "Financeiro"];
-  return names[index] ?? phone;
-}
 
 export default async function WhatsAppPage() {
   const { ctx } = await guardPage("whatsapp");
   const conversations = await whatsappRepository.listConversations(ctx);
-  const conversationMessages = await Promise.all(
-    conversations.map((c) => whatsappRepository.listMessages(ctx, c.id)),
+  const initial = await Promise.all(
+    conversations.map(async (c) => ({
+      ...c,
+      messages: await whatsappRepository.listMessages(ctx, c.id),
+    })),
   );
   const configured = isWhatsAppConfigured();
 
@@ -87,59 +76,7 @@ export default async function WhatsAppPage() {
         </Card>
       </div>
 
-      {conversations.length === 0 ? (
-        <EmptyState title="Sem conversas" icon={<MessageCircle className="size-8" />} />
-      ) : (
-        <div className="grid min-h-[620px] gap-4 lg:grid-cols-[214px_minmax(0,1fr)] xl:grid-cols-[214px_minmax(0,1fr)]">
-          <Card className="overflow-hidden rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-0">
-            <div className="max-h-[620px] space-y-2 overflow-y-auto p-3 thin-scrollbar">
-              {conversations.map((conversation, index) => {
-                const messages = conversationMessages[index];
-                const last = messages.at(-1);
-                const unread = index === 0 ? 2 : index === 1 ? 1 : 0;
-
-                return (
-                  <div
-                    key={conversation.id}
-                    className="flex gap-3 rounded-2xl border border-primary/12 bg-background/22 p-3 transition hover:border-primary/35 hover:bg-primary/8"
-                  >
-                    <Avatar name={displayName(conversation.phone, index)} className="size-9 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {displayName(conversation.phone, index)}
-                        </p>
-                        <span className="shrink-0 text-[10px] text-muted-foreground">
-                          {formatDate(last?.sentAt ?? conversation.lastMessageAt)}
-                        </span>
-                      </div>
-                      <p className="mt-1 truncate text-xs text-muted-foreground">
-                        {last?.body ?? conversation.phone}
-                      </p>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <StatusBadge status={conversation.status} />
-                        {unread ? <Badge>{unread}</Badge> : null}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          <Card className="flex min-h-[620px] items-center justify-center rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-8">
-            <div className="w-full max-w-sm rounded-[1.35rem] border border-dashed border-primary/25 bg-background/16 p-8 text-center">
-              <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-primary/35 bg-primary/10 text-primary shadow-glow">
-                <MessageCircle className="size-8" />
-              </div>
-              <p className="mt-6 section-label text-primary/80">Selecione uma conversa</p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Selecione uma conversa para ver as mensagens e responder.
-              </p>
-            </div>
-          </Card>
-        </div>
-      )}
+      <WhatsAppInbox initial={initial} />
     </div>
   );
 }
