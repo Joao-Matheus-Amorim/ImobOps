@@ -46,10 +46,13 @@ export function NewUserDialog() {
           active,
         }),
       });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; invited?: boolean };
       if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
         setError(data.error ?? "Falha ao criar usuário.");
         return;
+      }
+      if (data.invited) {
+        alert(`Convite enviado para ${email}. A pessoa define a senha pelo e-mail e já entra com o acesso do papel escolhido.`);
       }
       setOpen(false);
       reset();
@@ -158,8 +161,8 @@ export function NewUserDialog() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Cria apenas o perfil na equipe (para atribuir leads e comissões). A pessoa
-                ainda não terá acesso de login.
+                Um convite é enviado para o e-mail informado. A pessoa define a senha e,
+                ao entrar, já vê as features liberadas pelo papel escolhido.
               </p>
 
               <div className="flex justify-end gap-2 pt-2">
