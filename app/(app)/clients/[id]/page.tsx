@@ -1,10 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  Mail,
-  Phone,
-  MapPin,
-  MessageCircle,
   Pencil,
   Building2,
   KeyRound,
@@ -27,7 +23,8 @@ import { BUSINESS_ROLE_LABELS, FUNNEL_STAGE_LABELS } from "@/lib/types/domain";
 import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 import { NewClientDialog } from "@/components/domain/clients/new-client-dialog";
 import { OpenWhatsAppButton } from "@/components/domain/clients/open-whatsapp-button";
-import { formatBrazilPhone, formatCpfCnpj, formatBRL } from "@/lib/utils";
+import { ContactRows } from "@/components/domain/clients/contact-rows";
+import { formatCpfCnpj, formatBRL } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
@@ -97,13 +94,14 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             </div>
           </div>
 
-          {/* Contact as actionable rows */}
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
-            <ContactAction icon={<Phone className="size-4" />} label="Telefone" value={client.phone ? formatBrazilPhone(client.phone) : null} href={client.phone ? `tel:${client.phone}` : undefined} />
-            <ContactAction icon={<MessageCircle className="size-4" />} label="WhatsApp" value={client.whatsapp ? formatBrazilPhone(client.whatsapp) : null} href={client.whatsapp ? `https://wa.me/55${client.whatsapp.replace(/\D/g, "")}` : undefined} />
-            <ContactAction icon={<Mail className="size-4" />} label="E-mail" value={client.email} href={client.email ? `mailto:${client.email}` : undefined} />
-            <ContactAction icon={<MapPin className="size-4" />} label="Endereço" value={client.address} />
-          </div>
+          {/* Contact rows: phone/whatsapp open the in-app inbox */}
+          <ContactRows
+            phone={client.phone}
+            whatsapp={client.whatsapp}
+            email={client.email}
+            address={client.address}
+            name={client.name}
+          />
 
           {client.tags.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-1.5 border-t border-primary/10 pt-4">
@@ -181,37 +179,6 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
 
       <NewChargeForm fixedClientId={client.id} fixedClientName={client.name} />
     </div>
-  );
-}
-
-function ContactAction({
-  icon,
-  label,
-  value,
-  href,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | null;
-  href?: string;
-}) {
-  const inner = (
-    <div className="flex items-center gap-2.5 rounded-xl border border-primary/10 bg-background/25 px-3 py-2 transition hover:border-primary/35 hover:bg-primary/8">
-      <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="truncate text-sm text-foreground">{value ?? "—"}</p>
-      </div>
-    </div>
-  );
-  return href && value ? (
-    <Link href={href} target={href.startsWith("http") ? "_blank" : undefined}>
-      {inner}
-    </Link>
-  ) : (
-    inner
   );
 }
 
