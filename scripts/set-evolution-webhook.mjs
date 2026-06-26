@@ -39,7 +39,10 @@ const body = {
     },
     webhook_by_events: false,
     webhookBase64: false,
-    events: ["MESSAGES_UPSERT"],
+    // MESSAGES_UPSERT = mensagens recebidas; SEND_MESSAGE = mensagens que VOCÊ
+    // envia (do celular/outro aparelho) — sem isso, suas próprias mensagens não
+    // aparecem no inbox em tempo real.
+    events: ["MESSAGES_UPSERT", "SEND_MESSAGE"],
   },
 };
 
