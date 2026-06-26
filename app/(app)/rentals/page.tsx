@@ -9,12 +9,16 @@ import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { formatBRL } from "@/lib/utils";
 import { routes } from "@/lib/routes";
+import { NewRentalDialog } from "@/components/domain/rentals/new-rental-dialog";
 
 export const metadata = { title: "Locação" };
 
 export default async function RentalsPage() {
   const { ctx } = await guardPage("rentals");
   const contracts = await rentalsRepository.list(ctx);
+  // Options for the "new rental" form.
+  const allProperties = await propertiesRepository.list(ctx);
+  const allClients = await clientsRepository.list(ctx);
   // Fetch related properties + tenants in two bulk queries instead of one per
   // contract (was N+1).
   const propertyById = new Map(
@@ -28,7 +32,17 @@ export default async function RentalsPage() {
 
   return (
     <div className="space-y-4">
-      <PageHeader badge="Locação" title="Locação" description={`${contracts.length} contratos`} />
+      <PageHeader
+        badge="Locação"
+        title="Locação"
+        description={`${contracts.length} contratos`}
+        action={
+          <NewRentalDialog
+            properties={allProperties.map((p) => ({ id: p.id, address: p.address }))}
+            clients={allClients.map((c) => ({ id: c.id, name: c.name }))}
+          />
+        }
+      />
       {contracts.length === 0 ? (
         <EmptyState title="Nenhum contrato de locação" icon={<KeyRound className="size-8" />} />
       ) : (

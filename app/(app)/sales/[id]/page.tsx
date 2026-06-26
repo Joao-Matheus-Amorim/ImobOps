@@ -9,6 +9,8 @@ import { salesRepository } from "@/lib/repositories/sales.repository";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { EditListingDialog } from "@/components/domain/sales/edit-listing-dialog";
+import { ListingActions } from "@/components/domain/sales/listing-actions";
+import { usersRepository } from "@/lib/repositories/users.repository";
 import { formatBRL, formatDate } from "@/lib/utils";
 
 export default async function SaleDetailPage({ params }: { params: { id: string } }) {
@@ -19,6 +21,8 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
   const property = await propertiesRepository.get(ctx, listing.propertyId);
   const proposals = await salesRepository.listProposals(ctx, listing.id);
   const buyers = await Promise.all(proposals.map((p) => clientsRepository.get(ctx, p.buyerClientId)));
+  const allClients = await clientsRepository.list(ctx);
+  const brokers = await usersRepository.listByRole(ctx, "broker");
 
   return (
     <div className="space-y-4">
@@ -26,7 +30,7 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
         title={property?.address ?? "Listagem"}
         description={`${formatBRL(listing.askingPrice)} · comissão ${listing.commissionPct}%`}
         action={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={listing.status} />
             <EditListingDialog
               listing={listing}
@@ -35,6 +39,11 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
                   <Pencil /> Editar
                 </Button>
               }
+            />
+            <ListingActions
+              listingId={listing.id}
+              clients={allClients.map((c) => ({ id: c.id, name: c.name }))}
+              brokers={brokers.map((b) => ({ id: b.id, name: b.displayName }))}
             />
           </div>
         }
