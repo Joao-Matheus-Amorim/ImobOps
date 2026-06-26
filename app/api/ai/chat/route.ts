@@ -6,8 +6,12 @@ import { z } from "zod";
 import { getPrincipal, getSessionUser } from "@/lib/session";
 import { getLlmAdapter } from "@/lib/ai/provider";
 import { ALL_TOOLS } from "@/lib/ai/tools/registry";
-import { allowedToolsFor } from "@/lib/ai/guard";
+import { allowedToolsFor, toolContextFor } from "@/lib/ai/guard";
+import { runTool } from "@/lib/ai/confirm";
 import type { ChatMessage } from "@/lib/types/ai";
+
+// Max automatic read-tool round-trips before we stop (avoids loops / cost).
+const MAX_READ_STEPS = 4;
 
 const messageSchema = z.object({
   role: z.enum(["system", "user", "assistant", "tool"]),
@@ -70,36 +74,68 @@ export async function POST(request: Request) {
     ...parsed.data.messages,
   ];
 
-  let response;
-  try {
-    response = await adapter.chat(messages, tools);
-  } catch (err) {
-    // Surface the real reason (e.g. provider out of credits / rate limited)
-    // instead of a generic failure, so it's diagnosable from the UI.
-    const message = (err as Error).message ?? "Falha ao consultar a IA.";
-    const credits = /402|insufficient credits|payment/i.test(message);
-    const rate = /429|rate limit/i.test(message);
-    return NextResponse.json(
-      {
-        error: credits
+  const toolCtx = toolContextFor(principal, user.tenancyId);
+
+  const callModel = async () => {
+    try {
+      return await adapter.chat(messages, tools);
+    } catch (err) {
+      const message = (err as Error).message ?? "Falha ao consultar a IA.";
+      const credits = /402|insufficient credits|payment/i.test(message);
+      const rate = /429|rate limit/i.test(message);
+      throw new Error(
+        credits
           ? "Provedor de IA sem créditos. Adicione créditos ou use um modelo gratuito (OPENROUTER_MODEL)."
           : rate
             ? "Provedor de IA com limite de uso atingido. Tente em instantes."
             : `Falha na IA: ${message}`,
-      },
-      { status: 502 },
-    );
+      );
+    }
+  };
+
+  // Agent loop: run READ tools automatically (search/list/get) and feed the
+  // results back to the model, so it can chain steps (e.g. search a client, then
+  // propose creating a charge). Stop when the model returns text or proposes a
+  // WRITE tool — writes always go to the UI for dry-run + confirmation.
+  let response;
+  try {
+    response = await callModel();
+    for (let step = 0; step < MAX_READ_STEPS; step++) {
+      const reads = response.toolCalls.filter(
+        (tc) => tools.find((t) => t.name === tc.name)?.effect === "read",
+      );
+      const hasWrite = response.toolCalls.some(
+        (tc) => tools.find((t) => t.name === tc.name)?.effect === "write",
+      );
+      if (reads.length === 0 || hasWrite) break;
+
+      // Record the assistant turn that requested the tools (with tool_calls),
+      // then the results, so the next model call has the full context.
+      messages.push({ role: "assistant", content: response.content ?? "", toolCalls: response.toolCalls });
+      for (const tc of reads) {
+        const tool = tools.find((t) => t.name === tc.name);
+        if (!tool) continue;
+        const result = await runTool(tool, tc.params, toolCtx, { confirm: true }, tc.id);
+        messages.push({
+          role: "tool",
+          content: JSON.stringify(result.ok ? (result.data ?? null) : { error: result.error }),
+          toolCallId: tc.id,
+        });
+      }
+      response = await callModel();
+    }
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
 
   // Attach previews for any proposed write tool calls so the UI can ask to confirm.
-  const proposed = response.toolCalls.map((tc) => {
-    const tool = tools.find((t) => t.name === tc.name);
-    return {
+  const proposed = response.toolCalls
+    .filter((tc) => tools.find((t) => t.name === tc.name)?.effect === "write")
+    .map((tc) => ({
       ...tc,
-      effect: tool?.effect ?? "read",
-      requiresConfirmation: tool?.effect === "write",
-    };
-  });
+      effect: "write" as const,
+      requiresConfirmation: true,
+    }));
 
   return NextResponse.json({
     provider: adapter.name,

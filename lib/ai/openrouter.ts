@@ -31,7 +31,30 @@ export class OpenRouterAdapter implements LlmAdapter {
   private buildBody(model: string, messages: ChatMessage[], tools: ToolDefinition[]) {
     return {
       model,
-      messages: messages.map((message) => ({ role: message.role, content: message.content })),
+      messages: messages.map((message) => {
+        // Assistant turns that called tools must carry tool_calls; tool results
+        // must carry tool_call_id — required by the function-calling protocol so
+        // the agent loop can feed read results back to the model.
+        if (message.role === "assistant" && message.toolCalls?.length) {
+          return {
+            role: "assistant",
+            content: message.content || null,
+            tool_calls: message.toolCalls.map((tc) => ({
+              id: tc.id,
+              type: "function",
+              function: { name: tc.name, arguments: JSON.stringify(tc.params ?? {}) },
+            })),
+          };
+        }
+        if (message.role === "tool") {
+          return {
+            role: "tool",
+            content: message.content,
+            tool_call_id: message.toolCallId,
+          };
+        }
+        return { role: message.role, content: message.content };
+      }),
       tools: tools.map((tool) => ({
         type: "function",
         function: {
