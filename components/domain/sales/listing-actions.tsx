@@ -126,6 +126,7 @@ export function ListingActions({
       finalPrice: price,
       signedAt: signedAt || null,
       paymentTerms: paymentTerms.trim() || null,
+      brokerUserId: brokerUserId || null,
     });
   }
 
@@ -214,8 +215,16 @@ export function ListingActions({
               <Label htmlFor="terms">Forma de pagamento (opcional)</Label>
               <Input id="terms" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="Ex.: à vista, financiamento Caixa…" />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-broker">Corretor da venda (gera comissão)</Label>
+              <select id="s-broker" aria-label="Corretor da venda" value={brokerUserId} onChange={(e) => setBrokerUserId(e.target.value)} className={selectClass}>
+                <option value="">Sem comissão</option>
+                {brokers.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Ao fechar, o anúncio é marcado como vendido.
+              Ao fechar, o anúncio é marcado como vendido. Se um corretor for
+              informado, a comissão é gerada automaticamente pelo % do anúncio.
             </p>
             <div className="flex justify-end gap-3 pt-2">
               <Button type="button" variant="outline" onClick={close}>Cancelar</Button>
