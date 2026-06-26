@@ -6,6 +6,8 @@ import { crmRepository } from "@/lib/repositories/crm.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { filterAllowed, getPrincipalCan } from "@/components/domain/_helpers";
 import { FUNNEL_ORDER, FUNNEL_STAGE_LABELS } from "@/lib/types/domain";
+import { NewLeadDialog } from "@/components/domain/crm/new-lead-dialog";
+import { LeadCard } from "@/components/domain/crm/lead-card";
 
 export const metadata = { title: "CRM" };
 
@@ -13,17 +15,17 @@ export default async function CrmPage() {
   const { ctx } = await guardPage("crm");
   const principal = await getPrincipalCan();
   const leads = filterAllowed(principal, "crm", await crmRepository.listLeads(ctx));
-  const clientsById = new Map(
-    await Promise.all(
-      leads
-        .filter((l) => l.clientId)
-        .map(async (l) => [l.clientId as string, await clientsRepository.get(ctx, l.clientId as string)] as const),
-    ),
-  );
+  const allClients = await clientsRepository.list(ctx);
+  const clientsById = new Map(allClients.map((c) => [c.id, c] as const));
 
   return (
     <div className="space-y-4">
-      <PageHeader badge="Crescimento" title="CRM" description={`${leads.length} leads no funil`} />
+      <PageHeader
+        badge="Crescimento"
+        title="CRM"
+        description={`${leads.length} leads no funil`}
+        action={<NewLeadDialog clients={allClients.map((c) => ({ id: c.id, name: c.name }))} />}
+      />
 
       <div className="grid gap-3 md:grid-cols-2">
         {FUNNEL_ORDER.map((stage) => {
@@ -41,10 +43,14 @@ export default async function CrmPage() {
                   stageLeads.map((l) => {
                     const client = l.clientId ? clientsById.get(l.clientId) ?? null : null;
                     return (
-                      <div key={l.id} className="rounded-lg border border-border p-2.5 text-sm">
-                        <p className="font-medium">{client?.name ?? "Lead sem cadastro"}</p>
-                        <p className="text-xs text-muted-foreground">{l.interest} · via {l.source}</p>
-                      </div>
+                      <LeadCard
+                        key={l.id}
+                        leadId={l.id}
+                        clientName={client?.name ?? "Lead sem cadastro"}
+                        interest={l.interest}
+                        source={l.source}
+                        stage={l.funnelStage}
+                      />
                     );
                   })
                 )}
