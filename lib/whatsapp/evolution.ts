@@ -1,7 +1,12 @@
 // Evolution API implementation of the WhatsApp adapter. Configured via env:
 // EVOLUTION_API_URL, EVOLUTION_API_TOKEN, EVOLUTION_INSTANCE. In mock mode (no
 // env) sends return a fake externalId so the app stays usable end-to-end.
-import type { WhatsAppAdapter, InboundMessage, ConnectionInfo } from "./adapter";
+import type {
+  WhatsAppAdapter,
+  InboundMessage,
+  ConnectionInfo,
+  ImportedChat,
+} from "./adapter";
 import { renderTemplate, type TemplateKey } from "./templates";
 import { isWhatsAppConfigured } from "@/lib/constants";
 
@@ -29,6 +34,20 @@ interface EvolutionWebhook {
 }
 
 type EvolutionKey = NonNullable<NonNullable<EvolutionWebhook["data"]>["key"]>;
+
+// Shapes returned by /chat/findChats and /chat/findMessages (subset we use).
+interface EvolutionChat {
+  remoteJid?: string;
+  pushName?: string | null;
+  updatedAt?: string;
+  lastMessage?: { key?: { remoteJidAlt?: string } };
+}
+interface EvolutionMessageRecord {
+  key?: { id?: string; fromMe?: boolean };
+  pushName?: string | null;
+  message?: { conversation?: string; extendedTextMessage?: { text?: string } };
+  messageTimestamp?: number;
+}
 
 // Extract the dialable phone JID, preferring the real-number alt over a @lid.
 function resolvePhoneJid(key?: EvolutionKey): string | null {
@@ -113,6 +132,84 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     if (!isWhatsAppConfigured()) return { state: "close", qr: null };
     await this.del(`/instance/logout/${this.instance}`);
     return { state: "close", qr: null };
+  }
+
+  async importChats(sinceMs: number, perChat: number): Promise<ImportedChat[]> {
+    if (!isWhatsAppConfigured()) return [];
+    const chats = (await this.post2(`/chat/findChats/${this.instance}`, {})) as EvolutionChat[];
+    if (!Array.isArray(chats)) return [];
+
+    // Keep personal chats with a resolvable real number, active since `sinceMs`.
+    const since = Date.now() - sinceMs;
+    const wanted = chats.filter((c) => {
+      const jid = c.remoteJid ?? "";
+      if (jid.endsWith("@g.us") || jid.includes("status@")) return false;
+      const updated = c.updatedAt ? new Date(c.updatedAt).getTime() : 0;
+      if (updated < since) return false;
+      return Boolean(this.chatPhone(c));
+    });
+
+    const out: ImportedChat[] = [];
+    for (const c of wanted) {
+      const phone = this.chatPhone(c);
+      if (!phone) continue;
+      const messages = await this.fetchChatMessages(c.remoteJid ?? "", phone, perChat);
+      out.push({ phone, name: c.pushName ?? undefined, messages });
+    }
+    return out;
+  }
+
+  // POST that returns the raw JSON body (findChats returns an array, not {key}).
+  private async post2(path: string, body: unknown): Promise<unknown> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", apikey: this.token },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`Evolution ${res.status}: ${await res.text()}`);
+    return res.json();
+  }
+
+  // Resolve a chat's dialable phone (digits only) from its jid / lastMessage alt.
+  private chatPhone(c: EvolutionChat): string | null {
+    const alt = c.lastMessage?.key?.remoteJidAlt;
+    const jid =
+      alt && alt.endsWith("@s.whatsapp.net")
+        ? alt
+        : c.remoteJid?.endsWith("@s.whatsapp.net")
+          ? c.remoteJid
+          : null;
+    return jid ? jid.replace(/@.*$/, "") : null;
+  }
+
+  private async fetchChatMessages(
+    remoteJid: string,
+    phone: string,
+    limit: number,
+  ): Promise<InboundMessage[]> {
+    if (!remoteJid) return [];
+    const data = (await this.post2(`/chat/findMessages/${this.instance}`, {
+      where: { key: { remoteJid } },
+    })) as { messages?: { records?: EvolutionMessageRecord[] } };
+    const records = data?.messages?.records ?? [];
+    // Records come newest-first; take the most recent `limit` and order ascending.
+    const recent = records.slice(0, limit).reverse();
+    const out: InboundMessage[] = [];
+    for (const r of recent) {
+      const body = r.message?.conversation ?? r.message?.extendedTextMessage?.text;
+      if (!body) continue;
+      out.push({
+        phone,
+        body,
+        name: r.pushName ?? undefined,
+        externalId: r.key?.id ?? `imp-${Date.now()}-${Math.random()}`,
+        timestamp: r.messageTimestamp
+          ? new Date(r.messageTimestamp * 1000).toISOString()
+          : new Date().toISOString(),
+        fromMe: Boolean(r.key?.fromMe),
+      });
+    }
+    return out;
   }
 
   sendTemplate(to: string, templateKey: string, vars: Record<string, string>) {

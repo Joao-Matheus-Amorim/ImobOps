@@ -9,6 +9,8 @@ export interface InboundMessage {
   mediaUrl?: string;
   externalId: string;
   timestamp: string;
+  // True when this message was sent by us (import only — webhook drops fromMe).
+  fromMe?: boolean;
 }
 
 // Connection state for the inbox "connect number" flow. `qr` is a base64 data
@@ -16,6 +18,14 @@ export interface InboundMessage {
 export interface ConnectionInfo {
   state: "open" | "connecting" | "close" | "unknown";
   qr: string | null;
+}
+
+// An existing conversation pulled from the provider for import, with its recent
+// messages already normalized.
+export interface ImportedChat {
+  phone: string;
+  name?: string;
+  messages: InboundMessage[];
 }
 
 export interface WhatsAppAdapter {
@@ -32,4 +42,7 @@ export interface WhatsAppAdapter {
   connect(): Promise<ConnectionInfo>;
   // Log out the connected number (ends the WhatsApp session).
   disconnect(): Promise<ConnectionInfo>;
+  // Pull existing personal conversations (active since `sinceMs`) with their
+  // recent messages, for a one-off import into the inbox.
+  importChats(sinceMs: number, perChat: number): Promise<ImportedChat[]>;
 }

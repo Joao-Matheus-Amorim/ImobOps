@@ -33,4 +33,8 @@ export class MetaAdapter implements WhatsAppAdapter {
   async disconnect(): Promise<ConnectionInfo> {
     return { state: "open", qr: null };
   }
+
+  async importChats(): Promise<import("./adapter").ImportedChat[]> {
+    return [];
+  }
 }
