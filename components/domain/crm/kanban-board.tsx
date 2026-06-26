@@ -17,6 +17,7 @@ import { GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { FUNNEL_ORDER, FUNNEL_STAGE_LABELS, type FunnelStage } from "@/lib/types/domain";
 import { cn } from "@/lib/utils";
+import { LeadDrawer, type DrawerLead } from "./lead-drawer";
 
 export interface KanbanLead {
   id: string;
@@ -57,13 +58,15 @@ function LeadCard({ lead, dragging }: { lead: KanbanLead; dragging?: boolean }) 
   );
 }
 
-function DraggableCard({ lead }: { lead: KanbanLead }) {
+function DraggableCard({ lead, onOpen }: { lead: KanbanLead; onOpen: (l: KanbanLead) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: lead.id });
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
+      // A bare click (no 5px drag) opens the detail drawer; dragging moves stage.
+      onClick={() => onOpen(lead)}
       className={cn("cursor-grab touch-none active:cursor-grabbing", isDragging && "opacity-40")}
     >
       <LeadCard lead={lead} />
@@ -75,10 +78,12 @@ function Column({
   stage,
   leads,
   isOver,
+  onOpen,
 }: {
   stage: FunnelStage;
   leads: KanbanLead[];
   isOver: boolean;
+  onOpen: (l: KanbanLead) => void;
 }) {
   const { setNodeRef } = useDroppable({ id: stage });
   return (
@@ -99,7 +104,7 @@ function Column({
         {leads.length === 0 ? (
           <p className="px-1 py-6 text-center text-xs text-muted-foreground">Solte um lead aqui</p>
         ) : (
-          leads.map((lead) => <DraggableCard key={lead.id} lead={lead} />)
+          leads.map((lead) => <DraggableCard key={lead.id} lead={lead} onOpen={onOpen} />)
         )}
       </div>
     </div>
@@ -111,6 +116,7 @@ export function KanbanBoard({ initialLeads }: { initialLeads: KanbanLead[] }) {
   const [leads, setLeads] = useState<KanbanLead[]>(initialLeads);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<FunnelStage | null>(null);
+  const [openLead, setOpenLead] = useState<DrawerLead | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -172,11 +178,14 @@ export function KanbanBoard({ initialLeads }: { initialLeads: KanbanLead[] }) {
             stage={stage}
             leads={leads.filter((l) => l.stage === stage)}
             isOver={overStage === stage}
+            onOpen={setOpenLead}
           />
         ))}
       </div>
 
       <DragOverlay>{activeLead ? <LeadCard lead={activeLead} dragging /> : null}</DragOverlay>
+
+      <LeadDrawer lead={openLead} onClose={() => setOpenLead(null)} />
     </DndContext>
   );
 }

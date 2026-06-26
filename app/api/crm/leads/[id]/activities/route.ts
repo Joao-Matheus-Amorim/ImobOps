@@ -11,6 +11,15 @@ const bodySchema = z.object({
   scheduledAt: z.string().nullable().optional(),
 });
 
+// List the lead's activities (newest first) for the detail drawer.
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const auth = await requireContext(request);
+  if ("error" in auth) return auth.error;
+  const { ctx } = auth;
+  const activities = await crmRepository.listActivities(ctx, params.id);
+  return NextResponse.json({ activities });
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const auth = await requireContext(request);
   if ("error" in auth) return auth.error;
