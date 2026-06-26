@@ -265,8 +265,6 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     const key = data?.key;
     const body = data?.message?.conversation ?? data?.message?.extendedTextMessage?.text;
     if (!key || !body) return null;
-    // Ignore our own outbound echoes (avoids reply loops).
-    if (key.fromMe) return null;
     // Resolve the real phone JID. Newer WhatsApp delivers remoteJid as "<n>@lid"
     // with the real number in remoteJidAlt — accept both LID and standard JIDs.
     const jid = resolvePhoneJid(key);
@@ -276,8 +274,9 @@ export class EvolutionAdapter implements WhatsAppAdapter {
       return null;
     }
     const phone = jid.replace(/@.*$/, "");
-    // A real phone is digits only (LID values can leak through if there is no
-    // alt; we still keep them so the conversation is captured).
+    // fromMe messages (sent from the phone or another device) are kept and shown
+    // as outbound; the webhook maps fromMe → direction "out". Auto-reply is off,
+    // so there is no loop risk.
     return {
       phone,
       body,
@@ -286,6 +285,7 @@ export class EvolutionAdapter implements WhatsAppAdapter {
       timestamp: data?.messageTimestamp
         ? new Date(data.messageTimestamp * 1000).toISOString()
         : new Date().toISOString(),
+      fromMe: Boolean(key.fromMe),
     };
   }
 }

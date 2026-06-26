@@ -43,7 +43,10 @@ export async function POST(request: Request) {
   }
 
   const ctx = systemCtx();
-  const triage = await triageInbound(ctx, inbound.body);
+  // Only triage real inbound messages (from the contact), not our own outbound.
+  const triage = inbound.fromMe
+    ? { classification: null, leadId: null, assignedTo: null }
+    : await triageInbound(ctx, inbound.body);
   const conversation = await whatsappRepository.upsertConversation(
     ctx,
     inbound.phone,
@@ -51,27 +54,33 @@ export async function POST(request: Request) {
     inbound.name,
   );
 
-  await whatsappRepository.appendMessage(ctx, {
-    conversationId: conversation.id,
-    direction: "in",
-    body: inbound.body,
-    mediaUrl: inbound.mediaUrl ?? null,
-    templateKey: null,
-    externalId: inbound.externalId,
-    sentAt: inbound.timestamp,
-    deliveredAt: inbound.timestamp,
-    readAt: null,
-    sentBy: "user",
-  });
-
-  // Push the inbound message to any open inbox (SSE).
-  publishWhatsAppEvent({ type: "message", tenancyId: ctx.tenancyId, conversationId: conversation.id });
+  // Skip if we already stored this exact message (e.g. sent from the app, then
+  // echoed back by the webhook as fromMe). Dedup by externalId.
+  const already = (await whatsappRepository.listMessages(ctx, conversation.id)).some(
+    (m) => m.externalId && m.externalId === inbound.externalId,
+  );
+  if (!already) {
+    await whatsappRepository.appendMessage(ctx, {
+      conversationId: conversation.id,
+      direction: inbound.fromMe ? "out" : "in",
+      body: inbound.body,
+      mediaUrl: inbound.mediaUrl ?? null,
+      templateKey: null,
+      externalId: inbound.externalId,
+      sentAt: inbound.timestamp,
+      deliveredAt: inbound.timestamp,
+      readAt: null,
+      sentBy: "user",
+    });
+    // Push to any open inbox (SSE).
+    publishWhatsAppEvent({ type: "message", tenancyId: ctx.tenancyId, conversationId: conversation.id });
+  }
 
   // Optional AI auto-reply. Disabled by default — a human answers from the
   // inbox. Enable by setting WHATSAPP_AI_AUTOREPLY=true. A send failure must not
   // fail the webhook (Evolution would retry), so we log and still return 200.
   let replySent = false;
-  if (process.env.WHATSAPP_AI_AUTOREPLY === "true") {
+  if (process.env.WHATSAPP_AI_AUTOREPLY === "true" && !inbound.fromMe) {
     try {
       const reply = await generateReply(inbound.body, triage.classification);
       const sent = await adapter.sendMessage(inbound.phone, reply);
