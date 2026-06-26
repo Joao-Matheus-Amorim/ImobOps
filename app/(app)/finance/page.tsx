@@ -43,6 +43,10 @@ export default async function FinancePage() {
   });
   const repasses = await financeRepository.listRepasses(ctx);
 
+  // Every charge ever emitted (boleto/PIX), incl. standalone ones created by the
+  // AI assistant — so they're visible here, not only the installment-linked ones.
+  const allCharges = await billingRepository.list(ctx);
+
   // Billing rows: unpaid installments + any charge already emitted for them.
   const allInstallments = await rentalsRepository.listInstallments(ctx);
   const openInstallments = allInstallments.filter(
@@ -125,6 +129,40 @@ export default async function FinancePage() {
       />
 
       <BillingPanel rows={billingRows} />
+
+      <Card>
+        <CardHeader><CardTitle>Todas as cobranças ({allCharges.length})</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          {allCharges.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Nenhuma cobrança emitida ainda. Crie uma acima ou peça ao Assistente IA.
+            </p>
+          ) : (
+            allCharges.map((c) => (
+              <div key={c.id} className="flex items-center justify-between gap-3 rounded-xl border border-primary/12 bg-background/25 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {c.customerName ?? c.description ?? "Cobrança"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {c.method.toUpperCase()} · venc. {formatDate(c.dueDate)}
+                    {c.sourceType === "avulsa" ? " · avulsa" : ""}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {c.boletoUrl ? (
+                    <a href={c.boletoUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                      boleto
+                    </a>
+                  ) : null}
+                  <span className="font-display text-sm font-semibold text-foreground">{formatBRL(c.amount)}</span>
+                  <StatusBadge status={c.effectiveStatus} />
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
