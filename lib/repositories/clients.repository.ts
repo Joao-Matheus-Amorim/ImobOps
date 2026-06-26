@@ -28,6 +28,39 @@ export const clientsRepository = {
     return col.list(ctx, undefined, { in: { id: [...new Set(ids)] } });
   },
 
+  // Find an existing client that conflicts with the given data: same document
+  // (CPF/CNPJ), same phone/whatsapp, or same name + phone. Pass `excludeId` when
+  // editing so a client isn't flagged against itself. Values should be normalized
+  // (digits-only document/phone) as stored. Returns the first conflict or null.
+  async findDuplicate(
+    ctx: RepoContext,
+    data: { name?: string; document?: string | null; phone?: string | null; whatsapp?: string | null },
+    excludeId?: string,
+  ): Promise<Client | null> {
+    const doc = data.document?.replace(/\D/g, "") || null;
+    const phones = [data.phone, data.whatsapp]
+      .map((p) => p?.replace(/\D/g, "") || null)
+      .filter(Boolean) as string[];
+    const name = data.name?.trim().toLowerCase();
+
+    const rows = await col.list(ctx, (c) => c.id !== excludeId);
+    return (
+      rows.find((c) => {
+        const cDoc = c.document?.replace(/\D/g, "") || null;
+        const cPhones = [c.phone, c.whatsapp].map((p) => p?.replace(/\D/g, "") || null).filter(Boolean) as string[];
+        // Same document (strongest signal).
+        if (doc && cDoc && doc === cDoc) return true;
+        // Same phone or whatsapp.
+        if (phones.length && cPhones.some((cp) => phones.includes(cp))) return true;
+        // Same name + same phone (when there's no document to compare).
+        if (name && c.name.trim().toLowerCase() === name && phones.length && cPhones.some((cp) => phones.includes(cp))) {
+          return true;
+        }
+        return false;
+      }) ?? null
+    );
+  },
+
   create(
     ctx: RepoContext,
     data: Omit<Client, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,

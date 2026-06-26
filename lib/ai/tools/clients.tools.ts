@@ -37,8 +37,19 @@ export const clientTools = [
       phone: z.string().optional(),
       whatsapp: z.string().optional(),
     }),
-    run: async (p, ctx) =>
-      clientsRepository.create(repoCtx(ctx), {
+    run: async (p, ctx) => {
+      const rctx = repoCtx(ctx);
+      // Reject duplicates (same CPF/CNPJ, phone/whatsapp, or name+phone).
+      const dup = await clientsRepository.findDuplicate(rctx, {
+        name: p.name,
+        document: p.document ?? null,
+        phone: p.phone ?? null,
+        whatsapp: p.whatsapp ?? null,
+      });
+      if (dup) {
+        throw new Error(`Já existe um cliente com estes dados (${dup.name}). Não foi criado um duplicado.`);
+      }
+      return clientsRepository.create(rctx, {
         kind: p.kind,
         name: p.name,
         document: p.document ?? null,
@@ -49,7 +60,8 @@ export const clientTools = [
         tags: [],
         rolesInBusiness: [],
         ownerUserId: ctx.userId,
-      }),
+      });
+    },
     preview: async (p) => `Criar cliente "${p.name}" (${p.kind.toUpperCase()}).`,
   }),
 

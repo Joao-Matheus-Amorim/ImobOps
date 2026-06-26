@@ -69,15 +69,33 @@ export async function POST(request: Request) {
     );
   }
 
+  const document = parsed.data.document
+    ? normalizeCpfCnpj(parsed.data.document, parsed.data.kind)
+    : null;
+  const phone = parsed.data.phone ? normalizeBrazilPhone(parsed.data.phone) : null;
+  const whatsapp = parsed.data.whatsapp ? normalizeBrazilPhone(parsed.data.whatsapp) : null;
+
+  // Reject duplicates: same CPF/CNPJ, same phone/whatsapp, or same name+phone.
+  const duplicate = await clientsRepository.findDuplicate(ctx, {
+    name: parsed.data.name,
+    document,
+    phone,
+    whatsapp,
+  });
+  if (duplicate) {
+    return NextResponse.json(
+      { error: `Já existe um cliente com estes dados: ${duplicate.name}.`, duplicateId: duplicate.id },
+      { status: 409 },
+    );
+  }
+
   const client = await clientsRepository.create(ctx, {
     kind: parsed.data.kind,
     name: parsed.data.name,
-    document: parsed.data.document
-      ? normalizeCpfCnpj(parsed.data.document, parsed.data.kind)
-      : null,
+    document,
     email: parsed.data.email ?? null,
-    phone: parsed.data.phone ? normalizeBrazilPhone(parsed.data.phone) : null,
-    whatsapp: parsed.data.whatsapp ? normalizeBrazilPhone(parsed.data.whatsapp) : null,
+    phone,
+    whatsapp,
     address: parsed.data.address ?? null,
     tags: parsed.data.tags,
     rolesInBusiness: parsed.data.rolesInBusiness,
