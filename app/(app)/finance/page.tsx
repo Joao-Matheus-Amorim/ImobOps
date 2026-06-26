@@ -1,7 +1,9 @@
+import Link from "next/link";
+import { TrendingUp, AlertTriangle, Send, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { routes } from "@/lib/routes";
 import { guardPage } from "@/lib/guard-page";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
 import { financeRepository } from "@/lib/repositories/finance.repository";
@@ -80,11 +82,42 @@ export default async function FinancePage() {
     <div className="space-y-5">
       <PageHeader badge="Financeiro" title="Finanças" description="A receber, inadimplência e repasses" />
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard label="A receber (mês)" value={formatBRL(summary.receivableThisMonth)} />
-        <StatCard label="Inadimplência" value={formatBRL(summary.overdueAmount)} accent="destructive" />
-        <StatCard label="Repasses pendentes" value={formatBRL(summary.pendingRepasses)} accent="warning" />
-        <StatCard label="Comissões a pagar" value={formatBRL(summary.pendingCommissions)} accent="warning" />
+      {/* Financial hero: the money in vs the money at risk */}
+      <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <Card className="rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-6 shadow-[0_34px_110px_-72px_hsl(var(--primary)/0.9)]">
+          <div className="flex items-center gap-2 text-primary/80">
+            <TrendingUp className="size-4" />
+            <p className="section-label">A receber neste mês</p>
+          </div>
+          <p className="mt-2 font-display text-5xl font-semibold text-primary">
+            {formatBRL(summary.receivableThisMonth)}
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-2 border-t border-primary/10 pt-4">
+            <SecondaryStat icon={<Send className="size-4" />} label="Repasses pendentes" value={formatBRL(summary.pendingRepasses)} />
+            <SecondaryStat icon={<Wallet className="size-4" />} label="Comissões a pagar" value={formatBRL(summary.pendingCommissions)} />
+          </div>
+        </Card>
+
+        <Card
+          className={`rounded-[1.35rem] p-6 ${
+            summary.overdueAmount > 0
+              ? "border-destructive/45 bg-destructive/8"
+              : "border-emerald-500/35 bg-emerald-500/8"
+          }`}
+        >
+          <div className={`flex items-center gap-2 ${summary.overdueAmount > 0 ? "text-destructive" : "text-emerald-400"}`}>
+            <AlertTriangle className="size-4" />
+            <p className="section-label">Inadimplência</p>
+          </div>
+          <p className={`mt-2 font-display text-4xl font-semibold ${summary.overdueAmount > 0 ? "text-destructive" : "text-emerald-400"}`}>
+            {formatBRL(summary.overdueAmount)}
+          </p>
+          <p className="mt-3 text-xs text-muted-foreground">
+            {overdue.length > 0
+              ? `${overdue.length} parcela(s) em atraso`
+              : "Tudo em dia. 🎉"}
+          </p>
+        </Card>
       </div>
 
       <NewChargeForm
@@ -93,44 +126,79 @@ export default async function FinancePage() {
 
       <BillingPanel rows={billingRows} />
 
-      <Card>
-        <CardHeader><CardTitle>Parcelas em atraso</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {overdue.length === 0 ? (
-            <p className="text-muted-foreground">Nenhuma parcela em atraso.</p>
-          ) : (
-            overdue.map((i) => (
-              <div key={i.id} className="flex items-center justify-between border-b border-border/60 pb-2 last:border-0">
-                <span>{formatReferenceMonth(i.referenceMonth)} · venc. {formatDate(i.dueDate)}</span>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold">{formatBRL(i.amount)}</span>
-                  <StatusBadge status={i.status} />
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Parcelas em atraso</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {overdue.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma parcela em atraso. 🎉</p>
+            ) : (
+              overdue.map((i) => (
+                <Link
+                  key={i.id}
+                  href={routes.rental(i.contractId)}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-destructive/25 bg-destructive/8 px-3 py-2.5 transition hover:border-destructive/50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{formatReferenceMonth(i.referenceMonth)}</p>
+                    <p className="text-xs text-muted-foreground">venc. {formatDate(i.dueDate)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-display font-semibold text-destructive">{formatBRL(i.amount)}</span>
+                    <StatusBadge status={i.status} />
+                  </div>
+                </Link>
+              ))
+            )}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Repasses aos proprietários</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          {repasses.map((r) => (
-            <div key={r.id} className="flex items-center justify-between border-b border-border/60 pb-2 last:border-0">
-              <div>
-                <p className="font-medium">{formatReferenceMonth(r.referenceMonth)}</p>
-                <p className="text-xs text-muted-foreground">Bruto {formatBRL(r.grossAmount)} · taxa {formatBRL(r.adminFeeAmount)}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-semibold">{formatBRL(r.netAmount)}</span>
-                <StatusBadge status={r.status} />
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader><CardTitle>Repasses aos proprietários</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {repasses.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">Nenhum repasse no período.</p>
+            ) : (
+              repasses.map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl border border-primary/12 bg-background/25 px-3 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{formatReferenceMonth(r.referenceMonth)}</p>
+                    <p className="text-xs text-muted-foreground">Bruto {formatBRL(r.grossAmount)} · taxa {formatBRL(r.adminFeeAmount)}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-display font-semibold text-foreground">{formatBRL(r.netAmount)}</span>
+                    <StatusBadge status={r.status} />
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <CommissionsPanel rows={commissionRows} />
+    </div>
+  );
+}
+
+function SecondaryStat({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-primary/12 bg-background/30 px-3 py-2.5">
+      <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="truncate font-display text-sm font-semibold text-foreground">{value}</p>
+      </div>
     </div>
   );
 }
