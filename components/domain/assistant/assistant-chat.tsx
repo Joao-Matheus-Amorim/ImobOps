@@ -46,6 +46,10 @@ export function AssistantChat({ canUseTools }: { canUseTools: boolean }) {
         body: JSON.stringify({ messages: next }),
       });
       const data = await res.json();
+      if (!res.ok || data.error) {
+        setMessages((m) => [...m, { role: "assistant", content: data.error ?? "Erro ao falar com o assistente." }]);
+        return;
+      }
       setProvider(data.provider ?? "");
       setMessages((m) => [...m, { role: "assistant", content: data.content || "(sem resposta)" }]);
 

@@ -44,7 +44,26 @@ export async function POST(request: Request) {
     ...parsed.data.messages,
   ];
 
-  const response = await adapter.chat(messages, tools);
+  let response;
+  try {
+    response = await adapter.chat(messages, tools);
+  } catch (err) {
+    // Surface the real reason (e.g. provider out of credits / rate limited)
+    // instead of a generic failure, so it's diagnosable from the UI.
+    const message = (err as Error).message ?? "Falha ao consultar a IA.";
+    const credits = /402|insufficient credits|payment/i.test(message);
+    const rate = /429|rate limit/i.test(message);
+    return NextResponse.json(
+      {
+        error: credits
+          ? "Provedor de IA sem créditos. Adicione créditos ou use um modelo gratuito (OPENROUTER_MODEL)."
+          : rate
+            ? "Provedor de IA com limite de uso atingido. Tente em instantes."
+            : `Falha na IA: ${message}`,
+      },
+      { status: 502 },
+    );
+  }
 
   // Attach previews for any proposed write tool calls so the UI can ask to confirm.
   const proposed = response.toolCalls.map((tc) => {
