@@ -4,6 +4,7 @@
 // truth for ownership/team. Without Supabase it falls back to the cookie-driven
 // mock session (role switcher) used in demo mode.
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import type { Principal } from "@/lib/permissions/enforce";
 import type { Role } from "@/lib/types/permissions";
@@ -56,8 +57,11 @@ function mockSessionUser(): SessionUser {
   };
 }
 
-// Resolve the current session user. Async because Supabase auth is async.
-export async function getSessionUser(): Promise<SessionUser | null> {
+// Resolve the current session user. Wrapped in React `cache()` so the multiple
+// callers within a single request (guardPage, getPrincipal, route handlers,
+// layout) share ONE result instead of each re-running 2-3 Supabase round-trips.
+// This is the biggest per-navigation cost given the remote DB latency.
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   if (!isSupabaseConfigured()) return mockSessionUser();
 
   const supabase = createClient();
@@ -90,7 +94,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     displayName: profile.display_name,
     email: profile.email,
   };
-}
+});
 
 // Convenience: the bare Principal for permission checks.
 export async function getPrincipal(): Promise<Principal | null> {

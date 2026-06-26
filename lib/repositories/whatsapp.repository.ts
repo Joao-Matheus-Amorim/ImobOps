@@ -60,6 +60,21 @@ export const whatsappRepository = {
     return rows.sort((a, b) => a.sentAt.localeCompare(b.sentAt));
   },
 
+  // Fetch every message for the tenancy once and group by conversation. Avoids
+  // the N+1 (one listMessages per conversation) the inbox used to do on every
+  // load, SSE event and poll — the main inbox latency cost with a remote DB.
+  async messagesByConversation(ctx: RepoContext): Promise<Map<string, WhatsAppMessage[]>> {
+    const rows = await messages.list(ctx);
+    rows.sort((a, b) => a.sentAt.localeCompare(b.sentAt));
+    const map = new Map<string, WhatsAppMessage[]>();
+    for (const m of rows) {
+      const arr = map.get(m.conversationId);
+      if (arr) arr.push(m);
+      else map.set(m.conversationId, [m]);
+    }
+    return map;
+  },
+
   async appendMessage(
     ctx: RepoContext,
     data: Omit<WhatsAppMessage, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,

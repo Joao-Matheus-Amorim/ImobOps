@@ -10,13 +10,14 @@ export const metadata = { title: "WhatsApp" };
 
 export default async function WhatsAppPage() {
   const { ctx } = await guardPage("whatsapp");
-  const conversations = await whatsappRepository.listConversations(ctx);
-  const initial = await Promise.all(
-    conversations.map(async (c) => ({
-      ...c,
-      messages: await whatsappRepository.listMessages(ctx, c.id),
-    })),
-  );
+  const [conversations, byConversation] = await Promise.all([
+    whatsappRepository.listConversations(ctx),
+    whatsappRepository.messagesByConversation(ctx),
+  ]);
+  const initial = conversations.map((c) => ({
+    ...c,
+    messages: byConversation.get(c.id) ?? [],
+  }));
   const configured = isWhatsAppConfigured();
   const templates = (await whatsappRepository.listTemplates(ctx, true)).map((t) => ({
     id: t.id,

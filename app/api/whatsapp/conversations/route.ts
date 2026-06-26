@@ -16,13 +16,15 @@ export async function GET() {
   }
 
   const ctx = { tenancyId: user.tenancyId, userId: user.id };
-  const conversations = await whatsappRepository.listConversations(ctx);
-  const withMessages = await Promise.all(
-    conversations.map(async (conversation) => ({
-      ...conversation,
-      messages: await whatsappRepository.listMessages(ctx, conversation.id),
-    })),
-  );
+  // Two queries total (conversations + all messages) instead of N+1.
+  const [conversations, byConversation] = await Promise.all([
+    whatsappRepository.listConversations(ctx),
+    whatsappRepository.messagesByConversation(ctx),
+  ]);
+  const withMessages = conversations.map((conversation) => ({
+    ...conversation,
+    messages: byConversation.get(conversation.id) ?? [],
+  }));
 
   return NextResponse.json({ conversations: withMessages });
 }
