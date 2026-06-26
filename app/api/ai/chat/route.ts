@@ -31,11 +31,12 @@ VOCÊ TEM FERRAMENTAS REAIS que executam ações no sistema. Use-as sempre que o
 - WHATSAPP: enviar mensagem, enviar template, buscar conversas.
 
 COMO AGIR:
-1. Se o pedido corresponde a uma ferramenta, CHAME a ferramenta com os dados certos. Para criar boleto, primeiro use search_clients para achar o clientId; depois create_charge; se pedirem para enviar, use send_charge_whatsapp.
-2. Se faltam dados obrigatórios (ex.: valor, vencimento, qual cliente), PERGUNTE objetivamente o que falta antes de agir.
-3. Se o usuário pedir algo que NÃO está nas suas ferramentas (ex.: gerar relatório em PDF, alterar configurações do sistema, algo de outra área), diga com clareza que essa ação ainda não está disponível no assistente e sugira o caminho manual na interface — não finja que fez.
-4. Toda ação de ESCRITA (criar, atualizar, enviar, marcar pago, etc.) é confirmada pelo usuário antes de executar — explique brevemente o que vai fazer; o sistema mostrará a prévia e pedirá confirmação.
-5. Consultas (buscar, listar, ver) podem ser respondidas direto.
+1. Se o pedido corresponde a uma ferramenta, CHAME a ferramenta com os dados certos. Para criar boleto: PRIMEIRO use search_clients com o NOME que o usuário deu (ele NÃO precisa fornecer CPF/e-mail — você busca pelo nome); depois create_charge com o clientId encontrado; se pedirem para enviar, use send_charge_whatsapp. Se o usuário citou vários clientes, busque cada um.
+2. Só pergunte dados que você realmente não tem como obter sozinho e que são obrigatórios (ex.: o VALOR de um boleto). Não peça identificação de cliente se o usuário já deu um nome — busque. Se a busca não encontrar ou houver ambiguidade (vários com o mesmo nome), aí sim peça para esclarecer.
+3. Datas: resolva "amanhã/hoje/dia X" para yyyy-mm-dd usando a data de hoje fornecida. NUNCA escreva código, fórmulas, chamadas tipo new Date(...) ou templates com chaves duplas na resposta — escreva apenas a data já calculada.
+4. Se o usuário pedir algo que NÃO está nas suas ferramentas (ex.: gerar relatório em PDF, alterar configurações do sistema, algo de outra área), diga com clareza que essa ação ainda não está disponível no assistente e sugira o caminho manual na interface — não finja que fez.
+5. Toda ação de ESCRITA (criar, atualizar, enviar, marcar pago, etc.) é confirmada pelo usuário antes de executar — explique brevemente o que vai fazer; o sistema mostrará a prévia e pedirá confirmação.
+6. Consultas (buscar, listar, ver) podem ser respondidas direto.
 Nunca responda "sem assunto" ou em branco: ou age, ou pergunta o que falta, ou explica por que não pode.`;
 
 export async function POST(request: Request) {
@@ -54,8 +55,18 @@ export async function POST(request: Request) {
   const tools = allowedToolsFor(ALL_TOOLS, principal);
   const adapter = getLlmAdapter();
 
+  // Models have no clock — give them today's date so they can resolve "amanhã",
+  // "hoje", "semana que vem" into real yyyy-mm-dd values.
+  const today = new Date();
+  const todayISO = today.toISOString().slice(0, 10);
+  const tomorrowISO = new Date(today.getTime() + 86_400_000).toISOString().slice(0, 10);
+  const dateContext = `Hoje é ${todayISO} (amanhã é ${tomorrowISO}). Resolva datas relativas para o formato yyyy-mm-dd; nunca devolva fórmulas ou código.`;
+
   const messages: ChatMessage[] = [
-    { role: "system", content: `${SYSTEM_PROMPT}\nUsuário: ${user.displayName} (${user.role}).` },
+    {
+      role: "system",
+      content: `${SYSTEM_PROMPT}\n${dateContext}\nUsuário: ${user.displayName} (${user.role}).`,
+    },
     ...parsed.data.messages,
   ];
 
