@@ -7,7 +7,7 @@ import { isWhatsAppConfigured } from "@/lib/constants";
 
 interface EvolutionWebhook {
   data?: {
-    key?: { id?: string; remoteJid?: string };
+    key?: { id?: string; remoteJid?: string; fromMe?: boolean };
     message?: { conversation?: string; extendedTextMessage?: { text?: string } };
     messageTimestamp?: number;
   };
@@ -50,6 +50,10 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     const remoteJid = data?.key?.remoteJid;
     const body = data?.message?.conversation ?? data?.message?.extendedTextMessage?.text;
     if (!remoteJid || !body) return null;
+    // Ignore our own outbound echoes (avoids reply loops), and any non-personal
+    // chat (groups, status/broadcast, newsletters) — only individual @s.whatsapp.net.
+    if (data?.key?.fromMe) return null;
+    if (!remoteJid.endsWith("@s.whatsapp.net")) return null;
     return {
       phone: remoteJid.replace(/@.*$/, ""),
       body,
