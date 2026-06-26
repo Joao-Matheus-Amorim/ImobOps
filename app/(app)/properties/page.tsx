@@ -1,7 +1,7 @@
 import { Building2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ListItem } from "@/components/ui/list-item";
+import { EntityCard } from "@/components/ui/entity-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { guardPage } from "@/lib/guard-page";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
@@ -27,14 +27,20 @@ export default async function PropertiesPage() {
       {properties.length === 0 ? (
         <EmptyState title="Nenhum imóvel" icon={<Building2 className="size-8" />} />
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {properties.map((p) => (
-            <ListItem
+            <EntityCard
               key={p.id}
               href={routes.property(p.id)}
+              icon={<Building2 className="size-5" />}
               title={p.address}
-              subtitle={`${p.kind} · ${p.areaM2 ?? "?"} m² · ${p.bedrooms ?? 0} dorm.`}
-              trailing={<StatusBadge status={p.status} />}
+              subtitle={p.kind}
+              status={<StatusBadge status={p.status} />}
+              meta={[
+                { label: "Área", value: p.areaM2 ? `${p.areaM2} m²` : "—" },
+                { label: "Dorm.", value: p.bedrooms ?? 0 },
+                { label: "Vagas", value: p.parkingSpots ?? 0 },
+              ]}
             />
           ))}
         </div>

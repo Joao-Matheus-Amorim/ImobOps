@@ -1,7 +1,7 @@
 import { KeyRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ListItem } from "@/components/ui/list-item";
+import { EntityCard } from "@/components/ui/entity-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { guardPage } from "@/lib/guard-page";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
@@ -46,17 +46,21 @@ export default async function RentalsPage() {
       {contracts.length === 0 ? (
         <EmptyState title="Nenhum contrato de locação" icon={<KeyRound className="size-8" />} />
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {contracts.map((c, index) => {
             const property = properties[index];
             const tenant = tenants[index];
             return (
-              <ListItem
+              <EntityCard
                 key={c.id}
                 href={routes.rental(c.id)}
+                icon={<KeyRound className="size-5" />}
                 title={property?.address ?? "Imóvel"}
-                subtitle={`Inquilino: ${tenant?.name ?? "—"} · ${formatBRL(c.monthlyValue)}/mês`}
-                trailing={<StatusBadge status={c.status} />}
+                subtitle={`Inquilino: ${tenant?.name ?? "—"}`}
+                status={<StatusBadge status={c.status} />}
+                meta={[{ label: "Venc.", value: `dia ${c.dueDay}` }]}
+                highlightLabel="Aluguel"
+                highlight={`${formatBRL(c.monthlyValue)}`}
               />
             );
           })}

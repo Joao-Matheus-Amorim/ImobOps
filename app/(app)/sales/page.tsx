@@ -1,7 +1,7 @@
 import { Handshake } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ListItem } from "@/components/ui/list-item";
+import { EntityCard } from "@/components/ui/entity-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { guardPage } from "@/lib/guard-page";
 import { salesRepository } from "@/lib/repositories/sales.repository";
@@ -34,17 +34,21 @@ export default async function SalesPage() {
       {listings.length === 0 ? (
         <EmptyState title="Nenhuma listagem de venda" icon={<Handshake className="size-8" />} />
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {listings.map((l, index) => {
             const property = properties[index];
             const proposals = proposalLists[index];
             return (
-              <ListItem
+              <EntityCard
                 key={l.id}
                 href={routes.sale(l.id)}
+                icon={<Handshake className="size-5" />}
                 title={property?.address ?? "Imóvel"}
-                subtitle={`${formatBRL(l.askingPrice)} · ${proposals.length} proposta(s) · comissão ${l.commissionPct}%`}
-                trailing={<StatusBadge status={l.status} />}
+                subtitle={`comissão ${l.commissionPct}%`}
+                status={<StatusBadge status={l.status} />}
+                meta={[{ label: "Propostas", value: proposals.length }]}
+                highlightLabel="Valor pedido"
+                highlight={formatBRL(l.askingPrice)}
               />
             );
           })}
