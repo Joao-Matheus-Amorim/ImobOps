@@ -15,6 +15,7 @@ import {
   type BillingRow,
 } from "@/components/domain/finance/billing-panel";
 import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
+import { SendChargeButton } from "@/components/domain/finance/send-charge-button";
 import {
   CommissionsPanel,
   type CommissionRow,
@@ -155,6 +156,7 @@ export default async function FinancePage() {
                       boleto
                     </a>
                   ) : null}
+                  {c.clientId ? <SendChargeButton chargeId={c.id} /> : null}
                   <span className="font-display text-sm font-semibold text-foreground">{formatBRL(c.amount)}</span>
                   <StatusBadge status={c.effectiveStatus} />
                 </div>

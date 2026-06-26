@@ -11,6 +11,38 @@ const method = z.enum(["boleto", "pix", "cartao"]);
 
 export const financeTools = [
   defineTool({
+    name: "list_charges",
+    description:
+      "Lista cobranças (boletos/PIX) já existentes. Filtre por clientId (use search_clients para obtê-lo) e/ou por status (pendente, vencida, paga). Use para encontrar boletos a enviar, conferir pendências, etc.",
+    effect: "read",
+    feature: "finance",
+    action: "view",
+    schema: z.object({
+      clientId: z.string().optional(),
+      status: z.enum(["pendente", "paga", "vencida", "cancelada", "falha"]).optional(),
+      onlyOpen: z.boolean().optional(),
+    }),
+    run: async (p, ctx) => {
+      const all = await billingRepository.list(repoCtx(ctx));
+      return all
+        .filter((c) => (p.clientId ? c.clientId === p.clientId : true))
+        .filter((c) => (p.status ? c.effectiveStatus === p.status : true))
+        .filter((c) => (p.onlyOpen ? c.effectiveStatus !== "paga" && c.effectiveStatus !== "cancelada" : true))
+        .map((c) => ({
+          id: c.id,
+          clientId: c.clientId,
+          customerName: c.customerName,
+          description: c.description,
+          amount: c.amount,
+          method: c.method,
+          dueDate: c.dueDate,
+          status: c.effectiveStatus,
+          boletoUrl: c.boletoUrl,
+        }));
+    },
+  }),
+
+  defineTool({
     name: "create_charge",
     description:
       "Cria uma cobrança avulsa (boleto, PIX ou cartão) para um cliente. Use o clientId obtido por search_clients. Valor em reais; vencimento yyyy-mm-dd.",
@@ -42,7 +74,7 @@ export const financeTools = [
   defineTool({
     name: "send_charge_whatsapp",
     description:
-      "Envia uma cobrança já criada (boleto/PIX) ao cliente pelo WhatsApp. Use o chargeId retornado por create_charge.",
+      "Envia uma cobrança existente (boleto/PIX) ao cliente pelo WhatsApp. Obtenha o chargeId via create_charge (recém-criada) OU list_charges (cobranças já existentes).",
     effect: "write",
     feature: "finance",
     action: "edit",

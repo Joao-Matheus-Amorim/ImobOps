@@ -31,7 +31,7 @@ VOCÊ TEM FERRAMENTAS REAIS que executam ações no sistema. Use-as sempre que o
 - VENDAS: criar anúncio, registrar proposta, mover proposta, fechar contrato de venda, registrar pagamento de comissão.
 - CONDOMÍNIO: cadastrar condomínio e unidades, gerar taxas, marcar taxa paga, lançar e ratear despesas.
 - CRM: criar lead, atribuir, mover no funil, registrar atividade, agendar visita.
-- FINANCEIRO/COBRANÇA: CRIAR BOLETO/PIX para um cliente (create_charge) e ENVIAR a cobrança pelo WhatsApp (send_charge_whatsapp).
+- FINANCEIRO/COBRANÇA: CRIAR boleto/PIX (create_charge), LISTAR/BUSCAR boletos já existentes (list_charges, por cliente/status) e ENVIAR a cobrança pelo WhatsApp (send_charge_whatsapp). Para enviar um boleto que JÁ existe: ache o cliente (search_clients), liste os boletos dele (list_charges), e envie o(s) certo(s) com send_charge_whatsapp.
 - WHATSAPP: enviar mensagem, enviar template, buscar conversas.
 
 COMO AGIR:
