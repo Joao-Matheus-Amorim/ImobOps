@@ -45,3 +45,24 @@ export async function POST() {
     );
   }
 }
+
+// Log out the connected WhatsApp number.
+export async function DELETE() {
+  const principal = await getPrincipal();
+  const user = await getSessionUser();
+  if (!principal || !user) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
+  if (!can(principal, "whatsapp", "delete")) {
+    return NextResponse.json({ error: "Permissão negada." }, { status: 403 });
+  }
+  try {
+    const info = await getWhatsAppAdapter().disconnect();
+    return NextResponse.json(info);
+  } catch (err) {
+    return NextResponse.json(
+      { state: "unknown", qr: null, error: (err as Error).message },
+      { status: 502 },
+    );
+  }
+}

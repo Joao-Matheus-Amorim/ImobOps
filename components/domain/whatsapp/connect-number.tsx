@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2, QrCode, RefreshCw } from "lucide-react";
+import { CheckCircle2, Loader2, LogOut, QrCode, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +69,25 @@ export function ConnectNumber({ initialConfigured }: { initialConfigured: boolea
     }
   }
 
+  async function handleDisconnect() {
+    if (!confirm("Desconectar este número do WhatsApp? Você precisará escanear o QR de novo para reconectar.")) {
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/whatsapp/instance", { method: "DELETE" });
+      const data = (await res.json()) as ConnInfo;
+      if (data.error) setError(data.error);
+      setState(data.state);
+      setQr(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const connected = state === "open";
 
   return (
@@ -103,7 +122,12 @@ export function ConnectNumber({ initialConfigured }: { initialConfigured: boolea
         )}
 
         <div className="flex flex-col gap-2">
-          {!connected && (
+          {connected ? (
+            <Button variant="outline" onClick={() => void handleDisconnect()} disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : <LogOut />}
+              Desconectar
+            </Button>
+          ) : (
             <Button onClick={() => void handleConnect()} disabled={loading}>
               {loading ? <Loader2 className="animate-spin" /> : <QrCode />}
               {qr ? "Gerar novo QR" : "Conectar número"}

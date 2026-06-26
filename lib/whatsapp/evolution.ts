@@ -50,6 +50,14 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     return res.json();
   }
 
+  private async del(path: string): Promise<void> {
+    const res = await fetch(`${this.baseUrl}${path}`, {
+      method: "DELETE",
+      headers: { apikey: this.token },
+    });
+    if (!res.ok) throw new Error(`Evolution ${res.status}: ${await res.text()}`);
+  }
+
   sendMessage(to: string, body: string, _mediaUrl?: string) {
     return this.post(`/message/sendText/${this.instance}`, { number: to, text: body });
   }
@@ -80,6 +88,12 @@ export class EvolutionAdapter implements WhatsAppAdapter {
         : `data:image/png;base64,${data.base64}`
       : null;
     return { state: "connecting", qr };
+  }
+
+  async disconnect(): Promise<ConnectionInfo> {
+    if (!isWhatsAppConfigured()) return { state: "close", qr: null };
+    await this.del(`/instance/logout/${this.instance}`);
+    return { state: "close", qr: null };
   }
 
   sendTemplate(to: string, templateKey: string, vars: Record<string, string>) {

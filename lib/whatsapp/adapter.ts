@@ -28,4 +28,6 @@ export interface WhatsAppAdapter {
   connectionState(): Promise<ConnectionInfo>;
   // Start/resume a connection, returning a QR to scan when not yet connected.
   connect(): Promise<ConnectionInfo>;
+  // Log out the connected number (ends the WhatsApp session).
+  disconnect(): Promise<ConnectionInfo>;
 }

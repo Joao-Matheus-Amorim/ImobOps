@@ -29,4 +29,8 @@ export class MetaAdapter implements WhatsAppAdapter {
   async connect(): Promise<ConnectionInfo> {
     return { state: "open", qr: null };
   }
+
+  async disconnect(): Promise<ConnectionInfo> {
+    return { state: "open", qr: null };
+  }
 }
