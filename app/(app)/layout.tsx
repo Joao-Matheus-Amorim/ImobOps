@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { MobileShell } from "@/components/layout/mobile-shell";
 import { getSessionUser, getPrincipal } from "@/lib/session";
 import { can } from "@/lib/permissions/enforce";
-import { PRIMARY_NAV, NAV_GROUPS, routes } from "@/lib/routes";
+import { NAV_GROUPS, PRIMARY_NAV, routes } from "@/lib/routes";
 
 // Server layout for the authenticated app. Filters nav entries by permission so
 // the UI hides what the user cannot access.

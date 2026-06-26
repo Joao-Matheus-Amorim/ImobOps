@@ -4,6 +4,7 @@ import type { TriageClassification } from "@/lib/types/domain";
 import type { RepoContext } from "@/lib/repositories/base";
 import { crmRepository } from "@/lib/repositories/crm.repository";
 import { store } from "@/lib/mock-data";
+import { isSupabaseConfigured } from "@/lib/constants";
 
 const KEYWORDS: Record<Exclude<TriageClassification, null | "outro">, string[]> = {
   locacao: ["alugar", "aluguel", "locação", "locacao", "alugo", "inquilino", "fiador"],
@@ -26,6 +27,7 @@ export function classifyMessage(body: string): TriageClassification {
 
 // Pick the broker with the fewest assigned leads (round-robin-ish).
 async function pickBroker(ctx: RepoContext): Promise<string | null> {
+  if (isSupabaseConfigured()) return null;
   const brokers = store.users.filter((u) => u.tenancyId === ctx.tenancyId && u.role === "broker" && u.active);
   if (brokers.length === 0) return null;
   const leads = await crmRepository.listLeads(ctx);

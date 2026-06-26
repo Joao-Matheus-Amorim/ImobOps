@@ -15,6 +15,12 @@ export const DEMO_USERS = {
   finance: "user-00000003",
 } as const;
 
+// Client-facing preview mode. Keeps the mock internals but removes demo/admin
+// affordances from the visible product surface.
+export function isClientPreviewMode(): boolean {
+  return process.env.NEXT_PUBLIC_CLIENT_PREVIEW !== "off";
+}
+
 // True when Supabase env is configured; otherwise the app runs in mock mode.
 export function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -24,9 +30,9 @@ export function isSupabaseConfigured(): boolean {
 }
 
 // Selected AI provider; "mock" when unset.
-export function aiProvider(): "openai" | "anthropic" | "mock" {
+export function aiProvider(): "openai" | "anthropic" | "openrouter" | "mock" {
   const p = process.env.AI_PROVIDER;
-  if (p === "openai" || p === "anthropic") return p;
+  if (p === "openai" || p === "anthropic" || p === "openrouter") return p;
   return "mock";
 }
 
@@ -43,3 +49,7 @@ export function isBillingConfigured(): boolean {
 
 export const CURRENCY = "BRL";
 export const LOCALE = "pt-BR";
+
+export function defaultSystemTenancyId(): string {
+  return process.env.SUPABASE_DEFAULT_TENANCY_ID ?? DEMO_TENANCY_ID;
+}

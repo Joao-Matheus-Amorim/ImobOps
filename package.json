@@ -10,7 +10,10 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "evolution:up": "docker compose --env-file infra/evolution/.env -f infra/evolution/docker-compose.yml up -d",
+    "evolution:down": "docker compose --env-file infra/evolution/.env -f infra/evolution/docker-compose.yml down",
+    "evolution:logs": "docker logs -f imobops-evolution-api"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.1",
@@ -23,6 +26,8 @@
     "@radix-ui/react-toast": "^1.2.2",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.4",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.5.4",

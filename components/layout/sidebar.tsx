@@ -4,13 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Icon } from "./icon";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, isClientPreviewMode } from "@/lib/constants";
 import { routes } from "@/lib/routes";
 import type { NavGroup } from "@/lib/routes";
 
 // Fixed grouped sidebar (desktop). Groups are pre-filtered by permission server-side.
 export function Sidebar({ groups }: { groups: NavGroup[] }) {
   const pathname = usePathname();
+  const preview = isClientPreviewMode();
 
   return (
     <aside className="hidden w-[268px] shrink-0 flex-col border-r border-primary/14 bg-[#0b2742]/92 shadow-[24px_0_90px_-62px_hsl(var(--primary)/0.95)] backdrop-blur-xl md:flex">
@@ -60,8 +61,10 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
       </nav>
       <div className="border-t border-primary/12 p-4">
         <p className="section-label text-muted-foreground">Workspace ativo</p>
-        <p className="mt-2 font-semibold text-foreground">ImobOps Demo</p>
-        <p className="text-xs text-muted-foreground">Função: operação</p>
+        <p className="mt-2 font-semibold text-foreground">
+          {preview ? "ImobOps Workspace" : "ImobOps Demo"}
+        </p>
+        <p className="text-xs text-muted-foreground">Operação imobiliária</p>
       </div>
     </aside>
   );

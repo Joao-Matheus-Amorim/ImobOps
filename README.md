@@ -153,6 +153,7 @@ geração de parcelas e cálculo de repasse (`lib/repositories`), e triagem de W
 - [Estratégia Multi-Tenant](docs/MULTI_TENANT_STRATEGY.md)
 - [Estratégia do Assistente de IA](docs/AI_AGENT_STRATEGY.md)
 - [Integração WhatsApp](docs/WHATSAPP_INTEGRATION.md)
+- [Setup e Readiness](docs/SETUP_READYNESS.md)
 - [Roadmap](docs/ROADMAP.md)
 - Gestão (PM): [Termo de Abertura](docs/pm/01_TERMO_DE_ABERTURA.md) ·
   [Escopo](docs/pm/02_ESCOPO.md) · [WBS](docs/pm/03_WBS.md) ·

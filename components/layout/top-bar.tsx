@@ -4,7 +4,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { RoleSwitcher } from "./role-switcher";
 import { LogoutButton } from "./logout-button";
-import { APP_NAME, isSupabaseConfigured } from "@/lib/constants";
+import { APP_NAME, isClientPreviewMode, isSupabaseConfigured } from "@/lib/constants";
 import { ROLE_LABELS, type Role } from "@/lib/types/permissions";
 import { routes } from "@/lib/routes";
 
@@ -15,6 +15,8 @@ export function TopBar({
   displayName: string;
   role: Role;
 }) {
+  const preview = isClientPreviewMode();
+
   return (
     <header className="sticky top-0 z-30 border-b border-primary/15 bg-[#0f2a44]/90 shadow-[0_18px_70px_-55px_hsl(var(--primary)/0.9)] backdrop-blur-xl">
       <div className="flex h-[70px] items-center justify-between gap-4 px-4 md:px-8">
@@ -42,7 +44,7 @@ export function TopBar({
 
         <div className="flex items-center gap-2">
           {/* Role switcher is a demo-mode affordance only. */}
-          {!isSupabaseConfigured() ? (
+          {!preview && !isSupabaseConfigured() ? (
             <div className="hidden md:block">
               <RoleSwitcher current={role} />
             </div>
@@ -58,7 +60,9 @@ export function TopBar({
             <Avatar name={displayName} className="size-10 border border-primary/35 shadow-glow-sm" />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-medium leading-tight">{displayName}</p>
-              <p className="text-xs text-muted-foreground">{ROLE_LABELS[role]}</p>
+              <p className="text-xs text-muted-foreground">
+                {preview ? "Workspace" : ROLE_LABELS[role]}
+              </p>
             </div>
           </div>
           <LogoutButton />

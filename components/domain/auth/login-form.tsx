@@ -13,8 +13,8 @@ import { routes } from "@/lib/routes";
 // mock mode (no client) it just proceeds to the dashboard.
 export function LoginForm({ mock }: { mock: boolean }) {
   const router = useRouter();
-  const [email, setEmail] = useState(mock ? "admin@imobops.demo" : "");
-  const [password, setPassword] = useState(mock ? "demo" : "");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,11 +73,7 @@ export function LoginForm({ mock }: { mock: boolean }) {
         {busy ? <Loader2 className="size-4 animate-spin" /> : null}
         Entrar
       </Button>
-      {mock ? (
-        <p className="text-center text-xs text-muted-foreground">
-          Modo demonstração — sem Supabase configurado. Qualquer credencial entra.
-        </p>
-      ) : null}
+      {mock ? null : null}
     </form>
   );
 }

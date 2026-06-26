@@ -1,21 +1,11 @@
-// Dependency-free, in-memory rate limiter (fixed window). Adequate for a
-// single-region Next.js deployment to blunt abusive bursts on write/webhook
-// routes. It is per-instance: with multiple serverless instances the effective
-// limit is per-instance, which is fine as a coarse safety net. For strict global
-// limits, back this with Redis/Upstash later - the call sites stay the same.
 import { NextResponse } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
-
-// Opportunistic cleanup so the map does not grow unbounded for one-off keys.
-function sweep(now: number) {
-  if (buckets.size < 5000) return;
-  for (const [k, b] of buckets) {
-    if (b.resetAt <= now) buckets.delete(k);
-  }
-}
+const ratelimiters = new Map<string, Ratelimit>();
 
 export interface RateLimitResult {
   ok: boolean;
@@ -24,8 +14,14 @@ export interface RateLimitResult {
   resetAt: number; // epoch ms
 }
 
-// Returns whether the key is within `limit` requests per `windowMs`.
-export function rateLimit(
+function sweep(now: number) {
+  if (buckets.size < 5000) return;
+  for (const [k, b] of buckets) {
+    if (b.resetAt <= now) buckets.delete(k);
+  }
+}
+
+function rateLimitLocal(
   key: string,
   limit: number,
   windowMs: number,
@@ -43,11 +39,54 @@ export function rateLimit(
   return { ok: existing.count <= limit, limit, remaining, resetAt: existing.resetAt };
 }
 
-// 429 response with standard rate-limit headers.
+function isDistributedConfigured(): boolean {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL &&
+      process.env.UPSTASH_REDIS_REST_TOKEN,
+  );
+}
+
+function duration(windowMs: number): `${number} ms` {
+  return `${windowMs} ms`;
+}
+
+function ratelimiterFor(limit: number, windowMs: number): Ratelimit | null {
+  if (!isDistributedConfigured()) return null;
+  const cacheKey = `${limit}:${windowMs}`;
+  const existing = ratelimiters.get(cacheKey);
+  if (existing) return existing;
+
+  const created = new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(limit, duration(windowMs)),
+    prefix: "imobops:ratelimit",
+    analytics: true,
+  });
+  ratelimiters.set(cacheKey, created);
+  return created;
+}
+
+export async function rateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  const distributed = ratelimiterFor(limit, windowMs);
+  if (!distributed) return rateLimitLocal(key, limit, windowMs);
+
+  const result = await distributed.limit(key);
+  return {
+    ok: result.success,
+    limit: result.limit,
+    remaining: result.remaining,
+    resetAt: result.reset,
+  };
+}
+
 export function tooManyRequests(result: RateLimitResult): NextResponse {
   const retryAfter = Math.max(1, Math.ceil((result.resetAt - Date.now()) / 1000));
   return NextResponse.json(
-    { error: "Muitas requisições. Tente novamente em instantes." },
+    { error: "Muitas requisicoes. Tente novamente em instantes." },
     {
       status: 429,
       headers: {
@@ -60,7 +99,6 @@ export function tooManyRequests(result: RateLimitResult): NextResponse {
   );
 }
 
-// Best-effort client IP from proxy headers (Vercel sets x-forwarded-for).
 export function clientIp(request: Request): string {
   const fwd = request.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0]!.trim();

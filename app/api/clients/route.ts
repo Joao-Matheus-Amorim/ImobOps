@@ -4,6 +4,12 @@ import { z } from "zod";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
+import {
+  isValidBrazilPhoneLength,
+  isValidCpfCnpjLength,
+  normalizeBrazilPhone,
+  normalizeCpfCnpj,
+} from "@/lib/utils";
 
 const bodySchema = z.object({
   kind: z.enum(["pf", "pj"]),
@@ -44,13 +50,34 @@ export async function POST(request: Request) {
     );
   }
 
+  if (parsed.data.document && !isValidCpfCnpjLength(parsed.data.document, parsed.data.kind)) {
+    return NextResponse.json(
+      { error: parsed.data.kind === "pf" ? "CPF invalido." : "CNPJ invalido." },
+      { status: 400 },
+    );
+  }
+  if (parsed.data.phone && !isValidBrazilPhoneLength(parsed.data.phone)) {
+    return NextResponse.json(
+      { error: "Telefone invalido. Use um numero brasileiro com DDD." },
+      { status: 400 },
+    );
+  }
+  if (parsed.data.whatsapp && !isValidBrazilPhoneLength(parsed.data.whatsapp)) {
+    return NextResponse.json(
+      { error: "WhatsApp invalido. Use um numero brasileiro com DDD." },
+      { status: 400 },
+    );
+  }
+
   const client = await clientsRepository.create(ctx, {
     kind: parsed.data.kind,
     name: parsed.data.name,
-    document: parsed.data.document ?? null,
+    document: parsed.data.document
+      ? normalizeCpfCnpj(parsed.data.document, parsed.data.kind)
+      : null,
     email: parsed.data.email ?? null,
-    phone: parsed.data.phone ?? null,
-    whatsapp: parsed.data.whatsapp ?? null,
+    phone: parsed.data.phone ? normalizeBrazilPhone(parsed.data.phone) : null,
+    whatsapp: parsed.data.whatsapp ? normalizeBrazilPhone(parsed.data.whatsapp) : null,
     address: parsed.data.address ?? null,
     tags: parsed.data.tags,
     rolesInBusiness: parsed.data.rolesInBusiness,

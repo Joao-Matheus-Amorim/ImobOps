@@ -122,10 +122,6 @@ export function BillingPanel({ rows }: { rows: BillingRow[] }) {
                       >
                         <FileText className="size-4" />
                       </a>
-                    ) : row.charge.boletoUrl ? (
-                      <Badge variant="outline" title="Cobrança de demonstração (mock)">
-                        mock
-                      </Badge>
                     ) : null}
                     {row.charge.effectiveStatus !== "paga" ? (
                       <Button

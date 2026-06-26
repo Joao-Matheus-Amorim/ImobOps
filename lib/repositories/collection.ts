@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { store, type MockStore } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/constants";
+import { isSupabaseAdminRestConfigured, supabaseAdminRest } from "@/lib/supabase/admin-rest";
 import { rowToCamel, camelToRow, toSnakeKey } from "./case-map";
 import type { RepoContext, WithBase } from "./base";
 
@@ -35,6 +36,10 @@ export class Collection<T extends WithBase> {
 
   private get useDb(): boolean {
     return isSupabaseConfigured();
+  }
+
+  private useAdminRest(ctx: RepoContext): boolean {
+    return ctx.userId === "system" && isSupabaseAdminRestConfigured();
   }
 
   private all(): T[] {
@@ -92,6 +97,22 @@ export class Collection<T extends WithBase> {
       );
       return this.applyOptsInMemory(base, opts);
     }
+    if (this.useAdminRest(ctx)) {
+      const params = new URLSearchParams();
+      params.set("select", "*");
+      params.set("tenancy_id", `eq.${ctx.tenancyId}`);
+      if (opts?.eq) {
+        for (const [k, v] of Object.entries(opts.eq)) {
+          params.set(toSnakeKey(k), `eq.${String(v)}`);
+        }
+      }
+      if (opts?.limit != null) params.set("limit", String(opts.limit));
+      const data = await supabaseAdminRest<Record<string, unknown>[]>(
+        `${this.table}?${params.toString()}`,
+      );
+      const rows = (data ?? []).map((r) => rowToCamel<T>(r));
+      return predicate ? rows.filter(predicate) : rows;
+    }
     const supabase = createClient();
     if (!supabase) return [];
     // RLS already scopes by tenancy. Declarative opts push down to SQL; a predicate
@@ -133,6 +154,16 @@ export class Collection<T extends WithBase> {
     if (!this.useDb) {
       return this.all().find((r) => r.id === id && r.tenancyId === ctx.tenancyId) ?? null;
     }
+    if (this.useAdminRest(ctx)) {
+      const params = new URLSearchParams();
+      params.set("select", "*");
+      params.set("id", `eq.${id}`);
+      params.set("tenancy_id", `eq.${ctx.tenancyId}`);
+      const data = await supabaseAdminRest<Record<string, unknown>[]>(
+        `${this.table}?${params.toString()}`,
+      );
+      return data[0] ? rowToCamel<T>(data[0]) : null;
+    }
     const supabase = createClient();
     if (!supabase) return null;
     const { data, error } = await supabase
@@ -163,6 +194,18 @@ export class Collection<T extends WithBase> {
       this.all().push(row);
       return row;
     }
+    if (this.useAdminRest(ctx)) {
+      const payload = camelToRow({
+        ...data,
+        tenancyId: ctx.tenancyId,
+        createdBy: null,
+      });
+      const inserted = await supabaseAdminRest<Record<string, unknown>[]>(
+        this.table,
+        { method: "POST", body: payload, prefer: "return=representation" },
+      );
+      return rowToCamel<T>(inserted[0] as Record<string, unknown>);
+    }
     const supabase = createClient();
     if (!supabase) throw new Error(`${this.table}.create: no supabase client`);
     const payload = camelToRow({
@@ -185,6 +228,17 @@ export class Collection<T extends WithBase> {
       if (!row) return null;
       Object.assign(row, patch, { updatedAt: new Date().toISOString() });
       return row;
+    }
+    if (this.useAdminRest(ctx)) {
+      const params = new URLSearchParams();
+      params.set("id", `eq.${id}`);
+      params.set("tenancy_id", `eq.${ctx.tenancyId}`);
+      const payload = camelToRow({ ...patch, updatedAt: new Date().toISOString() });
+      const data = await supabaseAdminRest<Record<string, unknown>[]>(
+        `${this.table}?${params.toString()}`,
+        { method: "PATCH", body: payload, prefer: "return=representation" },
+      );
+      return data[0] ? rowToCamel<T>(data[0]) : null;
     }
     const supabase = createClient();
     if (!supabase) return null;

@@ -5,6 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function onlyDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 // Format a number as BRL currency.
 export function formatBRL(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -62,4 +66,79 @@ export function initials(name: string): string {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+export function formatCpf(value: string): string {
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) {
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  }
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+export function formatCnpj(value: string): string {
+  const digits = onlyDigits(value).slice(0, 14);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  if (digits.length <= 8) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+  }
+  if (digits.length <= 12) {
+    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+  }
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
+export function formatCpfCnpj(value: string, kind: "pf" | "pj"): string {
+  return kind === "pf" ? formatCpf(value) : formatCnpj(value);
+}
+
+export function isValidCpfCnpjLength(value: string, kind: "pf" | "pj"): boolean {
+  const digits = onlyDigits(value);
+  return digits.length === (kind === "pf" ? 11 : 14);
+}
+
+export function normalizeCpfCnpj(value: string, kind: "pf" | "pj"): string {
+  const digits = onlyDigits(value);
+  return formatCpfCnpj(digits, kind);
+}
+
+export function isValidBrazilPhoneLength(value: string): boolean {
+  const digits = onlyDigits(value);
+  if (digits.length === 10 || digits.length === 11) return true;
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) {
+    const local = digits.slice(2);
+    return local.length === 10 || local.length === 11;
+  }
+  return false;
+}
+
+export function normalizeBrazilPhone(value: string): string {
+  const digits = onlyDigits(value);
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) {
+    return `+${digits}`;
+  }
+  return `+55${digits.slice(0, 11)}`;
+}
+
+export function formatBrazilPhone(value: string): string {
+  let digits = onlyDigits(value);
+  if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) {
+    digits = digits.slice(2);
+  }
+  digits = digits.slice(0, 11);
+
+  const area = digits.slice(0, 2);
+  const subscriber = digits.slice(2);
+
+  if (!area) return "";
+  if (digits.length <= 2) return `(${area}`;
+
+  if (subscriber.length <= 4) return `(${area}) ${subscriber}`;
+  if (subscriber.length <= 8) {
+    return `(${area}) ${subscriber.slice(0, 4)}-${subscriber.slice(4)}`;
+  }
+  return `(${area}) ${subscriber.slice(0, 5)}-${subscriber.slice(5, 9)}`;
 }

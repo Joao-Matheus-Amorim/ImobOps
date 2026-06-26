@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -171,13 +172,7 @@ export function EditRentalDialog({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="endDate">Fim da vigência</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    required
-                  />
+                  <DateTimePicker value={endDate} onChange={setEndDate} placeholder="Selecionar data final" />
                 </div>
               </div>
 

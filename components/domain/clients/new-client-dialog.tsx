@@ -7,6 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  formatBrazilPhone,
+  formatCpfCnpj,
+  isValidBrazilPhoneLength,
+  isValidCpfCnpjLength,
+  normalizeBrazilPhone,
+  normalizeCpfCnpj,
+} from "@/lib/utils";
+import {
   BUSINESS_ROLE_LABELS,
   type BusinessRole,
   type Client,
@@ -33,9 +41,11 @@ export function NewClientDialog({
 
   const [kind, setKind] = useState<ClientKind>(client?.kind ?? "pf");
   const [name, setName] = useState(client?.name ?? "");
-  const [document, setDocument] = useState(client?.document ?? "");
+  const [document, setDocument] = useState(
+    client ? formatCpfCnpj(client.document ?? "", client.kind) : "",
+  );
   const [email, setEmail] = useState(client?.email ?? "");
-  const [phone, setPhone] = useState(client?.phone ?? "");
+  const [phone, setPhone] = useState(client?.phone ? formatBrazilPhone(client.phone) : "");
   const [roles, setRoles] = useState<BusinessRole[]>(client?.rolesInBusiness ?? []);
 
   function toggleRole(role: BusinessRole) {
@@ -48,9 +58,9 @@ export function NewClientDialog({
   function reset() {
     setKind(client?.kind ?? "pf");
     setName(client?.name ?? "");
-    setDocument(client?.document ?? "");
+    setDocument(client ? formatCpfCnpj(client.document ?? "", client.kind) : "");
     setEmail(client?.email ?? "");
-    setPhone(client?.phone ?? "");
+    setPhone(client?.phone ? formatBrazilPhone(client.phone) : "");
     setRoles(client?.rolesInBusiness ?? []);
     setError(null);
   }
@@ -61,13 +71,21 @@ export function NewClientDialog({
       setError("Informe o nome do cliente.");
       return;
     }
+    if (document.trim() && !isValidCpfCnpjLength(document, kind)) {
+      setError(kind === "pf" ? "Informe um CPF valido." : "Informe um CNPJ valido.");
+      return;
+    }
+    if (phone.trim() && !isValidBrazilPhoneLength(phone)) {
+      setError("Informe um telefone brasileiro valido com DDD.");
+      return;
+    }
 
     const payload = {
       kind,
       name: name.trim(),
-      document: document.trim() || null,
+      document: document.trim() ? normalizeCpfCnpj(document, kind) : null,
       email: email.trim() || null,
-      phone: phone.trim() || null,
+      phone: phone.trim() ? normalizeBrazilPhone(phone) : null,
       rolesInBusiness: roles,
       ...(isEdit ? {} : { whatsapp: null, address: null, tags: [] }),
     };
@@ -153,7 +171,11 @@ export function NewClientDialog({
                   <select
                     id="kind"
                     value={kind}
-                    onChange={(e) => setKind(e.target.value as ClientKind)}
+                    onChange={(e) => {
+                      const nextKind = e.target.value as ClientKind;
+                      setKind(nextKind);
+                      setDocument((current) => formatCpfCnpj(current, nextKind));
+                    }}
                     className="flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="pf">Pessoa física</option>
@@ -165,7 +187,10 @@ export function NewClientDialog({
                   <Input
                     id="document"
                     value={document}
-                    onChange={(e) => setDocument(e.target.value)}
+                    inputMode="numeric"
+                    maxLength={kind === "pf" ? 14 : 18}
+                    placeholder={kind === "pf" ? "000.000.000-00" : "00.000.000/0000-00"}
+                    onChange={(e) => setDocument(formatCpfCnpj(e.target.value, kind))}
                   />
                 </div>
               </div>
@@ -194,8 +219,11 @@ export function NewClientDialog({
                   <Label htmlFor="phone">Telefone</Label>
                   <Input
                     id="phone"
+                    inputMode="tel"
+                    maxLength={16}
+                    placeholder="(11) 99999-0000"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(formatBrazilPhone(e.target.value))}
                   />
                 </div>
               </div>

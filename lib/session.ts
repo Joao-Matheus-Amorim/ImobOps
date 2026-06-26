@@ -8,7 +8,12 @@ import { cookies } from "next/headers";
 import type { Principal } from "@/lib/permissions/enforce";
 import type { Role } from "@/lib/types/permissions";
 import { ROLES } from "@/lib/types/permissions";
-import { DEMO_TENANCY_ID, DEMO_USERS, isSupabaseConfigured } from "@/lib/constants";
+import {
+  DEMO_TENANCY_ID,
+  DEMO_USERS,
+  isClientPreviewMode,
+  isSupabaseConfigured,
+} from "@/lib/constants";
 import { store } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
 
@@ -30,7 +35,11 @@ function demoUserIdForRole(role: Role): string {
 // Mock session (demo mode): cookie-driven role switch over the seeded users.
 function mockSessionUser(): SessionUser {
   const cookieRole = cookies().get(ROLE_COOKIE)?.value as Role | undefined;
-  const role: Role = cookieRole && ROLES.includes(cookieRole) ? cookieRole : "admin";
+  const role: Role = isClientPreviewMode()
+    ? "admin"
+    : cookieRole && ROLES.includes(cookieRole)
+      ? cookieRole
+      : "admin";
   const userId = demoUserIdForRole(role);
   const profile = store.users.find((u) => u.id === userId);
   const teamMemberIds = store.users

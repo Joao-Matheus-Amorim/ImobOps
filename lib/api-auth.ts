@@ -23,7 +23,7 @@ export async function requireContext(
 
   // Key by user (+ optional bucket so distinct route groups don't share a budget).
   const bucket = options?.bucket ?? new URL(request?.url ?? "http://x/").pathname;
-  const limit = rateLimit(
+  const limit = await rateLimit(
     `user:${user.id}:${bucket}`,
     options?.limit ?? DEFAULT_LIMIT,
     options?.windowMs ?? DEFAULT_WINDOW_MS,

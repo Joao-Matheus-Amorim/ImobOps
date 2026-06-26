@@ -4,12 +4,14 @@ import { NextResponse } from "next/server";
 import { getWhatsAppAdapter } from "@/lib/whatsapp/provider";
 import { whatsappRepository } from "@/lib/repositories/whatsapp.repository";
 import { triageInbound } from "@/lib/whatsapp/triage-bot";
-import { DEMO_TENANCY_ID } from "@/lib/constants";
+import { defaultSystemTenancyId } from "@/lib/constants";
 import { clientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 // In single-tenant mode all inbound messages belong to the demo tenancy. In SaaS
 // mode the instance → tenancy mapping resolves this.
-const SYSTEM_CTX = { tenancyId: DEMO_TENANCY_ID, userId: "system" };
+function systemCtx() {
+  return { tenancyId: defaultSystemTenancyId(), userId: "system" };
+}
 const WEBHOOK_LIMIT = 120;
 const WEBHOOK_WINDOW_MS = 60_000;
 
@@ -21,7 +23,7 @@ function signatureValid(request: Request): boolean {
 }
 
 export async function POST(request: Request) {
-  const limit = rateLimit(
+  const limit = await rateLimit(
     `ip:${clientIp(request)}:/api/whatsapp/webhook`,
     WEBHOOK_LIMIT,
     WEBHOOK_WINDOW_MS,
@@ -39,14 +41,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ignored: true });
   }
 
-  const triage = await triageInbound(SYSTEM_CTX, inbound.body);
+  const ctx = systemCtx();
+  const triage = await triageInbound(ctx, inbound.body);
   const conversation = await whatsappRepository.upsertConversation(
-    SYSTEM_CTX,
+    ctx,
     inbound.phone,
     triage.classification,
   );
 
-  await whatsappRepository.appendMessage(SYSTEM_CTX, {
+  await whatsappRepository.appendMessage(ctx, {
     conversationId: conversation.id,
     direction: "in",
     body: inbound.body,

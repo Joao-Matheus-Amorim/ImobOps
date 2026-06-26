@@ -3,9 +3,11 @@
 // is computed at read time, so this job only sends reminders — never owns state.
 import { NextResponse } from "next/server";
 import { runReminderLadder } from "@/lib/billing/reminders";
-import { DEMO_TENANCY_ID } from "@/lib/constants";
+import { defaultSystemTenancyId } from "@/lib/constants";
 
-const SYSTEM_CTX = { tenancyId: DEMO_TENANCY_ID, userId: "system" };
+function systemCtx() {
+  return { tenancyId: defaultSystemTenancyId(), userId: "system" };
+}
 
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
@@ -17,7 +19,7 @@ export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   }
-  const results = await runReminderLadder(SYSTEM_CTX);
+  const results = await runReminderLadder(systemCtx());
   const sent = results.filter((r) => r.sent).length;
   return NextResponse.json({ ok: true, sent, total: results.length, results });
 }

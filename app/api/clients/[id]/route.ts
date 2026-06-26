@@ -3,6 +3,12 @@ import { z } from "zod";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
+import {
+  isValidBrazilPhoneLength,
+  isValidCpfCnpjLength,
+  normalizeBrazilPhone,
+  normalizeCpfCnpj,
+} from "@/lib/utils";
 
 // Editable fields. All optional so the client can send a partial patch.
 const patchSchema = z.object({
@@ -51,7 +57,41 @@ export async function PATCH(
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }
 
-  const client = await clientsRepository.update(ctx, params.id, parsed.data);
+  const effectiveKind = parsed.data.kind ?? before.kind;
+  if (parsed.data.document && !isValidCpfCnpjLength(parsed.data.document, effectiveKind)) {
+    return NextResponse.json(
+      { error: effectiveKind === "pf" ? "CPF invalido." : "CNPJ invalido." },
+      { status: 400 },
+    );
+  }
+  if (parsed.data.phone && !isValidBrazilPhoneLength(parsed.data.phone)) {
+    return NextResponse.json(
+      { error: "Telefone invalido. Use um numero brasileiro com DDD." },
+      { status: 400 },
+    );
+  }
+  if (parsed.data.whatsapp && !isValidBrazilPhoneLength(parsed.data.whatsapp)) {
+    return NextResponse.json(
+      { error: "WhatsApp invalido. Use um numero brasileiro com DDD." },
+      { status: 400 },
+    );
+  }
+
+  const client = await clientsRepository.update(ctx, params.id, {
+    ...parsed.data,
+    document:
+      parsed.data.document != null
+        ? normalizeCpfCnpj(parsed.data.document, effectiveKind)
+        : parsed.data.document,
+    phone:
+      parsed.data.phone != null
+        ? normalizeBrazilPhone(parsed.data.phone)
+        : parsed.data.phone,
+    whatsapp:
+      parsed.data.whatsapp != null
+        ? normalizeBrazilPhone(parsed.data.whatsapp)
+        : parsed.data.whatsapp,
+  });
   if (!client) {
     return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   }

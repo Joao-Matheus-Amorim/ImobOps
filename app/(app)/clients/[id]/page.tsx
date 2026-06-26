@@ -10,6 +10,7 @@ import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { BUSINESS_ROLE_LABELS } from "@/lib/types/domain";
 import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 import { NewClientDialog } from "@/components/domain/clients/new-client-dialog";
+import { formatBrazilPhone, formatCpfCnpj } from "@/lib/utils";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const { ctx } = await guardPage("clients");
@@ -42,7 +43,9 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                 <Badge key={r}>{BUSINESS_ROLE_LABELS[r]}</Badge>
               ))}
             </div>
-            <p className="text-sm text-muted-foreground">{client.document ?? "Documento não informado"}</p>
+            <p className="text-sm text-muted-foreground">
+              {client.document ? formatCpfCnpj(client.document, client.kind) : "Documento não informado"}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -53,8 +56,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <Row icon={<Mail className="size-4" />} value={client.email} />
-          <Row icon={<Phone className="size-4" />} value={client.phone} />
-          <Row icon={<MessageCircle className="size-4" />} value={client.whatsapp} />
+          <Row icon={<Phone className="size-4" />} value={client.phone ? formatBrazilPhone(client.phone) : null} />
+          <Row icon={<MessageCircle className="size-4" />} value={client.whatsapp ? formatBrazilPhone(client.whatsapp) : null} />
           <Row icon={<MapPin className="size-4" />} value={client.address} />
         </CardContent>
       </Card>
