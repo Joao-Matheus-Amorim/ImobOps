@@ -47,11 +47,14 @@ export async function POST(request: Request) {
   const triage = inbound.fromMe
     ? { classification: null, leadId: null, assignedTo: null }
     : await triageInbound(ctx, inbound.body);
+  // The contact's name only comes from THEIR messages. On fromMe, pushName is
+  // OUR name ("João Matheus") — never use it to name the conversation.
+  const contactName = inbound.fromMe ? undefined : inbound.name;
   const conversation = await whatsappRepository.upsertConversation(
     ctx,
     inbound.phone,
     triage.classification,
-    inbound.name,
+    contactName,
   );
 
   // Skip if we already stored this exact message (e.g. sent from the app, then
