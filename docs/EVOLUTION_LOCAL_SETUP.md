@@ -72,6 +72,12 @@ Use the generated URL to configure the Evolution webhook:
 https://YOUR_NGROK_URL/api/whatsapp/webhook
 ```
 
+Or configure it by command:
+
+```powershell
+npm run whatsapp:webhook:set -- https://YOUR_NGROK_URL
+```
+
 Header:
 
 ```text
@@ -84,7 +90,15 @@ Event:
 MESSAGES_UPSERT
 ```
 
-## 6. Stop Evolution
+## 6. Test the webhook
+
+With ImobOps running on `http://localhost:3000`:
+
+```powershell
+npm run whatsapp:webhook:test
+```
+
+## 7. Stop Evolution
 
 ```powershell
 npm run evolution:down
