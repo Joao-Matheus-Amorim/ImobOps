@@ -45,8 +45,46 @@ interface EvolutionChat {
 interface EvolutionMessageRecord {
   key?: { id?: string; fromMe?: boolean };
   pushName?: string | null;
-  message?: { conversation?: string; extendedTextMessage?: { text?: string } };
+  messageType?: string;
+  message?: {
+    conversation?: string;
+    extendedTextMessage?: { text?: string };
+    imageMessage?: { caption?: string };
+    videoMessage?: { caption?: string };
+    documentMessage?: { caption?: string; fileName?: string };
+  };
   messageTimestamp?: number;
+}
+
+// Human-readable body for an imported message: real text/caption when present,
+// otherwise a placeholder for media so the thread isn't blank.
+function extractBody(r: EvolutionMessageRecord): string | null {
+  const m = r.message ?? {};
+  const text =
+    m.conversation ??
+    m.extendedTextMessage?.text ??
+    m.imageMessage?.caption ??
+    m.videoMessage?.caption ??
+    m.documentMessage?.caption;
+  if (text && text.trim()) return text;
+  switch (r.messageType) {
+    case "imageMessage":
+      return "📷 Imagem";
+    case "videoMessage":
+      return "🎥 Vídeo";
+    case "audioMessage":
+      return "🎵 Áudio";
+    case "stickerMessage":
+      return "💬 Figurinha";
+    case "documentMessage":
+      return `📄 ${m.documentMessage?.fileName ?? "Documento"}`;
+    case "contactMessage":
+      return "👤 Contato";
+    case "locationMessage":
+      return "📍 Localização";
+    default:
+      return null; // unknown/system message — skip
+  }
 }
 
 // Extract the dialable phone JID, preferring the real-number alt over a @lid.
@@ -154,7 +192,11 @@ export class EvolutionAdapter implements WhatsAppAdapter {
       const phone = this.chatPhone(c);
       if (!phone) continue;
       const messages = await this.fetchChatMessages(c.remoteJid ?? "", phone, perChat);
-      out.push({ phone, name: c.pushName ?? undefined, messages });
+      // The chat's pushName is often null; fall back to the contact's name from
+      // one of their inbound messages.
+      const fromContact = messages.find((m) => !m.fromMe && m.name);
+      const name = c.pushName ?? fromContact?.name ?? undefined;
+      out.push({ phone, name, messages });
     }
     return out;
   }
@@ -196,7 +238,7 @@ export class EvolutionAdapter implements WhatsAppAdapter {
     const recent = records.slice(0, limit).reverse();
     const out: InboundMessage[] = [];
     for (const r of recent) {
-      const body = r.message?.conversation ?? r.message?.extendedTextMessage?.text;
+      const body = extractBody(r);
       if (!body) continue;
       out.push({
         phone,
