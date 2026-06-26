@@ -34,9 +34,26 @@ export async function POST(request: Request) {
   const adapter = getWhatsAppAdapter();
   const ctx = { tenancyId: user.tenancyId, userId: user.id };
 
-  const sent = templateKey
-    ? await adapter.sendTemplate(to, templateKey, vars ?? {})
-    : await adapter.sendMessage(to, body!);
+  let sent: { externalId: string };
+  try {
+    sent = templateKey
+      ? await adapter.sendTemplate(to, templateKey, vars ?? {})
+      : await adapter.sendMessage(to, body!);
+  } catch (err) {
+    // The provider rejected the send (e.g. number not on WhatsApp). Surface a
+    // clean error instead of a 500 so the inbox can show it.
+    const message = (err as Error).message ?? "Falha ao enviar.";
+    const invalidNumber = /exists":false|not.*whatsapp|400/i.test(message);
+    return NextResponse.json(
+      {
+        error: invalidNumber
+          ? "Número não está no WhatsApp ou é inválido."
+          : "Falha ao enviar pela Evolution.",
+        detail: message,
+      },
+      { status: 502 },
+    );
+  }
 
   const conversation = await whatsappRepository.upsertConversation(ctx, to);
   await whatsappRepository.appendMessage(ctx, {
