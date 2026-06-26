@@ -8,6 +8,9 @@ import { WhatsAppInbox } from "@/components/domain/whatsapp/whatsapp-inbox";
 import { ConnectNumber } from "@/components/domain/whatsapp/connect-number";
 
 export const metadata = { title: "WhatsApp" };
+// Always render fresh — the inbox must reflect the latest messages, never a
+// cached snapshot (F5 should show new conversations/messages).
+export const dynamic = "force-dynamic";
 
 export default async function WhatsAppPage() {
   const { ctx } = await guardPage("whatsapp");

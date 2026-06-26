@@ -5,6 +5,10 @@ import { getPrincipal, getSessionUser } from "@/lib/session";
 import { can } from "@/lib/permissions/enforce";
 import { whatsappRepository } from "@/lib/repositories/whatsapp.repository";
 
+// Never cache: the inbox polls this for near-real-time updates.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   const principal = await getPrincipal();
   const user = await getSessionUser();
