@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageCircle, RefreshCw, Send, MessageSquareText } from "lucide-react";
+import { RefreshCw, Send, MessageSquareText, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 
 interface InboxMessage {
@@ -80,6 +79,9 @@ export function WhatsAppInbox({
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [newPhone, setNewPhone] = useState("");
+  const [startingChat, setStartingChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -151,26 +153,96 @@ export function WhatsAppInbox({
     setRefreshing(false);
   }
 
-  if (conversations.length === 0) {
-    return <EmptyState title="Sem conversas" icon={<MessageCircle className="size-8" />} />;
+  // Start a conversation with a typed number, even if it has no history yet.
+  async function startNewChat(e: React.FormEvent) {
+    e.preventDefault();
+    const digits = newPhone.replace(/\D/g, "");
+    if (digits.length < 10) return;
+    setStartingChat(true);
+    try {
+      const res = await fetch("/api/whatsapp/conversations/open", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone: digits }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { conversationId?: string; error?: string };
+      if (!res.ok || !data.conversationId) {
+        alert(data.error ?? "Não foi possível abrir a conversa.");
+        return;
+      }
+      await refresh();
+      setSelectedId(data.conversationId);
+      setNewChatOpen(false);
+      setNewPhone("");
+    } finally {
+      setStartingChat(false);
+    }
   }
 
   return (
     <div className="grid min-h-[620px] gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       {/* Conversation list */}
       <Card className="overflow-hidden rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-0">
-        <div className="flex items-center justify-between border-b border-primary/12 px-4 py-3">
+        <div className="relative flex items-center justify-between border-b border-primary/12 px-4 py-3">
           <p className="section-label text-primary/80">Conversas</p>
-          <button
-            type="button"
-            onClick={manualRefresh}
-            className="text-muted-foreground transition hover:text-primary"
-            aria-label="Atualizar"
-          >
-            <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setNewChatOpen((v) => !v)}
+              className={cn(
+                "grid size-7 place-items-center rounded-lg border transition",
+                newChatOpen
+                  ? "border-primary/45 bg-primary/10 text-primary"
+                  : "border-primary/20 text-muted-foreground hover:text-primary",
+              )}
+              aria-label="Nova conversa"
+              title="Nova conversa"
+            >
+              <Plus className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={manualRefresh}
+              className="text-muted-foreground transition hover:text-primary"
+              aria-label="Atualizar"
+            >
+              <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+            </button>
+          </div>
+
+          {newChatOpen ? (
+            <form
+              onSubmit={startNewChat}
+              className="absolute right-3 top-12 z-20 w-72 rounded-2xl border border-primary/18 bg-[#102f4d] p-3 shadow-2xl"
+            >
+              <p className="mb-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+                Nova conversa
+              </p>
+              <input
+                autoFocus
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                placeholder="Número com DDD (ex: 21 99999-9999)"
+                inputMode="tel"
+                className="w-full rounded-xl border border-primary/18 bg-background/30 px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/45"
+              />
+              <div className="mt-2 flex justify-end gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => setNewChatOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit" size="sm" disabled={startingChat || newPhone.replace(/\D/g, "").length < 10}>
+                  Abrir
+                </Button>
+              </div>
+            </form>
+          ) : null}
         </div>
         <div className="max-h-[620px] space-y-2 overflow-y-auto p-3 thin-scrollbar">
+          {conversations.length === 0 ? (
+            <p className="px-2 py-8 text-center text-xs text-muted-foreground">
+              Sem conversas ainda. Use o + para iniciar uma.
+            </p>
+          ) : null}
           {conversations.map((conversation) => {
             const last = conversation.messages.at(-1);
             const isActive = conversation.id === selectedId;
