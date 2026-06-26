@@ -4,6 +4,8 @@
 export interface InboundMessage {
   phone: string;
   body: string;
+  // Sender's WhatsApp display name (pushName), when provided.
+  name?: string;
   mediaUrl?: string;
   externalId: string;
   timestamp: string;

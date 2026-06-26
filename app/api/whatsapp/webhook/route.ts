@@ -48,6 +48,7 @@ export async function POST(request: Request) {
     ctx,
     inbound.phone,
     triage.classification,
+    inbound.name,
   );
 
   await whatsappRepository.appendMessage(ctx, {

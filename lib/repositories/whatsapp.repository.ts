@@ -30,13 +30,22 @@ export const whatsappRepository = {
     ctx: RepoContext,
     phone: string,
     classification?: TriageClassification,
+    contactName?: string,
   ): Promise<WhatsAppConversation> {
     const list = await conversations.list(ctx, (c) => c.phone === phone);
     const existing = list.at(0);
-    if (existing) return existing;
+    if (existing) {
+      // Backfill the display name once we learn it (older rows have none).
+      if (contactName && existing.contactName !== contactName) {
+        const updated = await conversations.update(ctx, existing.id, { contactName });
+        return updated ?? existing;
+      }
+      return existing;
+    }
     return conversations.create(ctx, {
       clientId: null,
       phone,
+      contactName: contactName ?? null,
       lastMessageAt: new Date().toISOString(),
       assignedToUserId: null,
       status: "aberta",

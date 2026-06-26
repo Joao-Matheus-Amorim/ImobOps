@@ -21,6 +21,7 @@ interface InboxMessage {
 interface InboxConversation {
   id: string;
   phone: string;
+  contactName: string | null;
   status: string;
   lastMessageAt: string;
   triageClassification: string | null;
@@ -41,6 +42,11 @@ function formatPhone(phone: string) {
   const m = phone.match(/^55(\d{2})(\d{4,5})(\d{4})$/);
   if (!m) return phone;
   return `+55 ${m[1]} ${m[2]}-${m[3]}`;
+}
+
+// Prefer the WhatsApp display name; fall back to the formatted number.
+function displayName(c: { contactName: string | null; phone: string }) {
+  return c.contactName?.trim() || formatPhone(c.phone);
 }
 
 export function WhatsAppInbox({ initial }: { initial: InboxConversation[] }) {
@@ -155,11 +161,11 @@ export function WhatsAppInbox({ initial }: { initial: InboxConversation[] }) {
                     : "border-primary/12 bg-background/22 hover:border-primary/35 hover:bg-primary/8",
                 )}
               >
-                <Avatar name={formatPhone(conversation.phone)} className="size-9 shrink-0" />
+                <Avatar name={displayName(conversation)} className="size-9 shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
                     <p className="truncate text-sm font-semibold text-foreground">
-                      {formatPhone(conversation.phone)}
+                      {displayName(conversation)}
                     </p>
                     <span className="shrink-0 text-[10px] text-muted-foreground">
                       {formatTime(last?.sentAt ?? conversation.lastMessageAt)}
@@ -190,12 +196,15 @@ export function WhatsAppInbox({ initial }: { initial: InboxConversation[] }) {
         ) : (
           <>
             <div className="flex items-center gap-3 border-b border-primary/12 px-5 py-4">
-              <Avatar name={formatPhone(selected.phone)} className="size-9" />
+              <Avatar name={displayName(selected)} className="size-9" />
               <div>
                 <p className="text-sm font-semibold text-foreground">
-                  {formatPhone(selected.phone)}
+                  {displayName(selected)}
                 </p>
-                <p className="text-xs text-muted-foreground">{selected.status}</p>
+                <p className="text-xs text-muted-foreground">
+                  {selected.contactName ? `${formatPhone(selected.phone)} · ` : ""}
+                  {selected.status}
+                </p>
               </div>
             </div>
 

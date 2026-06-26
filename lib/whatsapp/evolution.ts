@@ -14,10 +14,29 @@ function normalizeState(state?: string): ConnectionInfo["state"] {
 
 interface EvolutionWebhook {
   data?: {
-    key?: { id?: string; remoteJid?: string; fromMe?: boolean };
+    key?: {
+      id?: string;
+      remoteJid?: string;
+      // Newer WhatsApp uses LID addressing: remoteJid is an anonymous "<n>@lid"
+      // and the real phone JID is carried in remoteJidAlt.
+      remoteJidAlt?: string;
+      fromMe?: boolean;
+    };
     message?: { conversation?: string; extendedTextMessage?: { text?: string } };
     messageTimestamp?: number;
+    pushName?: string;
   };
+}
+
+type EvolutionKey = NonNullable<NonNullable<EvolutionWebhook["data"]>["key"]>;
+
+// Extract the dialable phone JID, preferring the real-number alt over a @lid.
+function resolvePhoneJid(key?: EvolutionKey): string | null {
+  if (!key) return null;
+  const candidates = [key.remoteJidAlt, key.remoteJid].filter(Boolean) as string[];
+  // Prefer an @s.whatsapp.net jid (real phone) over @lid / @g.us / status.
+  const real = candidates.find((j) => j.endsWith("@s.whatsapp.net"));
+  return real ?? candidates[0] ?? null;
 }
 
 export class EvolutionAdapter implements WhatsAppAdapter {
@@ -104,17 +123,27 @@ export class EvolutionAdapter implements WhatsAppAdapter {
   parseWebhook(payload: unknown): InboundMessage | null {
     const p = payload as EvolutionWebhook;
     const data = p?.data;
-    const remoteJid = data?.key?.remoteJid;
+    const key = data?.key;
     const body = data?.message?.conversation ?? data?.message?.extendedTextMessage?.text;
-    if (!remoteJid || !body) return null;
-    // Ignore our own outbound echoes (avoids reply loops), and any non-personal
-    // chat (groups, status/broadcast, newsletters) — only individual @s.whatsapp.net.
-    if (data?.key?.fromMe) return null;
-    if (!remoteJid.endsWith("@s.whatsapp.net")) return null;
+    if (!key || !body) return null;
+    // Ignore our own outbound echoes (avoids reply loops).
+    if (key.fromMe) return null;
+    // Resolve the real phone JID. Newer WhatsApp delivers remoteJid as "<n>@lid"
+    // with the real number in remoteJidAlt — accept both LID and standard JIDs.
+    const jid = resolvePhoneJid(key);
+    if (!jid) return null;
+    // Drop non-personal chats: groups, status/broadcast, newsletters.
+    if (jid.endsWith("@g.us") || jid.endsWith("@broadcast") || jid.includes("status@")) {
+      return null;
+    }
+    const phone = jid.replace(/@.*$/, "");
+    // A real phone is digits only (LID values can leak through if there is no
+    // alt; we still keep them so the conversation is captured).
     return {
-      phone: remoteJid.replace(/@.*$/, ""),
+      phone,
       body,
-      externalId: data?.key?.id ?? `in-${Date.now()}`,
+      name: data?.pushName?.trim() || undefined,
+      externalId: key.id ?? `in-${Date.now()}`,
       timestamp: data?.messageTimestamp
         ? new Date(data.messageTimestamp * 1000).toISOString()
         : new Date().toISOString(),

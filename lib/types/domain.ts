@@ -469,6 +469,7 @@ export type TriageClassification =
 export interface WhatsAppConversation extends BaseEntity {
   clientId: string | null;
   phone: string;
+  contactName: string | null;
   lastMessageAt: string;
   assignedToUserId: string | null;
   status: ConversationStatus;
