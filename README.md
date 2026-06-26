@@ -126,11 +126,11 @@ docs/           # produto, permissões, multi-tenant, IA, WhatsApp, roadmap, pm/
 
 Copie `.env.example` para `.env.local` e preencha conforme necessário:
 
-- **Supabase** — sem isso, o app usa o store em memória.
+- **Supabase** — `NEXT_PUBLIC_SUPABASE_URL` deve ser a URL HTTPS do projeto; `DATABASE_URL` é a conexão do Postgres para o Prisma, de preferência via pooler do Supabase em `6543` com `pgbouncer=true&connection_limit=5`.
 - **Evolution API** — sem isso, o WhatsApp é simulado.
 - **IA** — `AI_PROVIDER=openai|anthropic|mock` + a key correspondente.
 
-O banco é criado aplicando, em ordem, os arquivos de `database/migrations/`.
+O banco é criado aplicando, em ordem, os arquivos de `database/migrations/`. Para o runtime real do Prisma, o app lê `DATABASE_URL` e usa `prisma.config.ts` + `@prisma/adapter-pg`.
 
 ---
 

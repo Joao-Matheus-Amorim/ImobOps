@@ -6,9 +6,11 @@
 // instance). For multi-instance deploys, back it with Redis/Postgres LISTEN.
 
 export interface WhatsAppEvent {
-  type: "message";
+  type: "message.upsert" | "message.update" | "ready";
   tenancyId: string;
   conversationId: string;
+  externalId?: string;
+  status?: string;
 }
 
 type Listener = (event: WhatsAppEvent) => void;

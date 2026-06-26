@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     sentBy: "user",
   });
 
-  publishWhatsAppEvent({ type: "message", tenancyId: ctx.tenancyId, conversationId: conversation.id });
+  publishWhatsAppEvent({ type: "message.upsert", tenancyId: ctx.tenancyId, conversationId: conversation.id });
 
   return NextResponse.json({ ok: true, externalId: sent.externalId });
 }

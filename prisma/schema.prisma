@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ConversationStatus {
+  aberta
+  em_atendimento
+  encerrada
+}
+
+enum TriageClassification {
+  locacao
+  venda
+  condominio
+  financeiro
+  outro
+}
+
+enum MessageDirection {
+  in
+  out
+}
+
+enum MessageSender {
+  user
+  system
+  ai
+  bot
+}
+
+model WhatsappConversation {
+  id                   String                @id @db.Uuid
+  tenancyId            String                @map("tenancy_id") @db.Uuid
+  clientId             String?               @map("client_id") @db.Uuid
+  phone                String
+  contactName          String?               @map("contact_name")
+  lastMessageAt        DateTime              @map("last_message_at") @db.Timestamptz(6)
+  assignedToUserId     String?               @map("assigned_to_user_id") @db.Uuid
+  status               ConversationStatus
+  triageClassification TriageClassification? @map("triage_classification")
+  createdAt            DateTime              @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime              @map("updated_at") @default(now()) @updatedAt @db.Timestamptz(6)
+  createdBy            String?               @map("created_by") @db.Uuid
+
+  messages WhatsappMessage[]
+
+  @@unique([tenancyId, phone], map: "uq_whatsapp_conversations_tenancy_phone")
+  @@map("whatsapp_conversations")
+}
+
+model WhatsappMessage {
+  id             String           @id @db.Uuid
+  tenancyId      String           @map("tenancy_id") @db.Uuid
+  conversationId String           @map("conversation_id") @db.Uuid
+  direction      MessageDirection
+  body           String
+  mediaUrl       String?          @map("media_url")
+  templateKey    String?          @map("template_key")
+  externalId     String?          @map("external_id")
+  sentAt         DateTime         @map("sent_at") @db.Timestamptz(6)
+  deliveredAt    DateTime?        @map("delivered_at") @db.Timestamptz(6)
+  readAt         DateTime?        @map("read_at") @db.Timestamptz(6)
+  sentBy         MessageSender    @map("sent_by")
+  createdAt      DateTime         @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime         @map("updated_at") @default(now()) @updatedAt @db.Timestamptz(6)
+  createdBy      String?          @map("created_by") @db.Uuid
+
+  conversation WhatsappConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([tenancyId, externalId], map: "uq_whatsapp_messages_tenancy_external")
+  @@index([tenancyId], map: "idx_messages_tenancy")
+  @@index([conversationId], map: "idx_messages_conversation")
+  @@index([externalId], map: "idx_messages_external_id")
+  @@map("whatsapp_messages")
+}

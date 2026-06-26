@@ -107,7 +107,7 @@ export function WhatsAppInbox({
       source.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data) as { type?: string };
-          if (data.type === "message") void refresh();
+          if (data.type && data.type !== "ready") void refresh();
         } catch {
           /* ignore */
         }

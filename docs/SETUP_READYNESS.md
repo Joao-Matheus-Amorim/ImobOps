@@ -22,6 +22,7 @@ Variaveis:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+DATABASE_URL=postgresql://postgres:<password>@<project-ref>.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=5&sslmode=require
 ```
 
 Responsavel por:
@@ -30,6 +31,12 @@ Responsavel por:
 - auth real
 - RLS
 - persistencia dos modulos
+
+Notas:
+
+- `NEXT_PUBLIC_SUPABASE_URL` é a URL HTTPS do projeto Supabase.
+- `DATABASE_URL` é a string de conexão do Postgres usada pelo Prisma.
+- Prefira o pooler do Supabase na porta `6543` para reduzir pressão no pool de conexões.
 
 Aplicar as migrations de `database/migrations/` em ordem.
 
