@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2, LogOut, QrCode, RefreshCw, DownloadCloud } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { CheckCircle2, Loader2, LogOut, QrCode, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,34 +21,7 @@ export function ConnectNumber({ initialConfigured }: { initialConfigured: boolea
   const [qr, setQr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const router = useRouter();
-
-  async function handleImport() {
-    setImporting(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/whatsapp/import", { method: "POST" });
-      const data = (await res.json().catch(() => ({}))) as {
-        conversationsImported?: number;
-        messagesImported?: number;
-        error?: string;
-      };
-      if (!res.ok) {
-        setError(data.error ?? "Falha ao importar conversas.");
-        return;
-      }
-      alert(
-        `Importadas ${data.conversationsImported ?? 0} conversa(s) e ${data.messagesImported ?? 0} mensagem(ns) dos últimos 30 dias.`,
-      );
-      router.refresh();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setImporting(false);
-    }
-  }
 
   const checkState = useCallback(async () => {
     try {
@@ -151,16 +123,10 @@ export function ConnectNumber({ initialConfigured }: { initialConfigured: boolea
 
         <div className="flex flex-col gap-2">
           {connected ? (
-            <>
-              <Button onClick={() => void handleImport()} disabled={importing}>
-                {importing ? <Loader2 className="animate-spin" /> : <DownloadCloud />}
-                Importar conversas
-              </Button>
-              <Button variant="outline" onClick={() => void handleDisconnect()} disabled={loading}>
-                {loading ? <Loader2 className="animate-spin" /> : <LogOut />}
-                Desconectar
-              </Button>
-            </>
+            <Button variant="outline" onClick={() => void handleDisconnect()} disabled={loading}>
+              {loading ? <Loader2 className="animate-spin" /> : <LogOut />}
+              Desconectar
+            </Button>
           ) : (
             <Button onClick={() => void handleConnect()} disabled={loading}>
               {loading ? <Loader2 className="animate-spin" /> : <QrCode />}

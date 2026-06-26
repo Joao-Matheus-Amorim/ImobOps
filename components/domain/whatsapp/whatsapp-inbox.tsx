@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { RefreshCw, Send, MessageSquareText, Plus } from "lucide-react";
+import { Send, MessageSquareText, Plus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +77,6 @@ export function WhatsAppInbox({
   );
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [newPhone, setNewPhone] = useState("");
@@ -147,11 +146,6 @@ export function WhatsAppInbox({
     }
   }
 
-  async function manualRefresh() {
-    setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
-  }
 
   // Start a conversation with a typed number, even if it has no history yet.
   async function startNewChat(e: React.FormEvent) {
@@ -185,30 +179,20 @@ export function WhatsAppInbox({
       <Card className="overflow-hidden rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-0">
         <div className="relative flex items-center justify-between border-b border-primary/12 px-4 py-3">
           <p className="section-label text-primary/80">Conversas</p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setNewChatOpen((v) => !v)}
-              className={cn(
-                "grid size-7 place-items-center rounded-lg border transition",
-                newChatOpen
-                  ? "border-primary/45 bg-primary/10 text-primary"
-                  : "border-primary/20 text-muted-foreground hover:text-primary",
-              )}
-              aria-label="Nova conversa"
-              title="Nova conversa"
-            >
-              <Plus className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={manualRefresh}
-              className="text-muted-foreground transition hover:text-primary"
-              aria-label="Atualizar"
-            >
-              <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setNewChatOpen((v) => !v)}
+            className={cn(
+              "grid size-7 place-items-center rounded-lg border transition",
+              newChatOpen
+                ? "border-primary/45 bg-primary/10 text-primary"
+                : "border-primary/20 text-muted-foreground hover:text-primary",
+            )}
+            aria-label="Nova conversa"
+            title="Nova conversa"
+          >
+            <Plus className="size-4" />
+          </button>
 
           {newChatOpen ? (
             <form
