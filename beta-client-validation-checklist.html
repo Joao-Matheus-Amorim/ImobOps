@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Validacao Beta do Cliente</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: rgba(12, 18, 36, 0.88);
+        --panel-strong: #111936;
+        --line: rgba(148, 163, 184, 0.2);
+        --text: #e5eefc;
+        --muted: #9fb0cf;
+        --accent: #3dd9b1;
+        --accent-strong: #14b88f;
+        --warning: #ffcc66;
+        --danger: #ff7b8f;
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(61, 217, 177, 0.18), transparent 26%),
+          radial-gradient(circle at top right, rgba(88, 124, 255, 0.18), transparent 22%),
+          linear-gradient(180deg, #09101f 0%, #060a14 100%);
+      }
+
+      .shell {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 32px auto;
+      }
+
+      .hero,
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero {
+        padding: 28px;
+        margin-bottom: 20px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border: 1px solid rgba(61, 217, 177, 0.28);
+        border-radius: 999px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 14px;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.05;
+      }
+
+      .hero-copy {
+        margin-top: 12px;
+        max-width: 720px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .top-grid,
+      .scope-grid,
+      .content-grid {
+        display: grid;
+        gap: 20px;
+      }
+
+      .top-grid {
+        grid-template-columns: 1.2fr 0.8fr;
+        margin-bottom: 20px;
+      }
+
+      .content-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .scope-grid {
+        grid-template-columns: repeat(3, 1fr);
+        margin-bottom: 20px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel h2 {
+        font-size: 18px;
+        margin-bottom: 14px;
+      }
+
+      .panel h3 {
+        font-size: 15px;
+        margin-bottom: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      label {
+        display: block;
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font: inherit;
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .summary-card {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+
+      .metric {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 24px;
+        margin-top: 6px;
+      }
+
+      .progress {
+        margin-top: 18px;
+      }
+
+      .progress-track {
+        height: 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+        transition: width 180ms ease;
+      }
+
+      .progress-copy {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .step-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .step {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.025);
+        padding: 16px;
+      }
+
+      .step-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .step-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(61, 217, 177, 0.12);
+        color: var(--accent);
+        font-weight: 700;
+      }
+
+      .status-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .status-pill {
+        position: relative;
+      }
+
+      .status-pill input {
+        position: absolute;
+        opacity: 0;
+        inset: 0;
+      }
+
+      .status-pill span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 88px;
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        cursor: pointer;
+        transition: 160ms ease;
+      }
+
+      .status-pill input:checked + span {
+        border-color: rgba(61, 217, 177, 0.45);
+        color: var(--text);
+        background: rgba(61, 217, 177, 0.12);
+      }
+
+      .step-copy {
+        margin-top: 8px;
+        color: var(--muted);
+        line-height: 1.55;
+        font-size: 14px;
+      }
+
+      .step-notes {
+        margin-top: 14px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: linear-gradient(90deg, var(--accent-strong), var(--accent));
+        color: #04120d;
+        font-weight: 700;
+      }
+
+      .secondary {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .final-box {
+        margin-top: 14px;
+        padding: 16px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.025);
+        white-space: pre-wrap;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .hint {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .scope-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .scope-item {
+        padding: 12px 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.025);
+        color: var(--muted);
+        line-height: 1.5;
+        font-size: 14px;
+      }
+
+      .scope-item strong {
+        color: var(--text);
+      }
+
+      .scope-validate {
+        border-color: rgba(61, 217, 177, 0.16);
+      }
+
+      .scope-observe {
+        border-color: rgba(255, 204, 102, 0.18);
+      }
+
+      .scope-out {
+        border-color: rgba(255, 123, 143, 0.18);
+      }
+
+      @media (max-width: 920px) {
+        .top-grid,
+        .scope-grid,
+        .content-grid,
+        .meta-grid,
+        .summary-card {
+          grid-template-columns: 1fr;
+        }
+
+        .step-head {
+          flex-direction: column;
+        }
+
+        .status-group {
+          width: 100%;
+        }
+
+        .status-pill {
+          flex: 1 1 0;
+        }
+
+        .status-pill span {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="hero">
+        <div class="eyebrow">Cliente Beta | Validacao Assistida</div>
+        <h1>Roteiro de teste para uso real do sistema</h1>
+        <p class="hero-copy">
+          Documento marcavel para acompanhar o teste do cliente com foco no fluxo principal:
+          acesso, navegacao, cadastros e confirmacao de uso sem erros bloqueantes.
+        </p>
+        <p class="hero-copy">
+          Este teste serve para validar se o produto esta utilizavel no dia a dia. Ele nao serve
+          para pedir ao cliente uma analise tecnica da infraestrutura ou das partes que ainda nao
+          fazem parte da entrega final.
+        </p>
+      </section>
+
+      <section class="top-grid">
+        <article class="panel">
+          <h2>Dados do teste</h2>
+          <div class="meta-grid">
+            <div>
+              <label for="test-date">Data</label>
+              <input id="test-date" type="date" />
+            </div>
+            <div>
+              <label for="test-url">URL</label>
+              <input id="test-url" type="text" placeholder="https://controle-dividas-7dcg.vercel.app" />
+            </div>
+            <div>
+              <label for="test-client">Cliente</label>
+              <input id="test-client" type="text" placeholder="Nome do cliente" />
+            </div>
+            <div>
+              <label for="test-user">Usuario de teste</label>
+              <input id="test-user" type="text" placeholder="email@cliente.com" />
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Status geral</h2>
+          <div class="summary-card">
+            <div class="metric">
+              <h3>Concluidos</h3>
+              <strong id="done-count">0</strong>
+            </div>
+            <div class="metric">
+              <h3>Com falha</h3>
+              <strong id="failed-count">0</strong>
+            </div>
+            <div class="metric">
+              <h3>Pendentes</h3>
+              <strong id="pending-count">10</strong>
+            </div>
+          </div>
+          <div class="progress">
+            <div class="progress-track">
+              <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="progress-copy" id="progress-copy">0% do roteiro concluido</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="scope-grid">
+        <article class="panel">
+          <h2>O que o cliente valida</h2>
+          <div class="scope-list">
+            <div class="scope-item scope-validate"><strong>Fluxo real de uso</strong><br />Login, navegacao, criacao e leitura dos registros principais.</div>
+            <div class="scope-item scope-validate"><strong>Clareza do produto</strong><br />Se a pessoa entende o que fazer sem depender de explicacao tecnica.</div>
+            <div class="scope-item scope-validate"><strong>Confianca no uso</strong><br />Se o sistema parece consistente, previsivel e utilizavel no dia a dia.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>O que o cliente observa</h2>
+          <div class="scope-list">
+            <div class="scope-item scope-observe"><strong>Sintomas</strong><br />Lentidao, travamento, erro confuso, tela vazia, comportamento estranho.</div>
+            <div class="scope-item scope-observe"><strong>Experiencia</strong><br />Dificuldade no celular, passos confusos, mensagens ruins, sensacao de inseguranca.</div>
+            <div class="scope-item scope-observe"><strong>Consistencia</strong><br />Se algo some, volta errado ou muda depois de sair e entrar novamente.</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <h2>Fora deste ciclo</h2>
+          <div class="scope-list">
+            <div class="scope-item scope-out"><strong>Infraestrutura</strong><br />Deploy, Vercel, Supabase, migrations, logs internos e testes automatizados.</div>
+            <div class="scope-item scope-out"><strong>Recursos ainda nao finais</strong><br />IA financeira real, cobranca comercial completa, webhook de billing e notificacoes.</div>
+            <div class="scope-item scope-out"><strong>Diagnostico tecnico</strong><br />O cliente ajuda a apontar o problema, mas nao precisa descobrir a causa.</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="content-grid">
+        <article class="panel">
+          <h2>Etapas do cliente</h2>
+          <div class="step-list" id="step-list"></div>
+        </article>
+
+        <article class="panel">
+          <h2>Resumo final</h2>
+          <div>
+            <label for="global-errors">Erros vistos</label>
+            <textarea id="global-errors" placeholder="Descreva os erros, telas, mensagens ou comportamentos estranhos."></textarea>
+          </div>
+          <div style="margin-top: 14px;">
+            <label for="next-action">Proximo ajuste necessario</label>
+            <textarea id="next-action" placeholder="Ex.: corrigir acesso em contas a pagar, revisar permissao de usuario limitado, ajustar mensagem de erro."></textarea>
+          </div>
+          <div style="margin-top: 14px;">
+            <label for="final-decision">Resultado final deste ciclo</label>
+            <select id="final-decision">
+              <option value="">Selecione</option>
+              <option value="Pronto para usar">Pronto para usar</option>
+              <option value="Usavel com ressalvas">Usavel com ressalvas</option>
+              <option value="Nao pronto para liberar">Nao pronto para liberar</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button class="primary" id="copy-summary" type="button">Copiar resumo</button>
+            <button class="secondary" id="print-view" type="button">Imprimir / PDF</button>
+            <button class="secondary" id="reset-form" type="button">Limpar marcacoes</button>
+          </div>
+          <div class="hint">
+            O documento salva automaticamente no navegador deste computador.
+          </div>
+          <div class="final-box" id="final-summary"></div>
+        </article>
+      </section>
+    </div>
+
+    <script>
+      const storageKey = "beta-client-validation-checklist-v1";
+
+      const steps = [
+        {
+          id: "login",
+          title: "Entrar no app",
+          copy: "Confirmar que o usuario consegue fazer login sem erro e sem travar na tela inicial.",
+        },
+        {
+          id: "onboarding",
+          title: "Nao cair no onboarding errado",
+          copy: "Confirmar que o usuario nao e enviado para criacao de organizacao por engano.",
+        },
+        {
+          id: "dashboard",
+          title: "Abrir dashboard",
+          copy: "Verificar se a tela principal abre e mostra a organizacao correta.",
+        },
+        {
+          id: "people",
+          title: "Abrir pessoas",
+          copy: "Entrar na area de pessoas e validar carregamento normal.",
+        },
+        {
+          id: "person-write",
+          title: "Criar ou editar pessoa",
+          copy: "Fazer uma alteracao simples para validar que o cadastro funciona.",
+        },
+        {
+          id: "expense",
+          title: "Registrar gasto",
+          copy: "Criar um gasto simples e confirmar que ele aparece corretamente.",
+        },
+        {
+          id: "payable",
+          title: "Criar conta a pagar",
+          copy: "Registrar uma conta a pagar e validar o salvamento.",
+        },
+        {
+          id: "receivable",
+          title: "Criar conta a receber",
+          copy: "Registrar uma conta a receber e validar o salvamento.",
+        },
+        {
+          id: "bank",
+          title: "Criar ou revisar banco",
+          copy: "Abrir bancos e confirmar que o fluxo principal funciona.",
+        },
+        {
+          id: "settings-session",
+          title: "Configuracoes e novo login",
+          copy: "Conferir categorias basicas, sair e entrar novamente para validar persistencia.",
+        },
+      ];
+
+      const state = loadState();
+
+      const stepList = document.getElementById("step-list");
+      const doneCount = document.getElementById("done-count");
+      const failedCount = document.getElementById("failed-count");
+      const pendingCount = document.getElementById("pending-count");
+      const progressBar = document.getElementById("progress-bar");
+      const progressCopy = document.getElementById("progress-copy");
+      const finalSummary = document.getElementById("final-summary");
+
+      document.getElementById("test-date").value = state.meta.testDate || "";
+      document.getElementById("test-url").value = state.meta.testUrl || "";
+      document.getElementById("test-client").value = state.meta.testClient || "";
+      document.getElementById("test-user").value = state.meta.testUser || "";
+      document.getElementById("global-errors").value = state.meta.globalErrors || "";
+      document.getElementById("next-action").value = state.meta.nextAction || "";
+      document.getElementById("final-decision").value = state.meta.finalDecision || "";
+
+      renderSteps();
+      updateSummary();
+
+      for (const id of ["test-date", "test-url", "test-client", "test-user", "global-errors", "next-action", "final-decision"]) {
+        document.getElementById(id).addEventListener("input", () => {
+          state.meta.testDate = document.getElementById("test-date").value;
+          state.meta.testUrl = document.getElementById("test-url").value;
+          state.meta.testClient = document.getElementById("test-client").value;
+          state.meta.testUser = document.getElementById("test-user").value;
+          state.meta.globalErrors = document.getElementById("global-errors").value;
+          state.meta.nextAction = document.getElementById("next-action").value;
+          state.meta.finalDecision = document.getElementById("final-decision").value;
+          persist();
+          updateSummary();
+        });
+      }
+
+      document.getElementById("copy-summary").addEventListener("click", async () => {
+        const content = buildSummary();
+        try {
+          await navigator.clipboard.writeText(content);
+          finalSummary.textContent = content + "\n\nResumo copiado.";
+        } catch {
+          finalSummary.textContent = content + "\n\nNao foi possivel copiar automaticamente.";
+        }
+      });
+
+      document.getElementById("print-view").addEventListener("click", () => {
+        window.print();
+      });
+
+      document.getElementById("reset-form").addEventListener("click", () => {
+        localStorage.removeItem(storageKey);
+        location.reload();
+      });
+
+      function renderSteps() {
+        stepList.innerHTML = "";
+
+        steps.forEach((step, index) => {
+          const stepState = state.steps[step.id] || { status: "pending", notes: "" };
+          const article = document.createElement("article");
+          article.className = "step";
+          article.innerHTML = `
+            <div class="step-head">
+              <div>
+                <div class="step-title">
+                  <span class="step-number">${index + 1}</span>
+                  <div>
+                    <strong>${step.title}</strong>
+                  </div>
+                </div>
+                <p class="step-copy">${step.copy}</p>
+              </div>
+              <div class="status-group">
+                ${renderStatus(step.id, "done", "OK")}
+                ${renderStatus(step.id, "failed", "Falhou")}
+                ${renderStatus(step.id, "pending", "Pendente")}
+              </div>
+            </div>
+            <div class="step-notes">
+              <label for="notes-${step.id}">Observacoes</label>
+              <textarea id="notes-${step.id}" placeholder="Ex.: abriu normal, erro ao salvar, mensagem vista, travou no loading.">${escapeHtml(stepState.notes)}</textarea>
+            </div>
+          `;
+          stepList.appendChild(article);
+
+          const notesField = article.querySelector(`#notes-${step.id}`);
+          notesField.addEventListener("input", () => {
+            state.steps[step.id].notes = notesField.value;
+            persist();
+            updateSummary();
+          });
+
+          article.querySelectorAll(`input[name="status-${step.id}"]`).forEach((input) => {
+            input.addEventListener("change", () => {
+              state.steps[step.id].status = input.value;
+              persist();
+              updateSummary();
+            });
+          });
+        });
+      }
+
+      function renderStatus(stepId, value, label) {
+        const checked = (state.steps[stepId]?.status || "pending") === value ? "checked" : "";
+        return `
+          <label class="status-pill">
+            <input type="radio" name="status-${stepId}" value="${value}" ${checked} />
+            <span>${label}</span>
+          </label>
+        `;
+      }
+
+      function loadState() {
+        const fallback = {
+          meta: {
+            testDate: "",
+            testUrl: "",
+            testClient: "",
+            testUser: "",
+            globalErrors: "",
+            nextAction: "",
+            finalDecision: "",
+          },
+          steps: Object.fromEntries(steps.map((step) => [step.id, { status: "pending", notes: "" }])),
+        };
+
+        try {
+          const parsed = JSON.parse(localStorage.getItem(storageKey) || "null");
+          if (!parsed) return fallback;
+          return {
+            meta: { ...fallback.meta, ...parsed.meta },
+            steps: {
+              ...fallback.steps,
+              ...parsed.steps,
+            },
+          };
+        } catch {
+          return fallback;
+        }
+      }
+
+      function persist() {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+      }
+
+      function updateSummary() {
+        const values = Object.values(state.steps);
+        const done = values.filter((item) => item.status === "done").length;
+        const failed = values.filter((item) => item.status === "failed").length;
+        const pending = values.filter((item) => item.status === "pending").length;
+        const percent = Math.round((done / steps.length) * 100);
+
+        doneCount.textContent = String(done);
+        failedCount.textContent = String(failed);
+        pendingCount.textContent = String(pending);
+        progressBar.style.width = `${percent}%`;
+        progressCopy.textContent = `${percent}% do roteiro concluido`;
+        finalSummary.textContent = buildSummary();
+      }
+
+      function buildSummary() {
+        const lines = [
+          "Teste beta",
+          `- Data: ${state.meta.testDate || "-"}`,
+          `- URL: ${state.meta.testUrl || "-"}`,
+          `- Cliente: ${state.meta.testClient || "-"}`,
+          `- Usuario: ${state.meta.testUser || "-"}`,
+          "- Escopo validado: login, navegacao, dashboard, pessoas, gastos, contas a pagar, contas a receber, bancos e configuracoes basicas.",
+          "- Fora deste ciclo: infraestrutura, billing comercial completo, IA financeira real, notificacoes e diagnostico tecnico interno.",
+        ];
+
+        steps.forEach((step) => {
+          const current = state.steps[step.id] || { status: "pending", notes: "" };
+          const map = {
+            done: "ok",
+            failed: "falhou",
+            pending: "pendente",
+          };
+          lines.push(`- ${step.title}: ${map[current.status]}`);
+          if (current.notes.trim()) {
+            lines.push(`  Observacoes: ${current.notes.trim()}`);
+          }
+        });
+
+        lines.push(`- Erros vistos: ${state.meta.globalErrors || "-"}`);
+        lines.push(`- Proximo ajuste necessario: ${state.meta.nextAction || "-"}`);
+        lines.push(`- Resultado final: ${state.meta.finalDecision || "-"}`);
+
+        return lines.join("\n");
+      }
+
+      function escapeHtml(value) {
+        return value
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+    </script>
+  </body>
+</html>
