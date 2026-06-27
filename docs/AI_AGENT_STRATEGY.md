@@ -165,8 +165,9 @@ provider, para que o modelo saiba exatamente quais argumentos cada tool aceita.
   modelo desnecessariamente — as tools retornam o mínimo para a tarefa.
 - **Append-only**: o histórico de ações de IA não pode ser apagado pela aplicação,
   garantindo integridade da trilha.
-- **Provider configurável**: a imobiliária escolhe o provedor (OpenAI ou
-  Anthropic) conforme sua política de dados; sem provider, roda em mock e nada sai.
+- **Provider configurável**: a imobiliária escolhe o provedor (OpenAI, Anthropic
+  ou OpenRouter) conforme sua política de dados; sem provider, roda em mock e nada
+  sai.
 
 ## 8. Tratamento de erros
 

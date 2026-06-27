@@ -149,8 +149,9 @@ reescrita**:
    Apenas garantir que cada novo usuário esteja corretamente vinculado.
 3. **Planos** (`plan`): o enum `tenancy_plan_t` (`single`, `saas_starter`,
    `saas_pro`) já existe para diferenciar limites/funcionalidades por assinatura.
-4. **Faturamento**: integração de billing (fora do escopo deste repositório)
-   amarrada ao `tenancy_id`.
+4. **Faturamento da tenancy**: billing de assinatura/plano do SaaS amarrado ao
+  `tenancy_id`. A cobrança operacional da imobiliária já existe no repositório;
+  aqui o tema é o faturamento da plataforma multi-tenant.
 5. **Seletor de tenant na UI**: só para usuários que pertencem a mais de uma
    imobiliária (ex.: grupos). Habilitar o switch que já é suportado pela
    arquitetura.

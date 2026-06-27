@@ -13,7 +13,8 @@ Cortes 1–3 do roadmap técnico.
 
 ### Fase B — Inteligência e canal — Marco M2
 Cortes 4–5.
-- Assistente de IA (mock + tools, quatro regras) e WhatsApp (Evolution + triagem).
+- Assistente de IA (mock + tools, quatro regras; OpenRouter/OpenAI/Anthropic) e
+  WhatsApp (Evolution local/VPS + Meta Cloud API).
 - **Saída:** dry-run/confirm funcionando; webhook triá e cria lead; testes verdes.
 
 ### Fase C — Persistência real — Marco M3
@@ -24,7 +25,7 @@ Corte 6.
 
 ### Fase D — Operação financeira + IA real — Marco M4
 Cortes 7–8.
-- Cobrança/repasse com Storage e lembretes; IA com provider real e papéis
+- Cobrança/repasse com Asaas e lembretes; IA com provider real e papéis
   ampliados; overrides na UI de admin.
 - **Saída:** ciclo de cobrança demonstrável; IA real com auditoria.
 

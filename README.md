@@ -42,15 +42,16 @@ o dashboard de cada papel.
 - **Zod** para validação de tools e payloads
 - **Vitest** para testes
 - **Vercel** como alvo de deploy
-- Adapter **WhatsApp** (`lib/whatsapp/`): Evolution API + stub Meta
+- Adapter **WhatsApp** (`lib/whatsapp/`): Evolution API + Meta Cloud API
 - Adapter **IA** (`lib/ai/`): OpenAI / Anthropic / OpenRouter / mock, com tool calling
 
 ---
 
 ## Os três módulos
 
-- **Locação** — contratos, parcelas mensais, cobrança manual (boleto/PIX por upload
-  + marcação), repasse ao proprietário descontando a taxa de administração.
+- **Locação** — contratos, parcelas mensais, cobrança operacional com Asaas
+  (boleto/PIX, webhook, repasse) e fallback manual, descontando a taxa de
+  administração.
 - **Venda** — listagens, funil de propostas/contrapropostas, contratos, comissões.
 - **Condomínio** — condomínios, unidades, taxas, despesas rateadas, assembleias.
 
@@ -89,16 +90,16 @@ SaaS **sem reescrita**. Ver [docs/MULTI_TENANT_STRATEGY.md](docs/MULTI_TENANT_ST
 3. **Auditoria de tudo** em `ai_actions` (append-only).
 4. **Allowlist por papel** (MVP: apenas `admin`).
 
-Provider por `AI_PROVIDER=openai|anthropic`; sem env, modo mock. Ver
+Provider por `AI_PROVIDER=openai|anthropic|openrouter`; sem env, modo mock. Ver
 [docs/AI_AGENT_STRATEGY.md](docs/AI_AGENT_STRATEGY.md).
 
 ---
 
 ## WhatsApp
 
-Adapter com Evolution API (default; mock sem env) e stub Meta tipado para migração.
-9 templates de cobrança/captação, bot de triagem de leads por intenção, webhook e
-envio. Ver [docs/WHATSAPP_INTEGRATION.md](docs/WHATSAPP_INTEGRATION.md).
+Adapter com Evolution API (default local/VPS; mock sem env) e Meta Cloud API
+oficial para produção. 9 templates de cobrança/captação, bot de triagem de leads
+por intenção, webhook e envio. Ver [docs/WHATSAPP_INTEGRATION.md](docs/WHATSAPP_INTEGRATION.md).
 
 ---
 

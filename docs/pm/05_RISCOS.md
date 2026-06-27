@@ -84,7 +84,7 @@ tarefas repetitivas; treinamento. **Responsável:** PO.
 
 ## 4. Riscos aceitos
 
-- Cobrança manual (não automatizada por boleto bancário) é uma decisão de escopo, não
-  um defeito — aceita conscientemente na fase inicial.
+- Cobrança operacional já existe com Asaas; o fallback manual continua como
+  contingência, não como estado desejado.
 - Uso da Evolution API é dívida técnica consciente, aceita com mitigações e plano de
   saída.
