@@ -500,6 +500,20 @@ export interface WhatsAppTemplate extends BaseEntity {
   active: boolean;
 }
 
+// --- Calendar ------------------------------------------------------------
+
+export type CalendarTone = "meeting" | "task" | "payment" | "board" | "visit";
+
+// A manual calendar event (created by a user or the AI). Operational events
+// (visits, due dates, contracts, meetings) are aggregated at read time, not here.
+export interface CalendarEvent extends BaseEntity {
+  title: string;
+  startsAt: string;
+  endsAt: string | null;
+  tone: CalendarTone;
+  notes: string | null;
+}
+
 // --- Audit & AI ----------------------------------------------------------
 
 export interface AuditLogEntry {

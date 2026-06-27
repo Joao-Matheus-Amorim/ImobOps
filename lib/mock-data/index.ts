@@ -24,6 +24,7 @@ import type {
   WhatsAppConversation,
   WhatsAppMessage,
   WhatsAppTemplate,
+  CalendarEvent,
   User,
   DocumentRecord,
   AuditLogEntry,
@@ -75,6 +76,7 @@ export interface MockStore {
   conversations: WhatsAppConversation[];
   messages: WhatsAppMessage[];
   whatsappTemplates: WhatsAppTemplate[];
+  calendarEvents: CalendarEvent[];
   auditLog: AuditLogEntry[];
   aiActions: AiActionEntry[];
 }
@@ -105,6 +107,7 @@ function buildStore(): MockStore {
     conversations: [...mockConversations],
     messages: [...mockMessages],
     whatsappTemplates: [],
+    calendarEvents: [],
     auditLog: [],
     aiActions: [],
   };

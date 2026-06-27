@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Building2,
   CalendarDays,
@@ -9,6 +9,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   Plus,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -17,35 +18,26 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
-
-type EventTone = "task" | "meeting" | "payment" | "board";
-type CalendarEvent = {
-  id: string;
-  label: string;
-  startsAt: string;
-  tone: EventTone;
-};
-
-const INITIAL_EVENTS: CalendarEvent[] = [
-  { id: "e-10", label: "Enviar boletos do mes", startsAt: "2026-06-10T09:00", tone: "payment" },
-  { id: "e-11", label: "PIX - confirmar recebimento", startsAt: "2026-06-11T10:00", tone: "payment" },
-  { id: "e-16-a", label: "Saude dos clientes", startsAt: "2026-06-16T09:00", tone: "task" },
-  { id: "e-16-b", label: "Revisar atrasados", startsAt: "2026-06-16T15:00", tone: "payment" },
-  { id: "e-17", label: "Reuniao com cliente", startsAt: "2026-06-17T14:00", tone: "meeting" },
-  { id: "e-18", label: "Contrato e vistoria", startsAt: "2026-06-18T11:00", tone: "task" },
-  { id: "e-19", label: "Subir campanha imoveis", startsAt: "2026-06-19T16:00", tone: "board" },
-  { id: "e-22", label: "Alinhamento financeiro", startsAt: "2026-06-22T10:00", tone: "meeting" },
-  { id: "e-24", label: "Disparar lembrete PIX", startsAt: "2026-06-24T08:00", tone: "payment" },
-  { id: "e-25", label: "Relatorio mensal", startsAt: "2026-06-25T17:00", tone: "task" },
-];
+import type { UnifiedEvent } from "@/lib/repositories/calendar.repository";
+import type { CalendarTone } from "@/lib/types/domain";
 
 const weekdays = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
-const eventTone = {
+
+const toneStyle = {
   task: "bg-primary/25 text-foreground",
   meeting: "bg-sky-500/22 text-foreground",
   payment: "bg-primary/35 text-foreground shadow-glow-sm",
   board: "bg-indigo-400/20 text-foreground",
-} satisfies Record<EventTone, string>;
+  visit: "bg-emerald-500/20 text-foreground",
+} satisfies Record<CalendarTone, string>;
+
+const sourceLabel: Record<UnifiedEvent["source"], string> = {
+  manual: "Manual",
+  visit: "Visita",
+  charge: "Cobranca",
+  contract: "Contrato",
+  meeting: "Assembleia",
+};
 
 function SummaryCard({
   label,
@@ -65,6 +57,10 @@ function SummaryCard({
       <div className="text-primary">{icon}</div>
     </Card>
   );
+}
+
+function todayDatePart(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function monthLabel(date: Date): string {
@@ -110,14 +106,22 @@ function buildDays(month: Date) {
   return cells;
 }
 
-export function CalendarExperience() {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 5, 1));
-  const [events, setEvents] = useState<CalendarEvent[]>(INITIAL_EVENTS);
+function monthFromDatePart(value: string): Date {
+  const [year, month] = value.split("-").map(Number);
+  return new Date(year || new Date().getFullYear(), (month || 1) - 1, 1);
+}
+
+export function CalendarExperience({ initialEvents }: { initialEvents: UnifiedEvent[] }) {
+  const today = todayDatePart();
+  const [currentMonth, setCurrentMonth] = useState(monthFromDatePart(today));
+  const [events, setEvents] = useState<UnifiedEvent[]>(initialEvents);
+  const [selectedDate, setSelectedDate] = useState(today);
   const [open, setOpen] = useState(false);
-  const [label, setLabel] = useState("");
-  const [startsAt, setStartsAt] = useState("2026-06-16T09:00");
-  const [tone, setTone] = useState<EventTone>("meeting");
+  const [title, setTitle] = useState("");
+  const [startsAt, setStartsAt] = useState(`${today}T09:00`);
+  const [tone, setTone] = useState<CalendarTone>("meeting");
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const days = useMemo(() => buildDays(currentMonth), [currentMonth]);
 
@@ -134,24 +138,29 @@ export function CalendarExperience() {
       task: visibleEvents.filter((event) => event.tone === "task").length,
       meeting: visibleEvents.filter((event) => event.tone === "meeting").length,
       payment: visibleEvents.filter((event) => event.tone === "payment").length,
-      board: visibleEvents.filter((event) => event.tone === "board").length,
+      board: visibleEvents.filter((event) => event.tone === "board" || event.tone === "visit").length,
     };
   }, [visibleEvents]);
 
-  const agendaToday = useMemo(
-    () => visibleEvents.filter((event) => datePart(event.startsAt) === "2026-06-16"),
-    [visibleEvents],
+  const selectedDayEvents = useMemo(
+    () => visibleEvents.filter((event) => datePart(event.startsAt) === selectedDate),
+    [selectedDate, visibleEvents],
   );
 
-  function resetModal() {
-    setLabel("");
-    setStartsAt(`${datePart(startsAt)}T09:00`);
+  const upcomingEvents = useMemo(
+    () => events.filter((event) => event.startsAt >= `${today}T00:00`).sort((a, b) => a.startsAt.localeCompare(b.startsAt)).slice(0, 6),
+    [events, today],
+  );
+
+  function resetModal(date = selectedDate) {
+    setTitle("");
+    setStartsAt(`${date}T09:00`);
     setTone("meeting");
     setError(null);
   }
 
-  function submitEvent() {
-    if (!label.trim()) {
+  async function submitEvent() {
+    if (!title.trim()) {
       setError("Informe um titulo para o evento.");
       return;
     }
@@ -160,17 +169,42 @@ export function CalendarExperience() {
       return;
     }
 
-    setEvents((current) => [
-      ...current,
-      {
-        id: `event-${Date.now()}`,
-        label: label.trim(),
-        startsAt,
-        tone,
-      },
-    ]);
-    setOpen(false);
-    resetModal();
+    setError(null);
+    startTransition(async () => {
+      const res = await fetch("/api/calendar", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          startsAt,
+          endsAt: null,
+          tone,
+          notes: null,
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as { event?: UnifiedEvent; error?: string } | null;
+      if (!res.ok || !data?.event) {
+        setError(data?.error ?? "Nao foi possivel salvar o evento.");
+        return;
+      }
+      setEvents((current) => [...current, data.event!].sort((a, b) => a.startsAt.localeCompare(b.startsAt)));
+      setCurrentMonth(monthFromDatePart(datePart(data.event.startsAt)));
+      setSelectedDate(datePart(data.event.startsAt));
+      setOpen(false);
+      resetModal(datePart(data.event.startsAt));
+    });
+  }
+
+  async function deleteManualEvent(event: UnifiedEvent) {
+    if (!event.manualId || isPending) return;
+    startTransition(async () => {
+      const res = await fetch(`/api/calendar/${event.manualId}`, { method: "DELETE" });
+      if (!res.ok) {
+        setError("Nao foi possivel remover o evento.");
+        return;
+      }
+      setEvents((current) => current.filter((item) => item.id !== event.id));
+    });
   }
 
   return (
@@ -178,7 +212,7 @@ export function CalendarExperience() {
       <PageHeader
         badge="Agenda"
         title="Calendario"
-        description="Tarefas, reunioes, boletos, PIX e pagamentos organizados por responsavel."
+        description="Agenda integrada com visitas, contratos, assembleias, vencimentos e eventos manuais."
         action={
           <Button
             size="lg"
@@ -194,11 +228,21 @@ export function CalendarExperience() {
 
       <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" onClick={() => setCurrentMonth(new Date(2026, 5, 1))}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const todayPart = todayDatePart();
+              setCurrentMonth(monthFromDatePart(todayPart));
+              setSelectedDate(todayPart);
+            }}
+          >
             Hoje
           </Button>
           <button
             type="button"
+            aria-label="Mes anterior"
+            title="Mes anterior"
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
             className="grid size-9 place-items-center rounded-full text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
           >
@@ -206,6 +250,8 @@ export function CalendarExperience() {
           </button>
           <button
             type="button"
+            aria-label="Proximo mes"
+            title="Proximo mes"
             onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
             className="grid size-9 place-items-center rounded-full text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
           >
@@ -235,78 +281,136 @@ export function CalendarExperience() {
         <SummaryCard label="Tarefas" value={String(summary.task)} icon={<CheckSquare className="size-5" />} />
         <SummaryCard label="Reunioes" value={String(summary.meeting)} icon={<Users className="size-5" />} />
         <SummaryCard label="Financeiro" value={String(summary.payment)} icon={<Building2 className="size-5" />} />
-        <SummaryCard label="Boards" value={String(summary.board)} icon={<LayoutDashboard className="size-5" />} />
+        <SummaryCard label="Operacao" value={String(summary.board)} icon={<LayoutDashboard className="size-5" />} />
       </div>
 
-      <Card className="overflow-x-auto rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-4 shadow-[0_34px_110px_-72px_hsl(var(--primary)/0.9)]">
-        <div className="min-w-[960px]">
-          <div className="grid grid-cols-7 gap-1 pb-2 section-label text-muted-foreground">
-            {weekdays.map((day) => (
-              <div key={day} className="px-3 py-2 text-center">
-                {day}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {days.map((item) => {
-              const iso = `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, "0")}-${String(item.date.getDate()).padStart(2, "0")}`;
-              const dayEvents = visibleEvents.filter((event) => datePart(event.startsAt) === iso);
-              const isToday = iso === "2026-06-16";
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
+        <Card className="overflow-x-auto rounded-[1.35rem] border-primary/18 bg-[#102f4d]/82 p-4 shadow-[0_34px_110px_-72px_hsl(var(--primary)/0.9)]">
+          <div className="min-w-[960px]">
+            <div className="grid grid-cols-7 gap-1 pb-2 section-label text-muted-foreground">
+              {weekdays.map((day) => (
+                <div key={day} className="px-3 py-2 text-center">
+                  {day}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((item) => {
+                const iso = `${item.date.getFullYear()}-${String(item.date.getMonth() + 1).padStart(2, "0")}-${String(item.date.getDate()).padStart(2, "0")}`;
+                const dayEvents = visibleEvents.filter((event) => datePart(event.startsAt) === iso);
+                const isToday = iso === today;
 
-              return (
-                <div
-                  key={`${iso}-${item.muted ? "muted" : "live"}`}
-                  className={[
-                    "min-h-[114px] rounded-lg border bg-primary/5 p-2 transition",
-                    item.muted
-                      ? "border-primary/6 text-muted-foreground/50"
-                      : "border-primary/12 text-foreground hover:border-primary/35 hover:bg-primary/10",
-                    isToday ? "border-primary/80 bg-primary/10 shadow-glow-lg" : "",
-                  ].join(" ")}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className={isToday ? "font-bold text-primary text-glow" : ""}>{item.date.getDate()}</div>
-                    {dayEvents.length ? (
-                      <span className="rounded-full bg-primary/12 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                        {dayEvents.length}
-                      </span>
+                return (
+                  <button
+                    type="button"
+                    key={`${iso}-${item.muted ? "muted" : "live"}`}
+                    onClick={() => {
+                      setSelectedDate(iso);
+                      resetModal(iso);
+                    }}
+                    className={[
+                      "min-h-[118px] rounded-lg border bg-primary/5 p-2 text-left transition",
+                      item.muted
+                        ? "border-primary/6 text-muted-foreground/50"
+                        : "border-primary/12 text-foreground hover:border-primary/35 hover:bg-primary/10",
+                      isToday ? "border-primary/80 bg-primary/10 shadow-glow-lg" : "",
+                      selectedDate === iso ? "ring-2 ring-primary/55" : "",
+                    ].join(" ")}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className={isToday ? "font-bold text-primary text-glow" : ""}>{item.date.getDate()}</div>
+                      {dayEvents.length ? (
+                        <span className="rounded-full bg-primary/12 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          {dayEvents.length}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-4 space-y-1">
+                      {dayEvents.slice(0, 3).map((event) => (
+                        <div key={event.id} className={`rounded-md px-2 py-1 text-[11px] ${toneStyle[event.tone]}`}>
+                          <div className="truncate font-medium">{event.title}</div>
+                          <div className="mt-0.5 text-[10px] opacity-80">{timePart(event.startsAt)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+
+        <Card className="rounded-[1.35rem] border-primary/18 bg-card/55 p-5">
+          <p className="section-label text-primary/80">Dia selecionado</p>
+          <p className="mt-2 font-display text-2xl font-bold text-foreground">
+            {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long" }).format(new Date(`${selectedDate}T12:00`))}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {selectedDayEvents.length ? `${selectedDayEvents.length} compromisso(s)` : "Sem compromissos"}
+          </p>
+
+          <div className="mt-5 space-y-2">
+            {selectedDayEvents.length ? (
+              selectedDayEvents.map((event) => (
+                <div key={event.id} className="rounded-2xl border border-primary/12 bg-background/20 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{event.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {timePart(event.startsAt)} - {sourceLabel[event.source]}
+                      </p>
+                    </div>
+                    {event.manualId ? (
+                      <button
+                        type="button"
+                        aria-label="Remover evento"
+                        title="Remover evento"
+                        onClick={() => deleteManualEvent(event)}
+                        className="grid size-8 shrink-0 place-items-center rounded-full text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
                     ) : null}
                   </div>
-                  <div className="mt-4 space-y-1">
-                    {dayEvents.slice(0, 3).map((event) => (
-                      <div
-                        key={event.id}
-                        className={`rounded-md px-2 py-1 text-[11px] ${eventTone[event.tone]}`}
-                      >
-                        <div className="truncate font-medium">{event.label}</div>
-                        <div className="mt-0.5 text-[10px] opacity-80">{timePart(event.startsAt)}</div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              );
-            })}
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-primary/18 bg-background/14 p-4 text-sm text-muted-foreground">
+                Crie um evento manual ou acompanhe automaticamente vencimentos, visitas, contratos e assembleias.
+              </div>
+            )}
           </div>
-        </div>
-      </Card>
+
+          <Button
+            className="mt-5 w-full"
+            onClick={() => {
+              resetModal(selectedDate);
+              setOpen(true);
+            }}
+          >
+            <Plus />
+            Novo evento nesta data
+          </Button>
+        </Card>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="p-5 lg:col-span-2">
           <div className="flex items-center gap-3">
             <CalendarDays className="size-5 text-primary" />
             <div>
-              <p className="section-label text-primary/80">Fluxo de agenda</p>
+              <p className="section-label text-primary/80">Agenda integrada</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Datas e horarios agora entram por um picker visual, mantendo o mesmo padrão de modal do app.
+                Eventos manuais ficam em calendario; vencimentos, visitas, contratos e assembleias entram dos modulos.
               </p>
             </div>
           </div>
         </Card>
         <Card className="p-5">
-          <p className="section-label text-primary/80">Hoje</p>
-          <p className="mt-2 font-display text-2xl font-bold text-foreground">{agendaToday.length} rotinas</p>
+          <p className="section-label text-primary/80">Proximos</p>
+          <p className="mt-2 font-display text-2xl font-bold text-foreground">{upcomingEvents.length} eventos</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {agendaToday[0]?.label ?? "Sem rotinas registradas para hoje."}
+            {upcomingEvents[0]?.title ?? "Sem eventos futuros registrados."}
           </p>
         </Card>
       </div>
@@ -316,14 +420,25 @@ export function CalendarExperience() {
           <div>
             <p className="section-label text-primary/80">Agenda do modulo</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Eventos do mes com foco em operacao, relacionamento e cobranca.
+              Feed operacional consolidado para apresentacao e uso diario.
             </p>
           </div>
           <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-right">
-            <p className="text-xs uppercase tracking-wide text-primary/80">Eventos ativos</p>
+            <p className="text-xs uppercase tracking-wide text-primary/80">Eventos do mes</p>
             <p className="mt-1 font-display text-2xl font-bold text-foreground">{visibleEvents.length}</p>
           </div>
         </div>
+        {upcomingEvents.length ? (
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {upcomingEvents.map((event) => (
+              <div key={event.id} className="rounded-2xl border border-primary/12 bg-background/18 p-3">
+                <p className="text-xs uppercase tracking-wide text-primary/75">{datePart(event.startsAt).split("-").reverse().join("/")}</p>
+                <p className="mt-2 truncate text-sm font-semibold text-foreground">{event.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{timePart(event.startsAt)} - {sourceLabel[event.source]}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </Card>
 
       {open ? (
@@ -334,6 +449,7 @@ export function CalendarExperience() {
               <button
                 type="button"
                 aria-label="Fechar"
+                title="Fechar"
                 onClick={() => setOpen(false)}
                 className="grid size-8 place-items-center rounded-full text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
               >
@@ -354,8 +470,8 @@ export function CalendarExperience() {
                 </label>
                 <input
                   id="event-title"
-                  value={label}
-                  onChange={(event) => setLabel(event.target.value)}
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
                   placeholder="Ex.: Reuniao com cliente, envio de lembrete, visita"
                   className="flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
                 />
@@ -378,13 +494,14 @@ export function CalendarExperience() {
                   <select
                     id="event-tone"
                     value={tone}
-                    onChange={(event) => setTone(event.target.value as EventTone)}
+                    onChange={(event) => setTone(event.target.value as CalendarTone)}
                     className="flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <option value="meeting">Reuniao</option>
                     <option value="task">Tarefa</option>
                     <option value="payment">Financeiro</option>
                     <option value="board">Planejamento</option>
+                    <option value="visit">Visita</option>
                   </select>
                 </div>
               </div>
@@ -397,7 +514,7 @@ export function CalendarExperience() {
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-foreground">
-                      {label.trim() || "Novo evento"}
+                      {title.trim() || "Novo evento"}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {new Intl.DateTimeFormat("pt-BR", {
@@ -413,9 +530,9 @@ export function CalendarExperience() {
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="button" onClick={submitEvent}>
+                <Button type="button" onClick={submitEvent} disabled={isPending}>
                   <Plus className="size-4" />
-                  Salvar evento
+                  {isPending ? "Salvando..." : "Salvar evento"}
                 </Button>
               </div>
             </div>
