@@ -18,6 +18,8 @@ Navegador ──► Vercel (app Next)  ──►  Supabase (Postgres + Auth + RL
 - **App Next** → Vercel (grátis para começar).
 - **Banco/Auth** → Supabase já está na nuvem (projeto `ImobOps-BR`, região SP). Nada a mudar.
 - **WhatsApp** → a única peça que exige decisão. Ver as duas opções abaixo.
+- **Billing** → Asaas já está integrado no repositório; em produção só precisa de
+   chaves e webhook.
 
 ---
 
@@ -75,7 +77,7 @@ no código (`lib/whatsapp/meta.ts`); basta configurar e apontar `WHATSAPP_PROVID
 6. **Templates**: mensagens iniciadas por você fora da janela de 24h exigem **templates
    aprovados** pela Meta. Os templates locais (`lib/whatsapp/templates.ts` / "Modelos de
    mensagem" do admin) servem dentro da janela de 24h; para envio proativo, cadastre os
-   equivalentes no Meta e mapeie `TemplateKey → nome do template` (TODO no `meta.ts`).
+   equivalentes no Meta e mapeie `TemplateKey → nome do template`.
 7. Vars na Vercel:
    ```
    WHATSAPP_PROVIDER=meta

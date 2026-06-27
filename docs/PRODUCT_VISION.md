@@ -11,8 +11,24 @@ planilhas dispersas, grupos de WhatsApp e sistemas legados desconectados:
 - **Condomínio** — condomínios administrados, unidades, taxas, despesas e assembleias.
 
 Sobre essas frentes existe um **núcleo compartilhado**: tenancies, usuários,
-clientes, imóveis, documentos, CRM, dashboard contextual, integração com WhatsApp
-e um assistente de IA que opera com as mesmas permissões do usuário logado.
+clientes, imóveis, documentos, CRM, dashboard contextual, calendário operacional,
+integração com WhatsApp, billing e um assistente de IA que opera com as mesmas
+permissões do usuário logado.
+
+## 1.1 Estado atual do produto
+
+Hoje o repositório está em um estado **híbrido, mock-first por padrão**:
+
+- O app sobe sem credenciais e continua funcional em modo mock.
+- Supabase, WhatsApp, billing e IA já têm caminhos reais de integração quando as
+  variáveis corretas estão presentes.
+- O banco real usa `DATABASE_URL` + Prisma 7 + `prisma.config.ts`.
+- O WhatsApp possui Evolution para local/VPS e Meta Cloud API para produção.
+- O calendário operacional já existe para eventos manuais e agregação de itens
+  operacionais (visitas, prazos, assembleias) na leitura.
+
+O que ainda não existe é uma promoção completa a SaaS multi-imobiliária com
+onboarding e billing por tenant na ponta a ponta.
 
 O ImobOps não é um portal para o cliente final (inquilino, proprietário ou
 comprador). É uma ferramenta **interna**, usada pela equipe da imobiliária:
@@ -43,13 +59,15 @@ O ImobOps entrega:
 - **Uma carteira única** de imóveis e clientes, com papéis de negócio claros
   (locador, locatário, fiador, comprador, vendedor, lead, condômino).
 - **Locação ponta a ponta**: contrato → geração de 12 parcelas → cobrança via
-  WhatsApp → marcação de pagamento (upload de comprovante) → repasse automático ao
-  proprietário descontando a taxa de administração.
+  WhatsApp/Asaas → baixa por webhook → repasse ao proprietário descontando a taxa
+  de administração.
 - **Vendas com funil real**: listagem → propostas e contrapropostas com histórico
   → fechamento → comissão do corretor e da imobiliária.
 - **Condomínio integrado**: unidades, taxas mensais, despesas comuns rateadas (por
   fração ideal ou igualitário) e atas de assembleia.
 - **CRM** com funil de leads que recebe automaticamente contatos do WhatsApp.
+- **Calendário operacional** com eventos manuais, visitas, prazos e assembleias
+  agregados na leitura.
 - **WhatsApp** como canal de cobrança e de captação, com triagem automática de
   leads por intenção.
 - **Assistente de IA** que executa tarefas ("crie o contrato", "marque a parcela de
@@ -97,9 +115,10 @@ permissão resolvida (padrão + overrides). Ver `PERMISSION_STRATEGY.md`.
 ### 6.1 Locação
 
 O coração financeiro recorrente da imobiliária. Cada contrato gera parcelas
-mensais. A cobrança é **manual e assistida**: o financeiro (ou a IA, sob confirmação)
-gera o boleto/PIX, envia por WhatsApp, recebe o comprovante e marca a parcela como
-paga. No fim do mês, o sistema calcula o **repasse** ao proprietário:
+mensais. A cobrança já possui fluxo operacional com emissão de boleto/PIX,
+webhook de baixa e repasse. O caminho manual continua como fallback, mas o estado
+atual do projeto já não é só "upload e marcação". No fim do mês, o sistema calcula
+o **repasse** ao proprietário:
 
 ```
 repasse_líquido = valor_bruto − (valor_bruto × taxa_de_administração%)
@@ -127,6 +146,13 @@ Para imobiliárias que também administram condomínios. Cada condomínio tem un
 
 Atas de assembleia ficam anexadas como documentos.
 
+### 6.4 Calendário operacional
+
+Eventos manuais, visitas, prazos e reuniões aparecem em um calendário de operação
+com eventos persistidos em `calendar_events` e agregação de itens operacionais na
+leitura. O foco é apoiar a rotina interna da equipe, não substituir um produto de
+agenda genérico.
+
 ## 7. Princípios de design
 
 1. **Mobile-first.** A equipe trabalha no celular, em visita, no corredor. Bottom
@@ -141,10 +167,10 @@ Atas de assembleia ficam anexadas como documentos.
 ## 8. O que está fora de escopo (por ora)
 
 - Portal externo para inquilino/proprietário/comprador.
-- Geração e registro de boleto bancário automatizado (a cobrança é manual: upload e
-  marcação).
 - Integração contábil/fiscal (NF-e, SPED).
 - App nativo (o produto é um PWA mobile-first).
+- Expansão completa a SaaS multi-imobiliária com onboarding, tenant switch e
+  billing por tenant já operacionalizados de ponta a ponta.
 
 ## 9. Métricas de sucesso
 

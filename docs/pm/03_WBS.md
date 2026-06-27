@@ -57,7 +57,7 @@ Decomposição do trabalho em pacotes entregáveis. Numeração hierárquica.
 
 ## 7. WhatsApp
 
-- **7.1** Interface de adapter + Evolution + stub Meta.
+- **7.1** Interface de adapter + Evolution + Meta Cloud API.
 - **7.2** Templates obrigatórios.
 - **7.3** Bot de triagem (classificação + roteamento).
 - **7.4** Rotas webhook e send.

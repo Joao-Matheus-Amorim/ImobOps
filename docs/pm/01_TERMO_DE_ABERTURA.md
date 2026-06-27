@@ -42,9 +42,10 @@ sem infraestrutura.
 - A primeira entrega atende **uma** imobiliária, mas a arquitetura é multi-tenant.
 - O uso é **interno** (equipe da imobiliária); não há portal externo para o
   consumidor final.
-- A cobrança é **manual e assistida** (upload de comprovante + marcação), não
-  geração automática de boleto bancário.
-- O WhatsApp inicia com Evolution API, com plano de migração para a Meta Cloud API.
+- A cobrança já possui fluxo operacional com Asaas (boleto/PIX, webhook e
+  repasse), mantendo fallback manual quando necessário.
+- O WhatsApp inicia com Evolution API em local/VPS e já possui caminho oficial de
+  produção via Meta Cloud API.
 
 ## 5. Restrições
 

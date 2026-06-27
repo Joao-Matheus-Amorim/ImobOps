@@ -42,8 +42,8 @@ estabelecendo as fronteiras para gestão de mudanças.
 - Atas de assembleia.
 
 ### 2.5 Integrações
-- **WhatsApp** via adapter (Evolution API; stub Meta).
-- **IA** via adapter agnóstico (OpenAI/Anthropic/mock) com tool calling.
+- **WhatsApp** via adapter (Evolution API local/VPS; Meta Cloud API oficial).
+- **IA** via adapter agnóstico (OpenAI/Anthropic/OpenRouter/mock) com tool calling.
 - **Cobrança** via adapter (Asaas; mock sem env) — boleto/PIX, webhook de
   pagamento, repasse. Ver [07_PLANO_DE_COBRANCA.md](07_PLANO_DE_COBRANCA.md).
 

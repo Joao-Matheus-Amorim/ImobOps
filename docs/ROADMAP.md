@@ -1,10 +1,16 @@
 # Roadmap de Entrega — ImobOps
 
 O roadmap é dividido em **9 cortes** incrementais. Cada corte é entregável,
-verificável e deixa o produto utilizável. Os cortes 1–3 já estão implementados neste
-repositório (modo mock); os demais plugam infraestrutura real sem reescrita.
+verificável e deixa o produto utilizável. Os cortes 1–5 já estão implementados no
+repositório; 6–8 estão em modo híbrido/parcial com infraestrutura real já
+plugada em partes; o 9 continua planejado.
 
 Legenda de status: ✅ entregue · 🟡 parcial · ⬜ planejado.
+
+> Nota de estado: além dos cortes abaixo, o repositório já contém calendário
+operacional (`calendar_events`), integração de billing Asaas e produção de IA/
+WhatsApp com providers reais. O roadmap organiza prioridade, não a cronologia exata
+da implementação.
 
 ---
 
@@ -65,7 +71,7 @@ Legenda de status: ✅ entregue · 🟡 parcial · ⬜ planejado.
 **Objetivo:** assistente operando com as quatro regras inegociáveis.
 
 **Escopo:**
-- Adapter LLM (`openai`/`anthropic`/`mock`).
+- Adapter LLM (`openai`/`anthropic`/`openrouter`/`mock`).
 - Registry de tools tipadas com Zod (clientes, imóveis, locação, vendas,
   condomínio, CRM, WhatsApp).
 - Guard (allowlist por papel, MVP admin-only), dry-run/confirm, auditoria.
@@ -84,14 +90,18 @@ Legenda de status: ✅ entregue · 🟡 parcial · ⬜ planejado.
 **Objetivo:** captação e cobrança via WhatsApp.
 
 **Escopo:**
-- Adapter Evolution (mock sem env), stub Meta, 9 templates pt-BR.
+- Adapter Evolution (default local/VPS, mock sem env) e Meta Cloud API oficial
+  já implementada.
 - Triagem de leads inbound por intenção; criação e roteamento de lead.
-- Rotas de webhook e envio; inbox no app.
+- Rotas de webhook e envio; inbox no app; webhook assíncrono com publicação de
+  eventos para SSE.
 
 **Critérios de aceite:**
 - Webhook normaliza payload, persiste e triá; envio persiste a mensagem.
 - Classificação de intenção testada.
 - Inbox mostra conversas, classificação e status.
+
+**Estado atual:** ✅ entregue.
 
 ---
 
@@ -106,6 +116,8 @@ repositories.
 - Repositories delegando ao cliente Supabase do usuário (sob RLS).
 - Login real (Supabase Auth) substituindo o login mock.
 
+**Estado atual:** 🟡 parcial.
+
 **Critérios de aceite:**
 - Todas as queries passam por RLS; nenhum uso de `service_role` em rota de usuário.
 - Isolamento de tenancy verificável (usuário de uma tenancy não vê outra).
@@ -113,7 +125,7 @@ repositories.
 
 ---
 
-## Corte 7 — Cobrança e repasse operacionais (Asaas) ⬜
+## Corte 7 — Cobrança e repasse operacionais (Asaas) 🟡
 
 **Objetivo:** ciclo de cobrança de **locação** automatizado — boleto/PIX, baixa por
 webhook e repasse — via gateway Asaas, mantendo o princípio mock-first. **Prioridade
@@ -137,17 +149,22 @@ nº 1 do produto.** Plano detalhado: [pm/07_PLANO_DE_COBRANCA.md](pm/07_PLANO_DE
 - Inadimplência reflete em tempo real no dashboard **sem** depender do cron.
 - Testes puros de status de atraso, conciliação idempotente e régua verdes.
 
+**Estado atual:** 🟡 parcial.
+
+**Notas:** o fluxo real de cobrança já existe no repositório, mas ainda convive com
+modo mock e com outras superfícies de domínio em evolução.
+
 **Fora deste corte (cortes seguintes):** cobrança de condomínio e comissões,
 multa/juros/correção, split automático no Asaas, canal e-mail.
 
 ---
 
-## Corte 8 — IA com provider real + permissões ampliadas ⬜
+## Corte 8 — IA com provider real + permissões ampliadas 🟡
 
 **Objetivo:** assistente em produção, com papéis liberados conforme política.
 
 **Escopo:**
-- `AI_PROVIDER=anthropic` (modelo `claude-opus-4-8`) ou `openai`.
+- `AI_PROVIDER=anthropic` (modelo `claude-opus-4-8`), `openai` ou `openrouter`.
 - Streaming real via SSE.
 - Ampliar allowlist (ex.: `finance` nas tools de cobrança).
 - Overrides de permissão por usuário na UI de admin.
@@ -156,6 +173,11 @@ multa/juros/correção, split automático no Asaas, canal e-mail.
 - Tool calling real funcionando com confirmação e auditoria.
 - Papéis liberados respeitando `can()` e RLS.
 - Overrides editáveis pelo admin e refletidos imediatamente.
+
+**Estado atual:** 🟡 parcial.
+
+**Notas:** o assistente já roda com OpenRouter/OpenAI/Anthropic/mock; o que falta
+é a maturação de streaming, permissões ampliadas e hardening de uso real.
 
 ---
 

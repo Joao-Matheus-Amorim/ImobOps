@@ -84,5 +84,6 @@ Expected:
 
 ```text
 ngrok: POST /api/whatsapp/webhook 200
-ImobOps: conversation appears in WhatsApp module
+ImobOps: conversation appears in WhatsApp module after the background worker
+persists the payload and publishes the update event
 ```

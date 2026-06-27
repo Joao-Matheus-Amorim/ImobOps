@@ -84,10 +84,12 @@ Implementações:
 
 - `openai.ts` — Chat Completions API (via `fetch`).
 - `anthropic.ts` — Messages API (via `fetch`), modelo padrão `claude-opus-4-8`.
+- `openrouter.ts` — OpenRouter compatível com o mesmo contrato de chat.
 - `mock.ts` — ecoa "Modo mock — defina AI_PROVIDER…" quando nenhuma key existe.
 
-O provider é escolhido por `AI_PROVIDER=openai|anthropic`; sem env, usa o mock.
-Assim o assistente funciona (em modo demonstrativo) sem nenhuma API key.
+O provider é escolhido por `AI_PROVIDER=openai|anthropic|openrouter`; sem env, usa o mock.
+Assim o assistente funciona (em modo demonstrativo) sem nenhuma API key, e também
+pode ser promovido para OpenRouter sem trocar o contrato das tools.
 
 ## 4. As tools
 
