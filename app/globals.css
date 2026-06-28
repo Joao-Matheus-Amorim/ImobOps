@@ -4,20 +4,20 @@
 
 @layer base {
   :root {
-    /* Light theme (raramente usado — o produto é dark-first) */
-    --background: 205 30% 97%;
-    --foreground: 205 35% 10%;
-    --card: 0 0% 100%;
+    /* Light office theme: claro, mas com baixo brilho e alto contraste. */
+    --background: 205 33% 94%;
+    --foreground: 207 42% 9%;
+    --card: 205 35% 98%;
     --card-foreground: 205 35% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 205 35% 10%;
-    --primary: 196 100% 72%;
-    --primary-foreground: 202 90% 8%;
-    --secondary: 205 16% 92%;
-    --secondary-foreground: 205 30% 16%;
-    --muted: 205 16% 92%;
-    --muted-foreground: 205 12% 40%;
-    --accent: 196 100% 72%;
+    --primary: 200 86% 38%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 205 25% 88%;
+    --secondary-foreground: 207 42% 13%;
+    --muted: 205 22% 88%;
+    --muted-foreground: 207 16% 30%;
+    --accent: 200 86% 38%;
     --accent-foreground: 202 90% 8%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -25,9 +25,9 @@
     --warning: 38 92% 50%;
     --gold: 43 52% 54%;
     --gold-foreground: 205 35% 10%;
-    --border: 205 16% 86%;
-    --input: 205 16% 86%;
-    --ring: 196 100% 68%;
+    --border: 205 22% 78%;
+    --input: 205 22% 78%;
+    --ring: 200 86% 38%;
     --radius: 1rem;
   }
 
@@ -68,16 +68,22 @@
   body {
     @apply bg-background text-foreground;
     -webkit-tap-highlight-color: transparent;
-    /* Gradiente radial azul-petróleo nos cantos, sobre o quase-preto. */
+    /* Gradiente sutil, sem reduzir contraste do texto. */
+    background-image:
+      radial-gradient(54rem 34rem at 100% 0%, hsl(var(--primary) / 0.16), transparent 62%),
+      radial-gradient(48rem 32rem at 0% 100%, hsl(205 58% 70% / 0.2), transparent 58%),
+      radial-gradient(44rem 32rem at 50% 58%, hsl(205 35% 86% / 0.35), transparent 72%);
+    background-attachment: fixed;
+  }
+  html {
+    @apply antialiased;
+  }
+  .dark body {
     background-image:
       radial-gradient(54rem 34rem at 100% 0%, hsl(196 100% 58% / 0.28), transparent 62%),
       radial-gradient(48rem 32rem at 0% 100%, hsl(196 100% 48% / 0.2), transparent 58%),
       radial-gradient(30rem 24rem at 50% 12%, hsl(196 100% 72% / 0.12), transparent 70%),
       radial-gradient(44rem 32rem at 50% 58%, hsl(205 50% 10% / 0.52), transparent 72%);
-    background-attachment: fixed;
-  }
-  html {
-    @apply antialiased;
   }
 }
 

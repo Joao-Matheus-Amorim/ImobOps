@@ -23,7 +23,7 @@ export function MobileShell({
   return (
     <div className="flex min-h-dvh bg-background">
       <Sidebar groups={navGroups} />
-      <div className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,hsl(var(--primary)/0.1),transparent_18rem)]">
+      <div className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,hsl(var(--primary)/0.08),transparent_18rem)]">
         <TopBar displayName={displayName} role={role} />
         <main className="w-full flex-1 px-4 pb-28 pt-8 md:px-9 md:pb-10 lg:px-10">
           {children}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Command, Search } from "lucide-react";
+import { Command, Search } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { ThemeToggle } from "./theme-toggle";
 import { RoleSwitcher } from "./role-switcher";
@@ -18,7 +18,7 @@ export function TopBar({
   const preview = isClientPreviewMode();
 
   return (
-    <header className="sticky top-0 z-30 border-b border-primary/15 bg-[#0f2a44]/90 shadow-[0_18px_70px_-55px_hsl(var(--primary)/0.9)] backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-primary/15 bg-card/90 shadow-[0_18px_70px_-55px_hsl(var(--primary)/0.55)] backdrop-blur-xl">
       <div className="flex h-[70px] items-center justify-between gap-4 px-4 md:px-8">
         {/* Brand only on mobile (sidebar carries it on desktop). */}
         <Link href={routes.dashboard} className="flex items-center gap-2 font-display font-bold md:hidden">
@@ -26,15 +26,15 @@ export function TopBar({
           <span>{APP_NAME}</span>
         </Link>
         <div className="hidden min-w-0 flex-1 items-center gap-4 md:flex">
-          <span className="whitespace-nowrap text-sm font-semibold text-foreground">
-            ImobOps Workspace
+            <span className="whitespace-nowrap text-sm font-semibold text-foreground">
+              Operação da imobiliária
           </span>
           <div className="relative w-full max-w-xl">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-primary/80" />
             <input
               aria-label="Buscar em tudo"
-              className="h-11 w-full rounded-2xl border border-primary/25 bg-[#07131d] px-12 text-sm text-foreground placeholder:text-slate-300 outline-none transition focus:border-primary/70 focus:bg-[#07131d] focus:shadow-glow-sm"
-              placeholder="Buscar em tudo..."
+              className="h-11 w-full rounded-2xl border border-primary/25 bg-card px-12 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary/70 focus:shadow-glow-sm"
+              placeholder="Buscar cliente, imóvel, telefone ou boleto..."
               type="search"
             />
             <span className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-primary/20 bg-card/60 px-2 py-1 text-xs text-muted-foreground lg:flex">
@@ -51,12 +51,6 @@ export function TopBar({
             </div>
           ) : null}
           <ThemeToggle />
-          <button className="relative grid size-10 place-items-center rounded-full border border-primary/20 bg-card/45 text-muted-foreground transition hover:border-primary/55 hover:text-primary hover:shadow-glow-sm">
-            <Bell className="size-4" />
-            <span className="absolute -right-1 -top-1 grid size-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-glow-sm">
-              3
-            </span>
-          </button>
           <div className="flex items-center gap-2">
             <Avatar name={displayName} className="size-10 border border-primary/35 shadow-glow-sm" />
             <div className="hidden text-right sm:block">

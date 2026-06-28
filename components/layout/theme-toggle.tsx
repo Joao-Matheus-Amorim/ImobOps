@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// Dark theme is the default; toggle persists in localStorage.
+// Light office theme is the default; toggle persists in localStorage.
 export function ThemeToggle() {
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("imobops-theme");
-    const isDark = stored ? stored === "dark" : true;
+    const isDark = stored ? stored === "dark" : false;
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
   }, []);

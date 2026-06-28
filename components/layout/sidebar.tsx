@@ -14,7 +14,7 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
   const preview = isClientPreviewMode();
 
   return (
-    <aside className="hidden w-[268px] shrink-0 flex-col border-r border-primary/14 bg-[#0b2742]/92 shadow-[24px_0_90px_-62px_hsl(var(--primary)/0.95)] backdrop-blur-xl md:flex">
+    <aside className="hidden w-[268px] shrink-0 flex-col border-r border-primary/14 bg-card/92 shadow-[24px_0_90px_-62px_hsl(var(--primary)/0.65)] backdrop-blur-xl md:flex">
       <Link href={routes.dashboard} className="flex h-[86px] items-center gap-3 border-b border-primary/12 px-6">
         <span className="grid size-11 place-items-center rounded-full border border-primary bg-primary/10 font-display text-lg font-bold text-primary shadow-glow">
           I
@@ -28,7 +28,7 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-6 thin-scrollbar">
         {groups.map((group) => (
           <div key={group.label} className="flex flex-col gap-1">
-            <p className="section-label px-3 pb-2 text-slate-300">{group.label}</p>
+            <p className="section-label px-3 pb-2 text-muted-foreground">{group.label}</p>
             {group.entries.map((e) => {
               const active = pathname === e.href || pathname.startsWith(`${e.href}/`);
               return (
@@ -60,7 +60,7 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
         ))}
       </nav>
       <div className="border-t border-primary/12 p-4">
-        <p className="section-label text-slate-300">Workspace ativo</p>
+        <p className="section-label text-muted-foreground">Operação ativa</p>
         <p className="mt-2 font-semibold text-foreground">
           {preview ? "ImobOps Workspace" : "ImobOps Demo"}
         </p>

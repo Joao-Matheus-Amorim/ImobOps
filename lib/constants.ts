@@ -21,6 +21,13 @@ export function isClientPreviewMode(): boolean {
   return process.env.NEXT_PUBLIC_CLIENT_PREVIEW !== "off";
 }
 
+// Personal/small-office mode: reduces visible surface area for a family-run
+// real-estate operation. Advanced modules remain in code, but are hidden from
+// the daily navigation unless explicitly enabled.
+export function isSimpleRealEstateMode(): boolean {
+  return process.env.NEXT_PUBLIC_SIMPLE_REAL_ESTATE_MODE !== "off";
+}
+
 // True when Supabase env is configured; otherwise the app runs in mock mode.
 export function isSupabaseConfigured(): boolean {
   return Boolean(

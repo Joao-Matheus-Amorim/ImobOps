@@ -9,13 +9,13 @@ import { routes } from "@/lib/routes";
 import type { DashboardData } from "./dashboard-data";
 
 const QUICK_ACTIONS = [
+  { href: routes.rentals, label: "Locação", icon: KeyRound },
+  { href: routes.finance, label: "Boletos", icon: BellRing },
+  { href: routes.whatsapp, label: "WhatsApp", icon: MessageCircle },
   { href: routes.clients, label: "Clientes", icon: Users },
   { href: routes.properties, label: "Imóveis", icon: Building2 },
-  { href: routes.rentals, label: "Locação", icon: KeyRound },
   { href: routes.sales, label: "Vendas", icon: Handshake },
-  { href: routes.crm, label: "CRM", icon: BarChart3 },
-  { href: routes.whatsapp, label: "WhatsApp", icon: MessageCircle },
-  { href: routes.reports, label: "Relatórios", icon: BellRing },
+  { href: routes.calendar, label: "Agenda", icon: BarChart3 },
 ];
 
 function QuickActions() {
@@ -48,15 +48,15 @@ function ReportsShortcut({ data }: { data: DashboardData }) {
 
   return (
     <Link href={routes.reports} className="group block">
-      <Card className="relative overflow-hidden border-primary/25 bg-[#102f4d]/82 p-5 transition hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-glow-sm">
+      <Card className="relative overflow-hidden border-primary/25 bg-card/90 p-5 transition hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-glow-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-primary">
               <BellRing className="size-4" />
-              <p className="section-label">Relatórios e alertas</p>
+              <p className="section-label">Pendências da operação</p>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Acompanhe riscos, vencimentos, inadimplência e gargalos operacionais.
+              Veja vencimentos, inadimplência, repasses e próximos compromissos.
             </p>
           </div>
           <ArrowUpRight className="size-4 text-primary opacity-70 transition group-hover:opacity-100" />
@@ -151,6 +151,19 @@ export function AdminDashboard({ data }: { data: DashboardData }) {
   return (
     <div className="space-y-4">
       <QuickActions />
+      <Card className="border-primary/20 bg-card/88 p-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="section-label text-primary/80">Hoje na imobiliária</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Priorize cobrança, WhatsApp, locações e repasses antes de relatórios avançados.
+            </p>
+          </div>
+          <Link href={routes.finance} className="inline-flex items-center gap-2 rounded-2xl border border-primary/25 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/15">
+            Abrir cobranças <ArrowUpRight className="size-4" />
+          </Link>
+        </div>
+      </Card>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Ocupação da carteira" value={`${data.occupancyPct}%`} hint={`${data.rentedCount}/${data.propertyCount} imóveis`} accent="success" />
         <StatCard label="GMV do mês" value={formatBRL(data.gmvMonth)} accent="gold" />
@@ -165,6 +178,19 @@ export function AdminDashboard({ data }: { data: DashboardData }) {
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Comissões a pagar" value={formatBRL(data.pendingCommissions)} accent="warning" />
         <StatCard label="Repasses pendentes" value={formatBRL(data.pendingRepasses)} accent="warning" />
+      </div>
+      <div>
+        <p className="section-label mb-3 text-primary/80">Operacional</p>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <StatCard label="Cobranças hoje" value={String(data.chargesTodayCount)} hint="boletos a vencer hoje" />
+          <StatCard label="Inadimplência" value={String(data.overdueChargesCount)} hint="cobranças vencidas" accent="destructive" />
+          <StatCard label="Conversas abertas" value={String(data.unreadConversationsCount)} hint="WhatsApp pendente" accent="gold" />
+          <StatCard label="Repasses a fazer" value={String(data.pendingRepassesCount)} hint="repasses pendentes" accent="warning" />
+          <StatCard label="Locações a vencer" value={String(data.expiringRentalsCount)} hint="contratos encerrando" accent="warning" />
+          <StatCard label="Atividades hoje" value={String(data.activitiesTodayCount)} hint="agenda do dia" />
+          <StatCard label="Clientes recentes" value={String(data.recentClientsCount)} hint="últimos 30 dias" />
+          <StatCard label="Automações com erro" value={String(data.failedAutomationsCount)} hint="falhas recentes" accent="destructive" />
+        </div>
       </div>
     </div>
   );

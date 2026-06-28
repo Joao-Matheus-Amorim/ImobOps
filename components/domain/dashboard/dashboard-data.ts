@@ -8,6 +8,9 @@ import { financeRepository } from "@/lib/repositories/finance.repository";
 import { salesRepository } from "@/lib/repositories/sales.repository";
 import { condosRepository } from "@/lib/repositories/condos.repository";
 import { crmRepository } from "@/lib/repositories/crm.repository";
+import { whatsappRepository } from "@/lib/repositories/whatsapp.repository";
+import { billingRepository } from "@/lib/repositories/billing.repository";
+import { automationRepository } from "@/lib/repositories/automation.repository";
 
 export interface DashboardData {
   propertyCount: number;
@@ -31,11 +34,23 @@ export interface DashboardData {
   condoOverdueAmount: number;
   condoExpensesMonth: number;
   upcomingMeetings: number;
+  chargesTodayCount: number;
+  overdueChargesCount: number;
+  unreadConversationsCount: number;
+  pendingRepassesCount: number;
+  expiringRentalsCount: number;
+  activitiesTodayCount: number;
+  recentClientsCount: number;
+  failedAutomationsCount: number;
 }
 
 // Assemble all dashboard metrics for the current tenancy + user.
 export async function buildDashboardData(ctx: RepoContext): Promise<DashboardData> {
   const month = new Date().toISOString().slice(0, 7);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const thirtyDaysFromNow = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
   const [
     properties,
@@ -49,6 +64,11 @@ export async function buildDashboardData(ctx: RepoContext): Promise<DashboardDat
     condoFees,
     clients,
     upcoming,
+    charges,
+    conversations,
+    activities,
+    repasseList,
+    automationRuns,
   ] = await Promise.all([
     propertiesRepository.list(ctx),
     rentalsRepository.list(ctx),
@@ -61,6 +81,11 @@ export async function buildDashboardData(ctx: RepoContext): Promise<DashboardDat
     condosRepository.listFees(ctx),
     clientsRepository.list(ctx),
     condosRepository.upcomingMeetings(ctx),
+    billingRepository.list(ctx),
+    whatsappRepository.listConversations(ctx),
+    crmRepository.listActivities(ctx),
+    financeRepository.listRepasses(ctx),
+    automationRepository.listRuns(ctx),
   ]);
 
   const rentedCount = properties.filter((p) => p.status === "alugado").length;
@@ -91,6 +116,38 @@ export async function buildDashboardData(ctx: RepoContext): Promise<DashboardDat
 
   const upcomingMeetings = upcoming.length;
 
+  const chargesTodayCount = charges.filter(
+    (c) => c.effectiveStatus === "pendente" && c.dueDate === today,
+  ).length;
+
+  const overdueChargesCount = charges.filter(
+    (c) => c.effectiveStatus === "vencida",
+  ).length;
+
+  const unreadConversationsCount = conversations.filter(
+    (c) => c.status !== "encerrada",
+  ).length;
+
+  const pendingRepassesCount = repasseList.filter(
+    (r) => r.status === "pendente",
+  ).length;
+
+  const expiringRentalsCount = rentals.filter(
+    (r) => r.status === "ativo" && r.endDate <= thirtyDaysFromNow,
+  ).length;
+
+  const activitiesTodayCount = activities.filter(
+    (a) => a.scheduledAt?.startsWith(today) && !a.doneAt,
+  ).length;
+
+  const recentClientsCount = clients.filter(
+    (c) => c.createdAt >= thirtyDaysAgo,
+  ).length;
+
+  const failedAutomationsCount = automationRuns.filter(
+    (r) => r.status === "error",
+  ).length;
+
   return {
     propertyCount: properties.length,
     clientCount: clients.length,
@@ -118,5 +175,13 @@ export async function buildDashboardData(ctx: RepoContext): Promise<DashboardDat
     condoOverdueAmount,
     condoExpensesMonth,
     upcomingMeetings,
+    chargesTodayCount,
+    overdueChargesCount,
+    unreadConversationsCount,
+    pendingRepassesCount,
+    expiringRentalsCount,
+    activitiesTodayCount,
+    recentClientsCount,
+    failedAutomationsCount,
   };
 }
