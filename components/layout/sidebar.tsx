@@ -28,7 +28,7 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
       <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-6 thin-scrollbar">
         {groups.map((group) => (
           <div key={group.label} className="flex flex-col gap-1">
-            <p className="section-label px-3 pb-2 text-muted-foreground/75">{group.label}</p>
+            <p className="section-label px-3 pb-2 text-slate-300">{group.label}</p>
             {group.entries.map((e) => {
               const active = pathname === e.href || pathname.startsWith(`${e.href}/`);
               return (
@@ -60,7 +60,7 @@ export function Sidebar({ groups }: { groups: NavGroup[] }) {
         ))}
       </nav>
       <div className="border-t border-primary/12 p-4">
-        <p className="section-label text-muted-foreground">Workspace ativo</p>
+        <p className="section-label text-slate-300">Workspace ativo</p>
         <p className="mt-2 font-semibold text-foreground">
           {preview ? "ImobOps Workspace" : "ImobOps Demo"}
         </p>

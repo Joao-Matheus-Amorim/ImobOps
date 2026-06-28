@@ -25,9 +25,32 @@ export class AnthropicAdapter implements LlmAdapter {
 
   private buildBody(messages: ChatMessage[], tools: ToolDefinition[]) {
     const system = messages.find((m) => m.role === "system")?.content;
-    const convo = messages
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role, content: m.content }));
+    const convo = messages.filter((m) => m.role !== "system").map((m) => {
+      // Tool results → user + tool_result content block
+      if (m.role === "tool") {
+        return {
+          role: "user" as const,
+          content: [{ type: "tool_result" as const, tool_use_id: m.toolCallId!, content: m.content }],
+        };
+      }
+      // Assistant turns with tool calls → content blocks with tool_use
+      if (m.role === "assistant" && m.toolCalls?.length) {
+        return {
+          role: "assistant",
+          content: [
+            ...(m.content ? [{ type: "text" as const, text: m.content }] : []),
+            ...m.toolCalls.map((tc) => ({
+              type: "tool_use" as const,
+              id: tc.id,
+              name: tc.name,
+              input: tc.params ?? {},
+            })),
+          ],
+        };
+      }
+      // Plain user / assistant messages
+      return { role: m.role, content: m.content };
+    });
     return {
       model: this.model,
       max_tokens: 1024,

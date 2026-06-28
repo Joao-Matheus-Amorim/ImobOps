@@ -70,6 +70,7 @@ export function ClientsTable({
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-primary/80" />
           <input
+            aria-label="Buscar cliente"
             className="h-12 w-full rounded-2xl border border-primary/18 bg-card/55 px-12 text-sm text-foreground shadow-[inset_0_1px_0_hsl(var(--primary)/0.08)] outline-none transition placeholder:text-muted-foreground focus:border-primary/55 focus:shadow-glow-sm"
             placeholder="Buscar cliente, documento ou funcao..."
             type="search"
@@ -78,6 +79,7 @@ export function ClientsTable({
           />
         </div>
         <select
+          aria-label="Filtrar clientes por status"
           className="h-12 rounded-2xl border border-primary/18 bg-card/55 px-4 text-sm font-medium text-foreground outline-none transition focus:border-primary/55 focus:shadow-glow-sm lg:w-48"
           value={status}
           onChange={(e) => setStatus(e.target.value as StatusFilter)}

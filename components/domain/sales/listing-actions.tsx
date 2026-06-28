@@ -43,10 +43,12 @@ function Modal({
 
 export function ListingActions({
   listingId,
+  sellerName,
   clients,
   brokers,
 }: {
   listingId: string;
+  sellerName: string;
   clients: Option[];
   brokers: Option[];
 }) {
@@ -62,7 +64,6 @@ export function ListingActions({
   const [conditions, setConditions] = useState("");
 
   // sale fields
-  const [sellerClientId, setSellerClientId] = useState("");
   const [finalPrice, setFinalPrice] = useState("");
   const [signedAt, setSignedAt] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("");
@@ -74,7 +75,6 @@ export function ListingActions({
     setBrokerUserId("");
     setOfferedPrice("");
     setConditions("");
-    setSellerClientId("");
     setFinalPrice("");
     setSignedAt("");
     setPaymentTerms("");
@@ -116,13 +116,9 @@ export function ListingActions({
     e.preventDefault();
     const price = Number(finalPrice);
     if (!(price > 0)) return setError("Valor final inválido.");
-    if (buyerClientId && buyerClientId === sellerClientId) {
-      return setError("Comprador e vendedor devem ser diferentes.");
-    }
     await post("/api/sales/contracts", {
       listingId,
       buyerClientId,
-      sellerClientId,
       finalPrice: price,
       signedAt: signedAt || null,
       paymentTerms: paymentTerms.trim() || null,
@@ -185,22 +181,16 @@ export function ListingActions({
                 {error}
               </p>
             ) : null}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="s-buyer">Comprador</Label>
-                <select id="s-buyer" value={buyerClientId} onChange={(e) => setBuyerClientId(e.target.value)} className={selectClass} required>
-                  <option value="">Selecione…</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="s-seller">Vendedor</Label>
-                <select id="s-seller" value={sellerClientId} onChange={(e) => setSellerClientId(e.target.value)} className={selectClass} required>
-                  <option value="">Selecione…</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="s-buyer">Comprador</Label>
+              <select id="s-buyer" value={buyerClientId} onChange={(e) => setBuyerClientId(e.target.value)} className={selectClass} required>
+                <option value="">Selecione…</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
+            <p className="rounded-xl border border-primary/15 bg-background/25 px-3 py-2 text-xs text-muted-foreground">
+              Vendedor: {sellerName}. O vendedor é derivado do proprietário do imóvel.
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="final">Valor final (R$)</Label>

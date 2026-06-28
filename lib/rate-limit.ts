@@ -74,13 +74,17 @@ export async function rateLimit(
   const distributed = ratelimiterFor(limit, windowMs);
   if (!distributed) return rateLimitLocal(key, limit, windowMs);
 
-  const result = await distributed.limit(key);
-  return {
-    ok: result.success,
-    limit: result.limit,
-    remaining: result.remaining,
-    resetAt: result.reset,
-  };
+  try {
+    const result = await distributed.limit(key);
+    return {
+      ok: result.success,
+      limit: result.limit,
+      remaining: result.remaining,
+      resetAt: result.reset,
+    };
+  } catch {
+    return rateLimitLocal(key, limit, windowMs);
+  }
 }
 
 export function tooManyRequests(result: RateLimitResult): NextResponse {

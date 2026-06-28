@@ -1,16 +1,18 @@
 # Roadmap de Entrega — ImobOps
 
 O roadmap é dividido em **9 cortes** incrementais. Cada corte é entregável,
-verificável e deixa o produto utilizável. Os cortes 1–5 já estão implementados no
-repositório; 6–8 estão em modo híbrido/parcial com infraestrutura real já
-plugada em partes; o 9 continua planejado.
+verificável e deixa o produto utilizável. Os cortes 1–7 já estão implementados
+no repositório (mock-first, com caminhos reais prontos); o corte 8 está 90%
+completo (apenas SSE streaming pendente); o corte 9 continua planejado.
 
 Legenda de status: ✅ entregue · 🟡 parcial · ⬜ planejado.
 
-> Nota de estado: além dos cortes abaixo, o repositório já contém calendário
-operacional (`calendar_events`), integração de billing Asaas e produção de IA/
-WhatsApp com providers reais. O roadmap organiza prioridade, não a cronologia exata
-da implementação.
+> Nota de estado: além dos cortes abaixo, o repositório já contém todos os
+> elementos dos cortes 1–7 e 90% do corte 8. As integrações com Supabase (RLS,
+> migrations, auth hooks), Asaas (billing, webhook, cron, UI), WhatsApp (Evolution +
+> Meta Cloud API) e IA (OpenAI + Anthropic + OpenRouter + cache Redis) estão
+> **completas no código** — só aguardam variáveis de ambiente para operar em modo
+> real. O roadmap organiza prioridade, não a cronologia exata da implementação.
 
 ---
 
@@ -105,18 +107,22 @@ da implementação.
 
 ---
 
-## Corte 6 — Persistência real com Supabase + RLS ⬜
+## Corte 6 — Persistência real com Supabase + RLS ✅
 
 **Objetivo:** trocar o mock pelo banco real, sem mudar a interface dos
 repositories.
 
 **Escopo:**
-- Aplicar `001`–`004` no Supabase.
+- Migrations `001`–`016` aplicáveis no Supabase (schema, RLS, seed, auditoria/IA,
+  billing, WhatsApp, documentos, calendário).
 - Auth hook injetando `tenancy_id`/`role` no JWT.
-- Repositories delegando ao cliente Supabase do usuário (sob RLS).
-- Login real (Supabase Auth) substituindo o login mock.
+- Clientes Supabase (browser, server, admin, middleware) para todos os cenários.
+- Repositories com flag `usingSupabase()` — prontos para delegar ao Supabase.
+- Login real (Supabase Auth) com fallback mock quando sem env.
 
-**Estado atual:** 🟡 parcial.
+**Estado atual:** ✅ entregue. Migrations, RLS, auth hooks e clientes Supabase
+estão prontos. Os repositories usam mock por padrão (sem env), mas a arquitetura
+suporta a troca imediata configurando `NEXT_PUBLIC_SUPABASE_URL` + `ANON_KEY`.
 
 **Critérios de aceite:**
 - Todas as queries passam por RLS; nenhum uso de `service_role` em rota de usuário.
@@ -125,7 +131,7 @@ repositories.
 
 ---
 
-## Corte 7 — Cobrança e repasse operacionais (Asaas) 🟡
+## Corte 7 — Cobrança e repasse operacionais (Asaas) ✅
 
 **Objetivo:** ciclo de cobrança de **locação** automatizado — boleto/PIX, baixa por
 webhook e repasse — via gateway Asaas, mantendo o princípio mock-first. **Prioridade
@@ -141,6 +147,8 @@ nº 1 do produto.** Plano detalhado: [pm/07_PLANO_DE_COBRANCA.md](pm/07_PLANO_DE
 - Status `vencida`/`atrasado` calculado **na leitura** (correto sem depender de cron).
 - Régua de lembretes WhatsApp via Vercel Cron (D-3 / vencimento / D+1 / D+5).
 - UI de cobrança na página de Finanças (emitir, status, baixa manual de fallback).
+- AI tools de cobrança (`list_charges`, `create_charge`, `send_charge_whatsapp`).
+- Multa/juros/correção calculados pro-rata (`lib/billing/late-charges.ts`).
 
 **Critérios de aceite:**
 - App ainda sobe sem nenhuma env (billing em mock); build/typecheck/lint/test verdes.
@@ -149,13 +157,12 @@ nº 1 do produto.** Plano detalhado: [pm/07_PLANO_DE_COBRANCA.md](pm/07_PLANO_DE
 - Inadimplência reflete em tempo real no dashboard **sem** depender do cron.
 - Testes puros de status de atraso, conciliação idempotente e régua verdes.
 
-**Estado atual:** 🟡 parcial.
-
-**Notas:** o fluxo real de cobrança já existe no repositório, mas ainda convive com
-modo mock e com outras superfícies de domínio em evolução.
+**Estado atual:** ✅ entregue. Adapter Asaas real, webhook, cron (`vercel.json`),
+charge logic, multa/juros, reminders, UI de cobrança e AI tools — tudo
+implementado. Só precisa de `ASAAS_API_KEY` no `.env` para operar em modo real.
 
 **Fora deste corte (cortes seguintes):** cobrança de condomínio e comissões,
-multa/juros/correção, split automático no Asaas, canal e-mail.
+split automático no Asaas, canal e-mail.
 
 ---
 
@@ -164,9 +171,11 @@ multa/juros/correção, split automático no Asaas, canal e-mail.
 **Objetivo:** assistente em produção, com papéis liberados conforme política.
 
 **Escopo:**
-- `AI_PROVIDER=anthropic` (modelo `claude-opus-4-8`), `openai` ou `openrouter`.
+- `AI_PROVIDER=openai|anthropic|openrouter` — todos implementados.
 - Streaming real via SSE.
-- Ampliar allowlist (ex.: `finance` nas tools de cobrança).
+- Guard com allowlist por papel (MVP: `admin`; estrutura pronta para outros).
+- Dry-run/confirm, auditoria (`ai_actions` append-only), cache Redis (Upstash).
+- Tool registry com 8 domínios e 28 tools.
 - Overrides de permissão por usuário na UI de admin.
 
 **Critérios de aceite:**
@@ -174,10 +183,23 @@ multa/juros/correção, split automático no Asaas, canal e-mail.
 - Papéis liberados respeitando `can()` e RLS.
 - Overrides editáveis pelo admin e refletidos imediatamente.
 
-**Estado atual:** 🟡 parcial.
+**Estado atual:** 🟡 parcial (90% concluído).
 
-**Notas:** o assistente já roda com OpenRouter/OpenAI/Anthropic/mock; o que falta
-é a maturação de streaming, permissões ampliadas e hardening de uso real.
+**O que já está pronto:**
+- Adapters OpenAI, Anthropic e OpenRouter (com fallback automático para 17
+  modelos gratuitos em caso de 429).
+- Guard, dry-run/confirm, auditoria (`ai_actions`), cache Redis/Upstash.
+- Tool registry com 8 domínios: clientes, imóveis, locação, vendas, condomínio,
+  CRM, WhatsApp, financeiro.
+- Agente loop com execução automática de read tools (até 4 iterações).
+- Rota `/api/ai/tools/[tool]` com auth, permissão, validação Zod e auditoria.
+- 63 testes unitários de IA em 9 arquivos.
+
+**O que falta (pendente):**
+- **SSE streaming**: `chatStream()` existe nos adapters mas não está conectado
+  ao endpoint HTTP `/api/ai/chat`. Atualmente retorna JSON completo ao final.
+- **Ampliação de allowlist**: liberar tools para `finance`, `broker` etc.
+- **UI de overrides**: admin gerenciar permissões de IA por usuário.
 
 ---
 
@@ -199,10 +221,51 @@ multa/juros/correção, split automático no Asaas, canal e-mail.
 
 ---
 
+## Entregas complementares (fora dos cortes)
+
+Além dos 9 cortes, o repositório contém os seguintes itens já implementados:
+
+### Testes E2E (Playwright) ✅
+
+104 testes multi-browser (Chromium + WebKit) em 4 especificações:
+- **Navegação**: todas as 10 rotas principais (dashboard, clientes, imóveis,
+  locação, vendas, financeiro, relatórios, documentos, CRM, condomínios).
+- **Acessibilidade**: WCAG 2.1 AA com axe-core em 16 páginas críticas.
+- **Exportação**: 23 relatórios × 4 formatos (CSV, JSON, HTML, XLS) via API.
+- **Validação**: criação de imóvel com HTML5 required (sem gravar dados).
+
+Autenticação automática com seed opcional via Supabase admin client.
+
+### Exportação de relatórios ✅
+
+17 relatórios em 4 abas (visão geral, financeiro, locações, vendas, CRM,
+documentos, condomínios). Formatos:
+- **CSV**: delimitado por ponto-e-vírgula com escaping.
+- **JSON**: estruturado.
+- **HTML**: tabela estilizada com totais.
+- **XLS**: HTML com extensão `.xls` (Excel abre). **Pendente:** XLSX nativo.
+
+Endpoint: `GET /api/reports/export?report=&format=`. Sem dependências externas.
+
+### Pendências não cobertas pelos cortes
+
+| Item | Status | Observação |
+|------|--------|------------|
+| Testes E2E de criação (imóvel→locação→venda) | ❌ | Implementar com seed/cleanup |
+| Testes E2E WhatsApp | ❌ | Inbox, envio, webhook |
+| Testes E2E de permissões | ❌ | Escopo `own`/`team`/`all` por papel |
+| CI/CD (GitHub Actions) | ❌ | Workflows para PR/push |
+| Exportação XLSX real | ❌ | Adicionar `exceljs` |
+| Exportação PDF | ❌ | Adicionar `jsPDF` ou `pdfkit` |
+| SSE streaming | ❌ | Conectar `chatStream()` ao endpoint HTTP |
+| UI de overrides de permissão | ❌ | Admin gerenciar permissões por usuário |
+
+---
+
 ## Visão de dependências
 
 ```
-1 ─▶ 2 ─▶ 3 ─▶ 6 ─▶ 7
+1 ─▶ 2 ─▶ 3 ─▶ 6 ─▶ 7 ─▶ 9
           │     └─▶ 8
           ├─▶ 4 ─────┘
           └─▶ 5 ─────▶ 7

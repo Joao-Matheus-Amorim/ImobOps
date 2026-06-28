@@ -24,11 +24,12 @@ import { NewChargeForm } from "@/components/domain/finance/new-charge-form";
 import { NewClientDialog } from "@/components/domain/clients/new-client-dialog";
 import { OpenWhatsAppButton } from "@/components/domain/clients/open-whatsapp-button";
 import { ContactRows } from "@/components/domain/clients/contact-rows";
+import { DocumentPanel } from "@/components/domain/documents/document-panel";
 import { formatCpfCnpj, formatBRL } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = await guardPage("clients");
+  const { ctx, user } = await guardPage("clients");
   const client = await clientsRepository.get(ctx, params.id);
   if (!client) notFound();
 
@@ -176,6 +177,8 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           </CardContent>
         </Card>
       ) : null}
+
+      <DocumentPanel entityType="client" entityId={client.id} userRole={user.role} />
 
       <NewChargeForm fixedClientId={client.id} fixedClientName={client.name} />
     </div>

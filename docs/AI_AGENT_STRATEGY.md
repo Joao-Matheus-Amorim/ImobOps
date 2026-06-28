@@ -65,16 +65,19 @@ por `can(principal, tool.feature, tool.action)` — a permissão normal do usuá
 
 ```
 Usuário ─▶ /assistant (UI)
-             │
-             ├─▶ POST /api/ai/chat      ── modelo propõe tool_calls
-             │      (provider = openai | anthropic | mock)
-             │
-             └─▶ POST /api/ai/tools/[tool]
-                    ├─ guard.ts        (allowlist por papel + can())
-                    ├─ confirm.ts      (dry-run / confirm; valida Zod)
-                    ├─ repository       (sob RLS/tenancy do usuário)
-                    ├─ audit.ts        (grava em ai_actions)
-                    └─ resultado ─▶ UI
+              │
+              ├─▶ POST /api/ai/chat      ── modelo propõe tool_calls
+              │      ├─ cache.ts         (Redis: cache de respostas + dedup)
+              │      ├─ provider         (openai | anthropic | openrouter | mock)
+              │      ├─ guard.ts         (allowlist por papel + can())
+              │      └─ agent loop       (executa read tools automaticamente)
+              │
+              └─▶ POST /api/ai/tools/[tool]
+                     ├─ guard.ts        (allowlist por papel + can())
+                     ├─ confirm.ts      (dry-run / confirm; valida Zod)
+                     ├─ repository       (sob RLS/tenancy do usuário)
+                     ├─ audit.ts        (grava em ai_actions)
+                     └─ resultado ─▶ UI
 ```
 
 ### Adapter LLM agnóstico
@@ -85,13 +88,66 @@ Implementações:
 - `openai.ts` — Chat Completions API (via `fetch`).
 - `anthropic.ts` — Messages API (via `fetch`), modelo padrão `claude-opus-4-8`.
 - `openrouter.ts` — OpenRouter compatível com o mesmo contrato de chat.
+  - Fallback automático: se o modelo principal retorna 429 (rate limit), tenta
+    até **17 modelos gratuitos** em sequência, todos com suporte a tool calling.
+    A lista é mantida em `FREE_FALLBACKS` e inclui modelos como
+    `qwen/qwen3-coder:free`, `meta-llama/llama-3.3-70b-instruct:free`,
+    `google/gemma-4-31b-it:free`, `nvidia/nemotron-3-super-120b-a12b:free`, etc.
+  - Erros não-429 (401, 400) são propagados imediatamente sem fallback.
 - `mock.ts` — ecoa "Modo mock — defina AI_PROVIDER…" quando nenhuma key existe.
 
 O provider é escolhido por `AI_PROVIDER=openai|anthropic|openrouter`; sem env, usa o mock.
 Assim o assistente funciona (em modo demonstrativo) sem nenhuma API key, e também
 pode ser promovido para OpenRouter sem trocar o contrato das tools.
 
-## 4. As tools
+## 4. Cache e Deduplicação (Redis)
+
+O módulo `lib/ai/cache.ts` adiciona três camadas de cache sobre o Upstash Redis,
+reduzindo chamadas ao LLM e ao banco de dados:
+
+### 4.1. Cache de respostas do LLM (TTL: 5 min)
+
+Antes de chamar o modelo, o hash da requisição (messages + tools + tenancyId) é
+calculado via SHA-1. Se o mesmo hash já existe no Redis, a resposta final é
+devolvida sem chamar o LLM:
+
+```
+Chave: ai:cache:response:<sha1(messages + tools + tenancyId)>
+Valor: { content: string, toolCalls: ToolCall[] }
+TTL:   300s
+```
+
+### 4.2. Cache de resultados de tools read (TTL: 30s)
+
+No agent loop, resultados de `effect: "read"` são cacheados por 30s. Se o modelo
+pede a mesma consulta duas vezes no mesmo request, a segunda não bate no banco:
+
+```
+Chave: ai:cache:tool:<toolName>:<tenancyId>:<sha1(params)>
+Valor: resultado da tool
+TTL:   30s
+```
+
+### 4.3. Lock de deduplicação (TTL: 10s)
+
+Se duas requisições idênticas chegam simultaneamente (ex.: usuário clicou duas
+vezes), a primeira adquire um lock no Redis. A segunda espera até 5s pela
+resposta da primeira (polling a cada 200ms). Se o timeout expira, a segunda
+processa normalmente.
+
+```
+Chave: ai:lock:<hash>
+Valor: "1" (NX)
+TTL:   10s
+```
+
+### 4.4. Degradação graciosa
+
+Se `UPSTASH_REDIS_REST_URL` não estiver configurada, o cache simplesmente não
+opera — todas as funções retornam null/true (comportamento idêntico a antes da
+implementação). Nenhuma exceção é lançada.
+
+## 5. As tools
 
 As tools ficam em `lib/ai/tools/`, uma por área de domínio, todas registradas em
 `registry.ts`. Cada tool é declarada com Zod para os parâmetros:
@@ -129,7 +185,7 @@ defineTool({
 - **WhatsApp**: `send_whatsapp_message`, `send_whatsapp_template`,
   `search_conversations`.
 
-## 5. Validação de parâmetros
+## 6. Validação de parâmetros
 
 Antes de executar, `runTool` faz `tool.schema.safeParse(params)`. Parâmetros
 inválidos retornam erro com a lista de problemas, sem tocar o repository. Isso
@@ -138,19 +194,53 @@ protege contra alucinações do modelo (campos faltando, tipos errados).
 O schema Zod também é convertido para JSON Schema (`lib/ai/schema.ts`) e enviado ao
 provider, para que o modelo saiba exatamente quais argumentos cada tool aceita.
 
-## 6. Fluxo completo de uma chamada
+## 7. Fluxo completo de uma chamada
 
-1. O admin envia uma mensagem em `/api/ai/chat`.
-2. O servidor expõe ao modelo **apenas** as tools permitidas para o papel do
-   usuário (`allowedToolsFor`).
-3. O modelo responde com `tool_calls` (ou só texto).
-4. Para cada tool call de escrita, a UI busca o `dry_run` em
-   `/api/ai/tools/[tool]` com `confirm: false` e mostra o preview.
-5. O admin confirma; a UI chama de novo com `confirm: true`.
-6. A tool executa via repository sob o contexto do usuário; grava `ai_actions`.
-7. O resultado volta ao chat.
+### 7.1 Chat (agent loop)
 
-## 7. Segurança e LGPD
+1. Cliente envia `POST /api/ai/chat` com `{ messages: [...] }`.
+2. Rota autentica o usuário (`getSessionUser`).
+3. Filtra tools permitidas (`allowedToolsFor`).
+4. Calcula hash da requisição (`cache.hashRequest`).
+5. **Cache hit?** Devolve resposta cacheada sem chamar LLM.
+6. **Cache miss?** Tenta lock de dedup no Redis.
+   - Se lock adquirido: chama o adapter, armazena no cache, libera lock.
+   - Se lock não adquirido: espera até 5s pela resposta de outra requisição.
+7. O modelo retorna `{ content, toolCalls }`.
+8. **Agent loop** (até 4 iterações):
+   - Se `toolCalls` tem apenas **read tools**: executa cada uma, cacheia o
+     resultado (30s), realimenta o modelo, repete.
+   - Se `toolCalls` tem **write tool** (ou está vazio): interrompe o loop.
+9. Write tools são retornadas com `requiresConfirmation: true` para a UI.
+10. Read tools silenciosamente descartadas na resposta final.
+
+### 7.2 Execução de tool (com confirmação)
+
+1. UI busca `dry_run` em `/api/ai/tools/[tool]` com `confirm: false`.
+2. Servidor valida permissão (`guard`), valida parâmetros (Zod), retorna preview.
+3. UI mostra preview ao usuário.
+4. Usuário confirma; UI chama com `confirm: true`.
+5. Tool executa via repository sob RLS do usuário.
+6. `audit.ts` registra em `ai_actions` (append-only).
+7. Resultado volta ao chat.
+
+## 8. Cobertura de testes
+
+O sistema de IA possui **63 testes** distribuídos em **9 arquivos**:
+
+| Arquivo | Tests | O que cobre |
+|---|---|---|
+| `guard.test.ts` | 6 | Permissões por role, registry sanity |
+| `provider.test.ts` | 5 | Factory seleciona adapter correto |
+| `mock.test.ts` | 3 | Mock adapter (chat, stream) |
+| `openrouter.test.ts` | 7 | Fallback 429, erros, tool_calls, stream |
+| `confirm.test.ts` | 5 | Read/write, dry-run, validação Zod |
+| `audit.test.ts` | 2 | Registro append-only, isolamento tenancy |
+| `cache.test.ts` | 10 | Hash estável, degradação sem Redis |
+| `registry.test.ts` | 8 | Nomes únicos, schemas válidos, previews |
+| `route.test.ts` | 17 | Fluxo completo: auth, validação, agent loop, cache, dedup, erros, permissões |
+
+## 9. Segurança e LGPD
 
 - **Minimização**: a IA só acessa o que o usuário já poderia acessar. Não há
   ampliação de privilégio.
@@ -169,14 +259,14 @@ provider, para que o modelo saiba exatamente quais argumentos cada tool aceita.
   ou OpenRouter) conforme sua política de dados; sem provider, roda em mock e nada
   sai.
 
-## 8. Tratamento de erros
+## 10. Tratamento de erros
 
 - Tool inexistente → 404.
 - Papel sem allowlist ou sem permissão → 403 (`ToolDeniedError`).
 - Parâmetros inválidos → 400 com detalhes do Zod.
 - Erro de execução → registrado em `ai_actions.error` e devolvido ao chat.
 
-## 9. Evolução
+## 11. Evolução
 
 - **Liberar papéis**: ajustar `allowedRoles` por tool (ex.: deixar `finance` usar
   as tools de cobrança).
@@ -187,7 +277,7 @@ provider, para que o modelo saiba exatamente quais argumentos cada tool aceita.
 - **Memória/contexto**: anexar resumo da carteira ao system prompt para respostas
   mais ricas, sempre respeitando o escopo do usuário.
 
-## 10. Princípio resumido
+## 12. Princípio resumido
 
 > A IA é um operador a mais — com as mesmas permissões do usuário, que sempre pede
 > confirmação antes de escrever e que deixa rastro de tudo que faz.

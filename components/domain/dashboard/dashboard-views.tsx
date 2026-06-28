@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Building2, KeyRound, Handshake, MessageCircle, BarChart3 } from "lucide-react";
+import { Users, Building2, KeyRound, Handshake, MessageCircle, BarChart3, BellRing, ArrowUpRight } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -15,11 +15,12 @@ const QUICK_ACTIONS = [
   { href: routes.sales, label: "Vendas", icon: Handshake },
   { href: routes.crm, label: "CRM", icon: BarChart3 },
   { href: routes.whatsapp, label: "WhatsApp", icon: MessageCircle },
+  { href: routes.reports, label: "Relatórios", icon: BellRing },
 ];
 
 function QuickActions() {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-7">
       {QUICK_ACTIONS.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
@@ -33,6 +34,49 @@ function QuickActions() {
         </Link>
       ))}
     </div>
+  );
+}
+
+function ReportsShortcut({ data }: { data: DashboardData }) {
+  const alertCount = [
+    data.overdueAmount > 0,
+    data.pendingRepasses > 0,
+    data.pendingCommissions > 0,
+    data.condoOverdueAmount > 0,
+    data.upcomingMeetings > 0,
+  ].filter(Boolean).length;
+
+  return (
+    <Link href={routes.reports} className="group block">
+      <Card className="relative overflow-hidden border-primary/25 bg-[#102f4d]/82 p-5 transition hover:-translate-y-0.5 hover:border-primary/55 hover:shadow-glow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-primary">
+              <BellRing className="size-4" />
+              <p className="section-label">Relatórios e alertas</p>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Acompanhe riscos, vencimentos, inadimplência e gargalos operacionais.
+            </p>
+          </div>
+          <ArrowUpRight className="size-4 text-primary opacity-70 transition group-hover:opacity-100" />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 border-t border-primary/10 pt-4 text-center">
+          <div>
+            <p className="font-display text-xl font-semibold text-destructive">{alertCount}</p>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">alertas</p>
+          </div>
+          <div>
+            <p className="font-display text-xl font-semibold text-primary">{data.overdue.length}</p>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">atrasos</p>
+          </div>
+          <div>
+            <p className="font-display text-xl font-semibold text-[hsl(var(--warning))]">{data.openProposals}</p>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">propostas</p>
+          </div>
+        </div>
+      </Card>
+    </Link>
   );
 }
 
@@ -117,6 +161,7 @@ export function AdminDashboard({ data }: { data: DashboardData }) {
         <OverdueList data={data} />
         <FunnelSummary data={data} />
       </div>
+      <ReportsShortcut data={data} />
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Comissões a pagar" value={formatBRL(data.pendingCommissions)} accent="warning" />
         <StatCard label="Repasses pendentes" value={formatBRL(data.pendingRepasses)} accent="warning" />
@@ -134,6 +179,7 @@ export function BrokerDashboard({ data }: { data: DashboardData }) {
         <StatCard label="Propostas em aberto" value={String(data.openProposals)} accent="warning" />
         <StatCard label="Imóveis disponíveis" value={String(data.availableProperties)} accent="success" />
       </div>
+      <ReportsShortcut data={data} />
       <FunnelSummary data={data} />
     </div>
   );
@@ -148,6 +194,7 @@ export function FinanceDashboard({ data }: { data: DashboardData }) {
         <StatCard label="Repasses pendentes" value={formatBRL(data.pendingRepasses)} accent="warning" />
         <StatCard label="Comissões a pagar" value={formatBRL(data.pendingCommissions)} accent="warning" />
       </div>
+      <ReportsShortcut data={data} />
       <OverdueList data={data} />
     </div>
   );
@@ -162,17 +209,21 @@ export function CondoDashboard({ data }: { data: DashboardData }) {
         <StatCard label="Despesas do mês" value={formatBRL(data.condoExpensesMonth)} />
         <StatCard label="Próximas assembleias" value={String(data.upcomingMeetings)} accent="gold" />
       </div>
+      <ReportsShortcut data={data} />
     </div>
   );
 }
 
 export function ViewerDashboard({ data }: { data: DashboardData }) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <StatCard label="Imóveis" value={String(data.propertyCount)} />
-      <StatCard label="Clientes" value={String(data.clientCount)} />
-      <StatCard label="Contratos de locação" value={String(data.rentalCount)} />
-      <StatCard label="Leads" value={String(data.leadCount)} />
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard label="Imóveis" value={String(data.propertyCount)} />
+        <StatCard label="Clientes" value={String(data.clientCount)} />
+        <StatCard label="Contratos de locação" value={String(data.rentalCount)} />
+        <StatCard label="Leads" value={String(data.leadCount)} />
+      </div>
+      <ReportsShortcut data={data} />
     </div>
   );
 }

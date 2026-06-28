@@ -49,6 +49,8 @@ export const DEFAULT_PERMISSIONS: Record<Role, FeaturePermission[]> = {
     perm("condo_meetings", VIEW_ONLY, "all"),
     perm("whatsapp", ALL_ACTIONS, "all"),
     perm("assistant", VIEW_ONLY, "all"),
+    perm("reports", VIEW_ONLY, "all"),
+    perm("documents", VIEW_ONLY, "all"),
   ],
 
   // broker → own on clients, properties, sales, crm; view on rentals
@@ -60,6 +62,7 @@ export const DEFAULT_PERMISSIONS: Record<Role, FeaturePermission[]> = {
     perm("calendar", ALL_ACTIONS, "own"),
     perm("rentals", VIEW_ONLY, "own"),
     perm("whatsapp", ALL_ACTIONS, "own"),
+    perm("reports", VIEW_ONLY, "own"),
   ],
 
   // finance → all on finance and money-related areas; view on clients
@@ -73,6 +76,8 @@ export const DEFAULT_PERMISSIONS: Record<Role, FeaturePermission[]> = {
     perm("clients", VIEW_ONLY, "all"),
     perm("properties", VIEW_ONLY, "all"),
     perm("calendar", VIEW_ONLY, "all"),
+    perm("reports", VIEW_ONLY, "all"),
+    perm("documents", VIEW_ONLY, "all"),
   ],
 
   // condo_admin → all on condos and condo sub-areas; view on clients
@@ -84,6 +89,8 @@ export const DEFAULT_PERMISSIONS: Record<Role, FeaturePermission[]> = {
     perm("clients", VIEW_ONLY, "all"),
     perm("properties", VIEW_ONLY, "all"),
     perm("calendar", VIEW_ONLY, "all"),
+    perm("reports", VIEW_ONLY, "all"),
+    perm("documents", VIEW_ONLY, "all"),
   ],
 
   // viewer → view on everything

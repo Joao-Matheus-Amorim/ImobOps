@@ -59,6 +59,8 @@ export type FeatureKey =
   | "crm"
   | "whatsapp"
   | "assistant"
+  | "reports"
+  | "documents"
   | "admin";
 
 export const FEATURE_KEYS: FeatureKey[] = [
@@ -78,6 +80,8 @@ export const FEATURE_KEYS: FeatureKey[] = [
   "crm",
   "whatsapp",
   "assistant",
+  "reports",
+  "documents",
   "admin",
 ];
 
@@ -98,6 +102,8 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   crm: "CRM",
   whatsapp: "WhatsApp",
   assistant: "Assistente IA",
+  reports: "Relatórios e alertas",
+  documents: "Documentos",
   admin: "Administração",
 };
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type PropertyOption = { id: string; address: string };
+type PropertyOption = { id: string; address: string; ownerClientId: string; ownerName: string };
 type ClientOption = { id: string; name: string };
 
 const selectClass =
@@ -26,7 +26,6 @@ export function NewRentalDialog({
   const [error, setError] = useState<string | null>(null);
 
   const [propertyId, setPropertyId] = useState("");
-  const [landlordClientId, setLandlordClientId] = useState("");
   const [tenantClientId, setTenantClientId] = useState("");
   const [guarantorClientId, setGuarantorClientId] = useState("");
   const [monthlyValue, setMonthlyValue] = useState("");
@@ -36,7 +35,6 @@ export function NewRentalDialog({
 
   function reset() {
     setPropertyId("");
-    setLandlordClientId("");
     setTenantClientId("");
     setGuarantorClientId("");
     setMonthlyValue("");
@@ -53,8 +51,13 @@ export function NewRentalDialog({
       setError("Informe um valor mensal válido.");
       return;
     }
-    if (landlordClientId && landlordClientId === tenantClientId) {
-      setError("Locador e locatário devem ser diferentes.");
+    const selectedProperty = properties.find((property) => property.id === propertyId);
+    if (!selectedProperty) {
+      setError("Selecione um imóvel com proprietário vinculado.");
+      return;
+    }
+    if (selectedProperty.ownerClientId === tenantClientId) {
+      setError("O locatário deve ser diferente do proprietário do imóvel.");
       return;
     }
 
@@ -65,7 +68,6 @@ export function NewRentalDialog({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         propertyId,
-        landlordClientId,
         tenantClientId,
         guarantorClientId: guarantorClientId || null,
         monthlyValue: value,
@@ -132,48 +134,33 @@ export function NewRentalDialog({
                   <option value="">Selecione…</option>
                   {properties.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.address}
+                      {p.address} · proprietário: {p.ownerName}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="landlordClientId">Locador</Label>
-                  <select
-                    id="landlordClientId"
-                    value={landlordClientId}
-                    onChange={(e) => setLandlordClientId(e.target.value)}
-                    className={selectClass}
-                    required
-                  >
-                    <option value="">Selecione…</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="tenantClientId">Locatário</Label>
-                  <select
-                    id="tenantClientId"
-                    value={tenantClientId}
-                    onChange={(e) => setTenantClientId(e.target.value)}
-                    className={selectClass}
-                    required
-                  >
-                    <option value="">Selecione…</option>
-                    {clients.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tenantClientId">Locatário</Label>
+                <select
+                  id="tenantClientId"
+                  value={tenantClientId}
+                  onChange={(e) => setTenantClientId(e.target.value)}
+                  className={selectClass}
+                  required
+                >
+                  <option value="">Selecione…</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              <p className="text-xs text-muted-foreground">
+                O locador será o proprietário vinculado ao imóvel selecionado.
+              </p>
 
               <div className="space-y-1.5">
                 <Label htmlFor="guarantorClientId">Fiador (opcional)</Label>

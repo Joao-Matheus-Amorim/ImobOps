@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { guardPage } from "@/lib/guard-page";
 import { salesRepository } from "@/lib/repositories/sales.repository";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { formatBRL } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { NewListingDialog } from "@/components/domain/sales/new-listing-dialog";
@@ -18,6 +19,15 @@ export default async function SalesPage() {
   const properties = await Promise.all(listings.map((l) => propertiesRepository.get(ctx, l.propertyId)));
   const proposalLists = await Promise.all(listings.map((l) => salesRepository.listProposals(ctx, l.id)));
   const allProperties = await propertiesRepository.list(ctx);
+  const allClients = await clientsRepository.list(ctx);
+  const clientById = new Map(allClients.map((client) => [client.id, client]));
+  const saleProperties = allProperties.filter(
+    (property) =>
+      property.ownerClientId &&
+      (property.availability === "venda" || property.availability === "ambos") &&
+      property.status !== "vendido" &&
+      property.status !== "inativo",
+  );
 
   return (
     <div className="space-y-4">
@@ -27,7 +37,11 @@ export default async function SalesPage() {
         description={`${listings.length} listagens`}
         action={
           <NewListingDialog
-            properties={allProperties.map((p) => ({ id: p.id, address: p.address }))}
+            properties={saleProperties.map((p) => ({
+              id: p.id,
+              address: p.address,
+              ownerName: clientById.get(p.ownerClientId!)?.name ?? "Cliente",
+            }))}
           />
         }
       />

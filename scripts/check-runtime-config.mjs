@@ -69,13 +69,21 @@ if (rootEnv.exists) {
     }
   }
 
-  requireKeys(rootEnv, "OpenRouter", [
-    "AI_PROVIDER",
-    "OPENROUTER_API_KEY",
-    "OPENROUTER_MODEL",
-  ]);
-  if (rootEnv.values.AI_PROVIDER && rootEnv.values.AI_PROVIDER !== "openrouter") {
-    warn("AI provider", `current value is ${rootEnv.values.AI_PROVIDER}`);
+  const aiProvider = rootEnv.values.AI_PROVIDER || "mock";
+  if (aiProvider === "mock") {
+    ok("AI provider", "mock mode (nenhuma API key necessaria)");
+  } else if (aiProvider === "openai") {
+    requireKeys(rootEnv, "AI provider (OpenAI)", ["AI_PROVIDER", "OPENAI_API_KEY"]);
+  } else if (aiProvider === "anthropic") {
+    requireKeys(rootEnv, "AI provider (Anthropic)", ["AI_PROVIDER", "ANTHROPIC_API_KEY"]);
+  } else if (aiProvider === "openrouter") {
+    requireKeys(rootEnv, "AI provider (OpenRouter)", [
+      "AI_PROVIDER",
+      "OPENROUTER_API_KEY",
+      "OPENROUTER_MODEL",
+    ]);
+  } else {
+    warn("AI provider", `provider desconhecido: ${aiProvider}`);
   }
 
   requireKeys(rootEnv, "Asaas", [

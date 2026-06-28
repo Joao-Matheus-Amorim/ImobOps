@@ -83,12 +83,19 @@ Uma fase está pronta quando:
 
 - **Fases A e B: concluídas** neste repositório (modo mock), com testes verdes e
   build limpo.
-- **Fases C–E: planejadas**, destravadas pela aplicação das migrations e
-  configuração de infraestrutura.
+- **Fase C (Corte 6 — Supabase + RLS): concluída.** Migrations (001–016), RLS
+  policies, auth hooks, clientes Supabase — tudo implementado. Só precisa de
+  `NEXT_PUBLIC_SUPABASE_URL` para ativar.
+- **Fase D (Cortes 7–8):** Corte 7 (Asaas/billing) **concluído**; Corte 8 (IA real)
+  **90% concluído** — apenas SSE streaming pendente.
+- **Fase E (Corte 9 — SaaS): planejada**, sem dependências novas de código (schema
+  multi-tenant já existe).
 
 ## 8. Próximos passos imediatos
 
-1. Provisionar projeto Supabase e aplicar `001`–`004`.
-2. Configurar auth hook (claims `tenancy_id`/`role`).
-3. Ligar `AI_PROVIDER` e credenciais da Evolution.
-4. Validar isolamento de tenancy com dois usuários de tenancies distintas.
+1. Configurar `NEXT_PUBLIC_SUPABASE_URL` + `ANON_KEY` para ativar modo real.
+2. Aplicar migrations `001`–`016` no Supabase.
+3. Configurar auth hook (claims `tenancy_id`/`role`).
+4. Ligar `AI_PROVIDER` e credenciais da Evolution/Meta.
+5. Configurar `ASAAS_API_KEY` para billing real.
+6. Validar isolamento de tenancy com dois usuários de tenancies distintas.

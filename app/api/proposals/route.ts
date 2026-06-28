@@ -4,6 +4,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { salesRepository } from "@/lib/repositories/sales.repository";
+import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
@@ -29,6 +31,22 @@ export async function POST(request: Request) {
     );
   }
   const d = parsed.data;
+
+  const listing = await salesRepository.getListing(ctx, d.listingId);
+  if (!listing) {
+    return NextResponse.json({ error: "Listagem não encontrada." }, { status: 400 });
+  }
+  const property = await propertiesRepository.get(ctx, listing.propertyId);
+  if (!property?.ownerClientId) {
+    return NextResponse.json({ error: "A listagem precisa estar ligada a um imóvel com proprietário." }, { status: 400 });
+  }
+  const buyer = await clientsRepository.get(ctx, d.buyerClientId);
+  if (!buyer) {
+    return NextResponse.json({ error: "Cliente comprador não encontrado." }, { status: 400 });
+  }
+  if (buyer.id === property.ownerClientId) {
+    return NextResponse.json({ error: "Comprador e vendedor devem ser diferentes." }, { status: 400 });
+  }
 
   const proposal = await salesRepository.registerProposal(ctx, {
     listingId: d.listingId,

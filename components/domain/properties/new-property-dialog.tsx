@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Property, PropertyAvailability, PropertyKind } from "@/lib/types/domain";
 
+type ClientOption = { id: string; name: string };
+
 const KIND_OPTIONS: { value: PropertyKind; label: string }[] = [
   { value: "apartamento", label: "Apartamento" },
   { value: "casa", label: "Casa" },
@@ -25,9 +27,11 @@ const AVAILABILITY_OPTIONS: { value: PropertyAvailability; label: string }[] = [
 
 export function NewPropertyDialog({
   property,
+  clients,
   trigger,
 }: {
   property?: Property;
+  clients: ClientOption[];
   trigger?: ReactNode;
 }) {
   const router = useRouter();
@@ -41,6 +45,7 @@ export function NewPropertyDialog({
   const [areaM2, setAreaM2] = useState(property?.areaM2 != null ? String(property.areaM2) : "");
   const [bedrooms, setBedrooms] = useState(property?.bedrooms != null ? String(property.bedrooms) : "");
   const [bathrooms, setBathrooms] = useState(property?.bathrooms != null ? String(property.bathrooms) : "");
+  const [ownerClientId, setOwnerClientId] = useState(property?.ownerClientId ?? "");
   const [availability, setAvailability] = useState<PropertyAvailability>(
     property?.availability ?? "locacao",
   );
@@ -51,6 +56,7 @@ export function NewPropertyDialog({
     setAreaM2(property?.areaM2 != null ? String(property.areaM2) : "");
     setBedrooms(property?.bedrooms != null ? String(property.bedrooms) : "");
     setBathrooms(property?.bathrooms != null ? String(property.bathrooms) : "");
+    setOwnerClientId(property?.ownerClientId ?? "");
     setAvailability(property?.availability ?? "locacao");
     setError(null);
   }
@@ -59,6 +65,10 @@ export function NewPropertyDialog({
     e.preventDefault();
     if (!address.trim()) {
       setError("Informe o endereço.");
+      return;
+    }
+    if (!ownerClientId) {
+      setError("Selecione o cliente proprietário do imóvel.");
       return;
     }
 
@@ -75,6 +85,7 @@ export function NewPropertyDialog({
           areaM2: areaM2 ? Number(areaM2) : null,
           bedrooms: bedrooms ? Number(bedrooms) : null,
           bathrooms: bathrooms ? Number(bathrooms) : null,
+          ownerClientId,
           availability,
         }),
       },
@@ -185,6 +196,24 @@ export function NewPropertyDialog({
                   onChange={(e) => setAddress(e.target.value)}
                   required
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="ownerClientId">Cliente proprietário</Label>
+                <select
+                  id="ownerClientId"
+                  value={ownerClientId}
+                  onChange={(e) => setOwnerClientId(e.target.value)}
+                  className="flex h-11 w-full rounded-xl border border-input bg-background px-4 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  required
+                >
+                  <option value="">Selecione…</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-3 gap-3">

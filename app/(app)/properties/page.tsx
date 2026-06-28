@@ -5,6 +5,7 @@ import { EntityCard } from "@/components/ui/entity-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { guardPage } from "@/lib/guard-page";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { filterAllowed, getPrincipalCan } from "@/components/domain/_helpers";
 import { routes } from "@/lib/routes";
 import { NewPropertyDialog } from "@/components/domain/properties/new-property-dialog";
@@ -15,6 +16,7 @@ export default async function PropertiesPage() {
   const { ctx } = await guardPage("properties");
   const principal = await getPrincipalCan();
   const properties = filterAllowed(principal, "properties", await propertiesRepository.list(ctx));
+  const clients = filterAllowed(principal, "clients", await clientsRepository.list(ctx));
 
   return (
     <div className="space-y-4">
@@ -22,7 +24,7 @@ export default async function PropertiesPage() {
         badge="Carteira"
         title="Imóveis"
         description={`${properties.length} na carteira`}
-        action={<NewPropertyDialog />}
+        action={<NewPropertyDialog clients={clients.map((c) => ({ id: c.id, name: c.name }))} />}
       />
       {properties.length === 0 ? (
         <EmptyState title="Nenhum imóvel" icon={<Building2 className="size-8" />} />

@@ -120,10 +120,12 @@ export type EntityType =
   | "rental_contract"
   | "installment"
   | "sale_contract"
+  | "charge"
   | "condo"
   | "unit"
   | "condo_meeting"
-  | "lead";
+  | "lead"
+  | "whatsapp_conversation";
 
 export type DocumentKind =
   | "contrato"
@@ -131,18 +133,66 @@ export type DocumentKind =
   | "comprovante"
   | "rg"
   | "cpf"
+  | "cnpj"
+  | "comprovante_endereco"
+  | "matricula"
+  | "iptu"
+  | "escritura"
   | "laudo"
+  | "vistoria"
   | "ata"
+  | "proposta"
+  | "certidao"
+  | "recibo"
+  | "nota_fiscal"
   | "outro";
+
+export type DocumentStatus = "pendente" | "validado" | "rejeitado" | "vencido";
+
+export const DOCUMENT_KIND_LABELS: Record<DocumentKind, string> = {
+  contrato: "Contrato",
+  boleto: "Boleto",
+  comprovante: "Comprovante",
+  rg: "RG",
+  cpf: "CPF",
+  cnpj: "CNPJ",
+  comprovante_endereco: "Comprovante de endereço",
+  matricula: "Matrícula",
+  iptu: "IPTU",
+  escritura: "Escritura",
+  laudo: "Laudo",
+  vistoria: "Vistoria",
+  ata: "Ata",
+  proposta: "Proposta",
+  certidao: "Certidão",
+  recibo: "Recibo",
+  nota_fiscal: "Nota fiscal",
+  outro: "Outro",
+};
+
+export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
+  pendente: "Pendente",
+  validado: "Validado",
+  rejeitado: "Rejeitado",
+  vencido: "Vencido",
+};
 
 export interface DocumentRecord extends BaseEntity {
   entityType: EntityType;
   entityId: string;
   kind: DocumentKind;
+  title: string;
+  description: string | null;
+  fileName: string;
   storagePath: string;
   mime: string;
   size: number;
+  status: DocumentStatus;
+  expiresAt: string | null;
   uploadedBy: string | null;
+  validatedBy: string | null;
+  validatedAt: string | null;
+  rejectedReason: string | null;
 }
 
 // --- Rental --------------------------------------------------------------

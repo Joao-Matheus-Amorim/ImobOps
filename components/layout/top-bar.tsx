@@ -32,7 +32,8 @@ export function TopBar({
           <div className="relative w-full max-w-xl">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-primary/80" />
             <input
-              className="h-11 w-full rounded-2xl border border-primary/20 bg-background/22 px-12 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary/60 focus:bg-background/35 focus:shadow-glow-sm"
+              aria-label="Buscar em tudo"
+              className="h-11 w-full rounded-2xl border border-primary/25 bg-[#07131d] px-12 text-sm text-foreground placeholder:text-slate-300 outline-none transition focus:border-primary/70 focus:bg-[#07131d] focus:shadow-glow-sm"
               placeholder="Buscar em tudo..."
               type="search"
             />

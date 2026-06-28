@@ -22,7 +22,23 @@ export class OpenAiAdapter implements LlmAdapter {
   private buildBody(messages: ChatMessage[], tools: ToolDefinition[]) {
     return {
       model: this.model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: messages.map((m) => {
+        if (m.role === "assistant" && m.toolCalls?.length) {
+          return {
+            role: "assistant",
+            content: m.content || null,
+            tool_calls: m.toolCalls.map((tc) => ({
+              id: tc.id,
+              type: "function",
+              function: { name: tc.name, arguments: JSON.stringify(tc.params ?? {}) },
+            })),
+          };
+        }
+        if (m.role === "tool") {
+          return { role: "tool", content: m.content, tool_call_id: m.toolCallId };
+        }
+        return { role: m.role, content: m.content };
+      }),
       tools: tools.map((t) => ({
         type: "function",
         function: {

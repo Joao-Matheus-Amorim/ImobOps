@@ -11,6 +11,9 @@ import {
   Handshake,
   MessageCircle,
   Settings,
+  BarChart3,
+  BellRing,
+  FileStack,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +30,9 @@ const ICONS: Record<string, LucideIcon> = {
   Handshake,
   MessageCircle,
   Settings,
+  BarChart3,
+  BellRing,
+  FileStack,
 };
 
 export function Icon({ name, className }: { name: string; className?: string }) {

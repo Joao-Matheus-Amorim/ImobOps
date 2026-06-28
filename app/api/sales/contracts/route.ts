@@ -3,6 +3,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { salesRepository } from "@/lib/repositories/sales.repository";
+import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { financeRepository } from "@/lib/repositories/finance.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
@@ -10,7 +12,7 @@ import { requireContext } from "@/lib/api-auth";
 const bodySchema = z.object({
   listingId: z.string().min(1, "Selecione o anúncio."),
   buyerClientId: z.string().min(1, "Selecione o comprador."),
-  sellerClientId: z.string().min(1, "Selecione o vendedor."),
+  sellerClientId: z.string().min(1).optional(),
   finalPrice: z.number().positive("Valor final inválido."),
   signedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   paymentTerms: z.string().trim().min(1).nullable().optional(),
@@ -33,10 +35,32 @@ export async function POST(request: Request) {
   }
   const d = parsed.data;
 
+  const listing = await salesRepository.getListing(ctx, d.listingId);
+  if (!listing) {
+    return NextResponse.json({ error: "Listagem não encontrada." }, { status: 400 });
+  }
+  if (listing.status === "vendida" || listing.status === "cancelada") {
+    return NextResponse.json({ error: "Esta listagem não pode ser fechada." }, { status: 400 });
+  }
+  const property = await propertiesRepository.get(ctx, listing.propertyId);
+  if (!property?.ownerClientId) {
+    return NextResponse.json({ error: "A venda precisa estar ligada a um imóvel com proprietário." }, { status: 400 });
+  }
+  const buyer = await clientsRepository.get(ctx, d.buyerClientId);
+  if (!buyer) {
+    return NextResponse.json({ error: "Cliente comprador não encontrado." }, { status: 400 });
+  }
+  if (buyer.id === property.ownerClientId) {
+    return NextResponse.json({ error: "Comprador e vendedor devem ser diferentes." }, { status: 400 });
+  }
+  if (d.sellerClientId && d.sellerClientId !== property.ownerClientId) {
+    return NextResponse.json({ error: "O vendedor deve ser o proprietário vinculado ao imóvel." }, { status: 400 });
+  }
+
   const contract = await salesRepository.closeSaleContract(ctx, {
     listingId: d.listingId,
     buyerClientId: d.buyerClientId,
-    sellerClientId: d.sellerClientId,
+    sellerClientId: property.ownerClientId,
     finalPrice: d.finalPrice,
     signedAt: d.signedAt ?? null,
     paymentTerms: d.paymentTerms ?? null,
@@ -55,7 +79,6 @@ export async function POST(request: Request) {
   // Auto-generate the broker's commission from the listing's commission %.
   let commission = null;
   if (d.brokerUserId) {
-    const listing = await salesRepository.getListing(ctx, d.listingId);
     const pct = listing?.commissionPct ?? 0;
     if (pct > 0) {
       commission = await financeRepository.createCommission(ctx, {
@@ -76,6 +99,8 @@ export async function POST(request: Request) {
       });
     }
   }
+
+  await propertiesRepository.changeStatus(ctx, property.id, "vendido");
 
   return NextResponse.json({ ok: true, contract, commission });
 }

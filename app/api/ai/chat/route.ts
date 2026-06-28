@@ -8,6 +8,17 @@ import { getLlmAdapter } from "@/lib/ai/provider";
 import { ALL_TOOLS } from "@/lib/ai/tools/registry";
 import { allowedToolsFor, toolContextFor } from "@/lib/ai/guard";
 import { runTool } from "@/lib/ai/confirm";
+import {
+  hashRequest,
+  getCachedResponse,
+  setCachedResponse,
+  getCachedToolResult,
+  setCachedToolResult,
+  acquireLock,
+  releaseLock,
+  waitForCachedResponse,
+} from "@/lib/ai/cache";
+import { recordAiAction } from "@/lib/ai/audit";
 import type { ChatMessage } from "@/lib/types/ai";
 
 // Max automatic read-tool round-trips before we stop (avoids loops / cost).
@@ -76,6 +87,8 @@ export async function POST(request: Request) {
 
   const toolCtx = toolContextFor(principal, user.tenancyId);
 
+  const reqHash = hashRequest(messages, tools.map((t) => t.name), user.tenancyId);
+
   const callModel = async () => {
     try {
       return await adapter.chat(messages, tools);
@@ -93,13 +106,30 @@ export async function POST(request: Request) {
     }
   };
 
+  // Cache-aware first call: skip LLM if identical request was answered recently,
+  // and deduplicate concurrent identical requests via Redis lock. The lock is
+  // released only after the agent loop caches the final answer.
+  let lockAcquired = false;
+  const firstCall = async () => {
+    const cached = await getCachedResponse(reqHash);
+    if (cached) return cached;
+
+    lockAcquired = await acquireLock(reqHash);
+    if (!lockAcquired) {
+      const waited = await waitForCachedResponse(reqHash);
+      if (waited) return waited;
+    }
+
+    return callModel();
+  };
+
   // Agent loop: run READ tools automatically (search/list/get) and feed the
   // results back to the model, so it can chain steps (e.g. search a client, then
   // propose creating a charge). Stop when the model returns text or proposes a
   // WRITE tool — writes always go to the UI for dry-run + confirmation.
   let response;
   try {
-    response = await callModel();
+    response = await firstCall();
     for (let step = 0; step < MAX_READ_STEPS; step++) {
       const reads = response.toolCalls.filter(
         (tc) => tools.find((t) => t.name === tc.name)?.effect === "read",
@@ -115,7 +145,14 @@ export async function POST(request: Request) {
       for (const tc of reads) {
         const tool = tools.find((t) => t.name === tc.name);
         if (!tool) continue;
-        const result = await runTool(tool, tc.params, toolCtx, { confirm: true }, tc.id);
+        const cachedResult = await getCachedToolResult(tool.name, tc.params, user.tenancyId);
+        const result = cachedResult !== null
+          ? { callId: tc.id, toolName: tool.name, dryRun: false, confirmed: true, ok: true, data: cachedResult }
+          : await runTool(tool, tc.params, toolCtx, { confirm: true }, tc.id);
+        recordAiAction(toolCtx, parsed.data.messages[0]?.content ?? "", tool.name, tc.params, result);
+        if (result.ok && result.data && cachedResult === null) {
+          await setCachedToolResult(tool.name, tc.params, result.data, user.tenancyId).catch(() => {});
+        }
         messages.push({
           role: "tool",
           content: JSON.stringify(result.ok ? (result.data ?? null) : { error: result.error }),
@@ -125,17 +162,22 @@ export async function POST(request: Request) {
       response = await callModel();
     }
   } catch (err) {
+    if (lockAcquired) await releaseLock(reqHash).catch(() => {});
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
 
   // Attach previews for any proposed write tool calls so the UI can ask to confirm.
-  const proposed = response.toolCalls
-    .filter((tc) => tools.find((t) => t.name === tc.name)?.effect === "write")
-    .map((tc) => ({
+  const writeCalls = response.toolCalls.filter(
+    (tc) => tools.find((t) => t.name === tc.name)?.effect === "write",
+  );
+  const proposed = writeCalls.map((tc) => ({
       ...tc,
       effect: "write" as const,
       requiresConfirmation: true,
     }));
+
+  await setCachedResponse(reqHash, { content: response.content, toolCalls: writeCalls }).catch(() => {});
+  if (lockAcquired) await releaseLock(reqHash).catch(() => {});
 
   return NextResponse.json({
     provider: adapter.name,

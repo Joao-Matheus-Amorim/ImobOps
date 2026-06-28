@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
@@ -12,7 +13,7 @@ const bodySchema = z.object({
   bedrooms: z.number().int().nonnegative().nullable().optional(),
   bathrooms: z.number().int().nonnegative().nullable().optional(),
   parkingSpots: z.number().int().nonnegative().nullable().optional(),
-  ownerClientId: z.string().nullable().optional(),
+  ownerClientId: z.string().min(1, "Selecione o cliente proprietário."),
   status: z
     .enum(["disponivel", "alugado", "vendido", "em_obra", "inativo"])
     .default("disponivel"),
@@ -37,6 +38,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const owner = await clientsRepository.get(ctx, parsed.data.ownerClientId);
+  if (!owner) {
+    return NextResponse.json({ error: "Cliente proprietário não encontrado." }, { status: 400 });
+  }
+
   const property = await propertiesRepository.create(ctx, {
     kind: parsed.data.kind,
     address: parsed.data.address,
@@ -44,7 +50,7 @@ export async function POST(request: Request) {
     bedrooms: parsed.data.bedrooms ?? null,
     bathrooms: parsed.data.bathrooms ?? null,
     parkingSpots: parsed.data.parkingSpots ?? null,
-    ownerClientId: parsed.data.ownerClientId ?? null,
+    ownerClientId: parsed.data.ownerClientId,
     status: parsed.data.status,
     availability: parsed.data.availability,
     condoId: parsed.data.condoId ?? null,

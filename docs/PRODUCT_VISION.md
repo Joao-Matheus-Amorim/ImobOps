@@ -17,18 +17,37 @@ permissões do usuário logado.
 
 ## 1.1 Estado atual do produto
 
-Hoje o repositório está em um estado **híbrido, mock-first por padrão**:
+Hoje o repositório está em um estado **maduro, mock-first por padrão**:
 
 - O app sobe sem credenciais e continua funcional em modo mock.
-- Supabase, WhatsApp, billing e IA já têm caminhos reais de integração quando as
-  variáveis corretas estão presentes.
-- O banco real usa `DATABASE_URL` + Prisma 7 + `prisma.config.ts`.
-- O WhatsApp possui Evolution para local/VPS e Meta Cloud API para produção.
+- Supabase, WhatsApp, billing e IA já têm **implementações reais completas** no
+  código — só precisam de variáveis de ambiente para operar.
+- O banco real usa `DATABASE_URL` + Prisma 7 + `prisma.config.ts`. São 16
+  migrations SQL que cobrem schema, RLS, auth hooks, auditoria, billing, WhatsApp,
+  documentos e calendário.
+- O Supabase tem clientes browser, server, admin e middleware; login real com
+  `supabase.auth.signInWithPassword` com fallback mock.
+- O WhatsApp possui Evolution para local/VPS e Meta Cloud API para produção,
+  ambos com webhook, envio de templates e bot de triagem de leads.
+- O billing Asaas está completo: adapter, webhook idempotente, cron de lembretes,
+  multa/juros pro-rata, UI de cobrança e AI tools.
+- A IA tem adapters OpenAI, Anthropic e OpenRouter (com fallback automático entre
+  17 modelos gratuitos), guard com allowlist, dry-run/confirm, auditoria
+  append-only e cache Redis (Upstash) com degradação graciosa.
 - O calendário operacional já existe para eventos manuais e agregação de itens
   operacionais (visitas, prazos, assembleias) na leitura.
+- Testes E2E com Playwright (104 testes, Chromium + WebKit) cobrem navegação,
+  acessibilidade WCAG 2.1 AA, exportação de relatórios e validação de formulários.
+- Exportação de relatórios em 4 formatos (CSV, JSON, HTML, XLS) via API dedicada,
+  sem dependências externas.
 
-O que ainda não existe é uma promoção completa a SaaS multi-imobiliária com
-onboarding e billing por tenant na ponta a ponta.
+O que ainda não existe:
+- Streaming SSE no assistente de IA (`chatStream()` não conectado ao HTTP).
+- Testes E2E de criação de entidades, WhatsApp e permissões.
+- Exportação XLSX nativa (atual é HTML com extensão `.xls`) e PDF.
+- CI/CD com GitHub Actions.
+- UI de overrides de permissão para admin.
+- Promoção completa a SaaS multi-imobiliária com onboarding e billing por tenant.
 
 O ImobOps não é um portal para o cliente final (inquilino, proprietário ou
 comprador). É uma ferramenta **interna**, usada pela equipe da imobiliária:

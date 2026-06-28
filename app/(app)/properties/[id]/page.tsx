@@ -22,23 +22,25 @@ import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { salesRepository } from "@/lib/repositories/sales.repository";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
 import { NewPropertyDialog } from "@/components/domain/properties/new-property-dialog";
+import { DocumentPanel } from "@/components/domain/documents/document-panel";
 import { formatBRL } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 
 const AVAILABILITY_LABEL: Record<string, string> = {
   locacao: "Para locação",
   venda: "Para venda",
-  locacao_venda: "Locação e venda",
-  indisponivel: "Indisponível",
+  ambos: "Locação e venda",
+  condominio_only: "Só condomínio",
 };
 
 export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = await guardPage("properties");
+  const { ctx, user } = await guardPage("properties");
   const property = await propertiesRepository.get(ctx, params.id);
   if (!property) notFound();
   const owner = property.ownerClientId
     ? await clientsRepository.get(ctx, property.ownerClientId)
     : null;
+  const allClients = await clientsRepository.list(ctx);
 
   // The key number: active rent for this property, else its sale asking price.
   const [rentals, listings] = await Promise.all([
@@ -73,6 +75,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
             <StatusBadge status={property.status} />
             <NewPropertyDialog
               property={property}
+              clients={allClients.map((client) => ({ id: client.id, name: client.name }))}
               trigger={
                 <Button size="sm" variant="outline">
                   <Pencil /> Editar
@@ -174,6 +177,8 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
           </CardContent>
         </Card>
       </div>
+
+      <DocumentPanel entityType="property" entityId={property.id} userRole={user.role} />
     </div>
   );
 }

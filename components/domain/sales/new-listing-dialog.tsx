@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type PropertyOption = { id: string; address: string };
+type PropertyOption = { id: string; address: string; ownerName: string };
 
 export function NewListingDialog({ properties }: { properties: PropertyOption[] }) {
   const router = useRouter();
@@ -113,7 +113,7 @@ export function NewListingDialog({ properties }: { properties: PropertyOption[] 
                   <option value="">Selecione…</option>
                   {properties.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.address}
+                      {p.address} · proprietário: {p.ownerName}
                     </option>
                   ))}
                 </select>

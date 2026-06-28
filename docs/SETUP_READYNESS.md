@@ -96,9 +96,10 @@ CRON_SECRET=
 
 Responsavel por:
 
-- emissao de cobrancas
-- webhook autenticado
-- cron protegido
+- emissao de cobrancas (boleto, PIX, cartao)
+- webhook autenticado (idempotente)
+- cron protegido (lembretes D-3, vencimento, D+1, D+5)
+- multa/juros/correcao pro-rata
 
 ## Rate limit distribuido
 
@@ -124,12 +125,15 @@ Use `off` para expor novamente sinais internos de demo.
 ## Checklist final
 
 1. preencher `.env.local`
-2. aplicar migrations
-3. validar login real
-4. validar inbox WhatsApp
-5. validar assistente com provider real
-6. validar cobranca e webhook
-7. validar rate limiting
+2. aplicar migrations (`001`–`016` no Supabase)
+3. configurar auth hook (access token com `tenancy_id` + `role`)
+4. validar login real (com `NEXT_PUBLIC_SUPABASE_URL`)
+5. validar inbox WhatsApp (Evolution ou Meta Cloud API)
+6. validar assistente com provider real (`AI_PROVIDER=openai|anthropic|openrouter`)
+7. validar cobranca e webhook (`ASAAS_API_KEY`)
+8. validar rate limiting (`UPSTASH_REDIS_REST_URL`)
+9. executar `npm run e2e` para validar integridade geral
+10. executar `npm run build && npm run test` para garantir build e testes
 
 ## Painel no app
 

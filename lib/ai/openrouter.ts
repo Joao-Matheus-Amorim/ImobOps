@@ -7,10 +7,26 @@ const DEFAULT_MODEL = "openai/gpt-oss-120b:free";
 
 // Free, tool-capable models to fall back to when the primary one is rate-limited
 // (429). Tried in order; the configured model is always tried first.
+// Updated 2026-06 — sourced from openrouter.ai/api/v1/models filtered by
+// prompt=0, completion=0, supported_parameters includes "tools".
 const FREE_FALLBACKS = [
   "openai/gpt-oss-120b:free",
-  "openai/gpt-oss-20b:free",
+  "qwen/qwen3-coder:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
   "google/gemma-4-31b-it:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "nvidia/nemotron-3-nano-30b-a3b:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "qwen/qwen3-next-80b-a3b-instruct:free",
+  "openai/gpt-oss-20b:free",
+  "poolside/laguna-m.1:free",
+  "poolside/laguna-xs.2:free",
+  "cohere/north-mini-code:free",
+  "nvidia/nemotron-nano-12b-v2-vl:free",
+  "nvidia/nemotron-nano-9b-v2:free",
+  "liquid/lfm-2.5-1.2b-thinking:free",
 ];
 
 interface OpenRouterToolCall {

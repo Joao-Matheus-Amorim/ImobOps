@@ -31,6 +31,12 @@ o dashboard de cada papel.
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` (TypeScript estrito) |
 | `npm run test` | Vitest |
+| `npm run e2e` | Playwright E2E (Chromium + WebKit) |
+| `npm run e2e:chrome` | Playwright E2E (Chromium apenas) |
+| `npm run e2e:safari` | Playwright E2E (WebKit apenas) |
+| `npm run e2e:a11y` | Acessibilidade WCAG |
+| `npm run e2e:ui` | Playwright modo UI |
+| `npm run e2e:install` | Instalar browsers do Playwright |
 
 ---
 
@@ -40,7 +46,9 @@ o dashboard de cada papel.
 - **Tailwind CSS** + **shadcn/ui** (Radix) + **lucide-react** + **framer-motion**
 - **Supabase** (Auth, DB, Storage, RLS) — opcional no MVP
 - **Zod** para validação de tools e payloads
-- **Vitest** para testes
+- **Vitest** para testes unitários
+- **Playwright** para testes E2E multi-browser (Chromium + WebKit)
+- **axe-core** para acessibilidade WCAG 2.1 AA
 - **Vercel** como alvo de deploy
 - Adapter **WhatsApp** (`lib/whatsapp/`): Evolution API + Meta Cloud API
 - Adapter **IA** (`lib/ai/`): OpenAI / Anthropic / OpenRouter / mock, com tool calling
@@ -117,7 +125,9 @@ lib/
   whatsapp/     # adapter, evolution, meta, templates, triage-bot
   ai/           # adapter, providers, tools, guard, confirm, audit
 database/
-  migrations/   # 001 schema · 002 RLS · 003 seed · 004 auditoria/IA
+  migrations/   # 001–016: schema, RLS, seed, auditoria/IA, billing, WhatsApp, docs
+tests/
+  e2e/          # Playwright: navegação, a11y, exportações, validação
 docs/           # produto, permissões, multi-tenant, IA, WhatsApp, roadmap, pm/
 ```
 
@@ -137,13 +147,30 @@ O banco é criado aplicando, em ordem, os arquivos de `database/migrations/`. Pa
 
 ## Testes
 
+### Unitários (Vitest)
+
 ```bash
-npm run test
+npm run test          # todos os testes
+npx vitest run        # Vitest direto
 ```
 
-Cobertura principal: permissões (`lib/permissions`), guard da IA (`lib/ai/guard`),
-geração de parcelas e cálculo de repasse (`lib/repositories`), e triagem de WhatsApp
-(`lib/whatsapp`).
+Cobertura principal: permissões (`lib/permissions`), IA (guard, provider, cache,
+audit, confirm, mock, openrouter, registry, route — 63 testes), billing (charge
+logic, late charges, repository), geração de parcelas, repasse, e triagem WhatsApp.
+
+### E2E (Playwright)
+
+```bash
+npm run e2e           # Chromium + WebKit (com setup automático)
+npm run e2e:chrome    # só Chromium
+npm run e2e:safari    # só WebKit
+npm run e2e:a11y      # só acessibilidade
+npm run e2e:ui        # modo UI (inspecionar testes)
+```
+
+104 testes E2E (todas as páginas, acessibilidade WCAG 2.1 AA em 16 páginas,
+exportação de relatórios em 4 formatos × 23 relatórios, validação de criação de
+imóvel). Autenticação automática com seed opcional via Supabase.
 
 ---
 

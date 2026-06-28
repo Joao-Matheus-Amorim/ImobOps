@@ -22,6 +22,7 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
   if (!listing) notFound();
 
   const property = await propertiesRepository.get(ctx, listing.propertyId);
+  const owner = property?.ownerClientId ? await clientsRepository.get(ctx, property.ownerClientId) : null;
   const proposals = await salesRepository.listProposals(ctx, listing.id);
   const buyers = await Promise.all(proposals.map((p) => clientsRepository.get(ctx, p.buyerClientId)));
   const allClients = await clientsRepository.list(ctx);
@@ -48,6 +49,7 @@ export default async function SaleDetailPage({ params }: { params: { id: string 
             />
             <ListingActions
               listingId={listing.id}
+              sellerName={owner?.name ?? "proprietário do imóvel"}
               clients={allClients.map((c) => ({ id: c.id, name: c.name }))}
               brokers={brokers.map((b) => ({ id: b.id, name: b.displayName }))}
             />

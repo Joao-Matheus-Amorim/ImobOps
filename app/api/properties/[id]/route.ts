@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
@@ -11,7 +12,7 @@ const patchSchema = z.object({
   bedrooms: z.number().int().nonnegative().nullable().optional(),
   bathrooms: z.number().int().nonnegative().nullable().optional(),
   parkingSpots: z.number().int().nonnegative().nullable().optional(),
-  ownerClientId: z.string().nullable().optional(),
+  ownerClientId: z.string().min(1).optional(),
   status: z.enum(["disponivel", "alugado", "vendido", "em_obra", "inativo"]).optional(),
   availability: z.enum(["locacao", "venda", "ambos", "condominio_only"]).optional(),
   condoId: z.string().nullable().optional(),
@@ -38,6 +39,13 @@ export async function PATCH(
   const before = await propertiesRepository.get(ctx, params.id);
   if (!before) {
     return NextResponse.json({ error: "Imóvel não encontrado." }, { status: 404 });
+  }
+
+  if (parsed.data.ownerClientId) {
+    const owner = await clientsRepository.get(ctx, parsed.data.ownerClientId);
+    if (!owner) {
+      return NextResponse.json({ error: "Cliente proprietário não encontrado." }, { status: 400 });
+    }
   }
 
   const property = await propertiesRepository.update(ctx, params.id, parsed.data);

@@ -4,6 +4,7 @@ import { defaultSystemTenancyId } from "@/lib/constants";
 import { getWhatsAppAdapter } from "@/lib/whatsapp/provider";
 import { publishWhatsAppEvent } from "@/lib/whatsapp/events";
 import { generateReply, triageInbound } from "@/lib/whatsapp/triage-bot";
+import type { TriageClassification } from "@/lib/types/domain";
 
 type EvolutionWebhookPayload = unknown;
 
@@ -160,7 +161,7 @@ async function persistConversation(params: {
   tenancyId: string;
   phone: string;
   contactName?: string;
-  classification: string | null;
+  classification: TriageClassification;
   lastMessageAt: Date;
 }) {
   const { tenancyId, phone, contactName, classification, lastMessageAt } = params;
@@ -182,7 +183,7 @@ async function persistConversation(params: {
     },
     update: {
       lastMessageAt,
-      triageClassification: classification as never,
+      triageClassification: classification,
       ...(contactName !== undefined ? { contactName } : {}),
     },
     create: {
@@ -194,7 +195,7 @@ async function persistConversation(params: {
       lastMessageAt,
       assignedToUserId: null,
       status: "aberta",
-      triageClassification: classification as never,
+      triageClassification: classification,
       createdBy: null,
     },
   });
@@ -311,7 +312,7 @@ async function handleUpsert(payload: EvolutionWebhookPayload): Promise<void> {
   if (!inbound) return;
 
   const ctx = systemCtx();
-  const classification = inbound.fromMe
+  const classification: TriageClassification = inbound.fromMe
     ? null
     : (await triageInbound(ctx, inbound.body)).classification;
   const contactName = inbound.fromMe ? undefined : inbound.name;
@@ -331,7 +332,7 @@ async function handleUpsert(payload: EvolutionWebhookPayload): Promise<void> {
     mediaUrl: inbound.mediaUrl ?? null,
     externalId: inbound.externalId,
     sentAt: new Date(inbound.timestamp),
-    sentBy: inbound.fromMe ? "user" : "user",
+    sentBy: "user",
   });
 
   publishWhatsAppEvent({

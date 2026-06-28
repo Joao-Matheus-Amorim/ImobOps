@@ -19,6 +19,13 @@ export default async function RentalsPage() {
   // Options for the "new rental" form.
   const allProperties = await propertiesRepository.list(ctx);
   const allClients = await clientsRepository.list(ctx);
+  const clientById = new Map(allClients.map((client) => [client.id, client]));
+  const rentalProperties = allProperties.filter(
+    (property) =>
+      property.ownerClientId &&
+      (property.availability === "locacao" || property.availability === "ambos") &&
+      property.status === "disponivel",
+  );
   // Fetch related properties + tenants in two bulk queries instead of one per
   // contract (was N+1).
   const propertyById = new Map(
@@ -38,7 +45,12 @@ export default async function RentalsPage() {
         description={`${contracts.length} contratos`}
         action={
           <NewRentalDialog
-            properties={allProperties.map((p) => ({ id: p.id, address: p.address }))}
+            properties={rentalProperties.map((p) => ({
+              id: p.id,
+              address: p.address,
+              ownerClientId: p.ownerClientId!,
+              ownerName: clientById.get(p.ownerClientId!)?.name ?? "Cliente",
+            }))}
             clients={allClients.map((c) => ({ id: c.id, name: c.name }))}
           />
         }

@@ -14,6 +14,7 @@ function hasEnv(name: string): boolean {
 export function getRuntimeChecks(): RuntimeCheck[] {
   const aiProvider = process.env.AI_PROVIDER?.trim() || "mock";
   const aiReady =
+    aiProvider === "mock" ||
     (aiProvider === "openai" && hasEnv("OPENAI_API_KEY")) ||
     (aiProvider === "anthropic" && hasEnv("ANTHROPIC_API_KEY")) ||
     (aiProvider === "openrouter" && hasEnv("OPENROUTER_API_KEY"));
@@ -55,11 +56,13 @@ export function getRuntimeChecks(): RuntimeCheck[] {
       ready: aiReady,
       detail: `Provider atual: ${aiProvider}.`,
       requiredVars:
-        aiProvider === "anthropic"
-          ? ["AI_PROVIDER", "ANTHROPIC_API_KEY"]
-          : aiProvider === "openrouter"
-            ? ["AI_PROVIDER", "OPENROUTER_API_KEY", "OPENROUTER_MODEL"]
-          : ["AI_PROVIDER", "OPENAI_API_KEY"],
+        aiProvider === "mock"
+          ? ["AI_PROVIDER"]
+          : aiProvider === "anthropic"
+            ? ["AI_PROVIDER", "ANTHROPIC_API_KEY"]
+            : aiProvider === "openrouter"
+              ? ["AI_PROVIDER", "OPENROUTER_API_KEY", "OPENROUTER_MODEL"]
+              : ["AI_PROVIDER", "OPENAI_API_KEY"],
     },
     {
       key: "billing",

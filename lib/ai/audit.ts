@@ -9,7 +9,7 @@ export function recordAiAction(
   toolParams: Record<string, unknown>,
   result: ToolResult,
 ): void {
-  aiActionsRepository.record(
+  void aiActionsRepository.record(
     { tenancyId: ctx.tenancyId, userId: ctx.userId },
     {
       userId: ctx.userId,
@@ -21,5 +21,7 @@ export function recordAiAction(
       result: result.ok ? ((result.data as Record<string, unknown>) ?? { preview: result.preview ?? null }) : null,
       error: result.error ?? null,
     },
-  );
+  ).catch((error: unknown) => {
+    console.error("ai_actions.record failed", error);
+  });
 }

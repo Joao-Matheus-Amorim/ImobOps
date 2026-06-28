@@ -4,6 +4,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
+import { propertiesRepository } from "@/lib/repositories/properties.repository";
+import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 import {
@@ -15,7 +17,6 @@ const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "use yyyy-mm-dd");
 
 const bodySchema = z.object({
   propertyId: z.string().min(1, "Selecione o imóvel."),
-  landlordClientId: z.string().min(1, "Selecione o locador."),
   tenantClientId: z.string().min(1, "Selecione o locatário."),
   guarantorClientId: z.string().nullable().optional(),
   monthlyValue: z.number().positive("Valor mensal inválido."),
@@ -50,9 +51,36 @@ export async function POST(request: Request) {
   }
   const d = parsed.data;
 
+  const property = await propertiesRepository.get(ctx, d.propertyId);
+  if (!property) {
+    return NextResponse.json({ error: "Imóvel não encontrado." }, { status: 400 });
+  }
+  if (!property.ownerClientId) {
+    return NextResponse.json({ error: "O imóvel precisa ter um cliente proprietário antes da locação." }, { status: 400 });
+  }
+  if (property.availability !== "locacao" && property.availability !== "ambos") {
+    return NextResponse.json({ error: "O imóvel não está disponível para locação." }, { status: 400 });
+  }
+  if (property.status !== "disponivel") {
+    return NextResponse.json({ error: "Somente imóveis disponíveis podem virar locação." }, { status: 400 });
+  }
+  const tenant = await clientsRepository.get(ctx, d.tenantClientId);
+  if (!tenant) {
+    return NextResponse.json({ error: "Cliente locatário não encontrado." }, { status: 400 });
+  }
+  if (tenant.id === property.ownerClientId) {
+    return NextResponse.json({ error: "Locatário e proprietário do imóvel devem ser diferentes." }, { status: 400 });
+  }
+  if (d.guarantorClientId) {
+    const guarantor = await clientsRepository.get(ctx, d.guarantorClientId);
+    if (!guarantor) {
+      return NextResponse.json({ error: "Cliente fiador não encontrado." }, { status: 400 });
+    }
+  }
+
   const contract = await rentalsRepository.create(ctx, {
     propertyId: d.propertyId,
-    landlordClientId: d.landlordClientId,
+    landlordClientId: property.ownerClientId,
     tenantClientId: d.tenantClientId,
     guarantorClientId: d.guarantorClientId ?? null,
     monthlyValue: d.monthlyValue,
@@ -69,6 +97,7 @@ export async function POST(request: Request) {
 
   // Generate the recurring rent installments for the contract.
   const installments = await rentalsRepository.generateInstallments(ctx, contract.id);
+  await propertiesRepository.changeStatus(ctx, property.id, "alugado");
 
   await auditRepository.log(ctx, {
     userId: ctx.userId,

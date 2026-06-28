@@ -10,6 +10,7 @@ import { rentalsRepository } from "@/lib/repositories/rentals.repository";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { EditRentalDialog } from "@/components/domain/rentals/edit-rental-dialog";
+import { DocumentPanel } from "@/components/domain/documents/document-panel";
 import { type InstallmentStatus } from "@/lib/types/domain";
 import { formatBRL, formatDate, formatReferenceMonth } from "@/lib/utils";
 import { routes } from "@/lib/routes";
@@ -23,7 +24,7 @@ const DOT: Record<InstallmentStatus, string> = {
 };
 
 export default async function RentalDetailPage({ params }: { params: { id: string } }) {
-  const { ctx } = await guardPage("rentals");
+  const { ctx, user } = await guardPage("rentals");
   const contract = await rentalsRepository.get(ctx, params.id);
   if (!contract) notFound();
 
@@ -127,6 +128,8 @@ export default async function RentalDetailPage({ params }: { params: { id: strin
           </ol>
         </CardContent>
       </Card>
+
+      <DocumentPanel entityType="rental_contract" entityId={contract.id} userRole={user.role} />
     </div>
   );
 }

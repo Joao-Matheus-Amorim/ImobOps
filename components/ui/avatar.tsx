@@ -1,14 +1,23 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
 // Minimal initials avatar (no image loading needed for mock mode).
 export function Avatar({ name, className }: { name: string; className?: string }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const initials = name
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+
   return (
     <div
       className={cn(
@@ -16,7 +25,7 @@ export function Avatar({ name, className }: { name: string; className?: string }
         className,
       )}
     >
-      {initials}
+      {mounted ? initials : ""}
     </div>
   );
 }

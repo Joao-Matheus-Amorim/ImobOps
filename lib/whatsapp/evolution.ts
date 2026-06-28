@@ -7,6 +7,7 @@ import type {
   ConnectionInfo,
   ImportedChat,
 } from "./adapter";
+import QRCode from "qrcode";
 import { renderTemplate, type TemplateKey } from "./templates";
 import { isWhatsAppConfigured } from "@/lib/constants";
 
@@ -113,6 +114,21 @@ function resolvePhoneJid(key?: EvolutionKey): string | null {
   return real ?? candidates[0] ?? null;
 }
 
+async function pairingPayloadToQr(data: { base64?: string; code?: string }): Promise<string | null> {
+  if (data.base64) {
+    return data.base64.startsWith("data:") ? data.base64 : `data:image/png;base64,${data.base64}`;
+  }
+  if (!data.code) return null;
+  if (data.code.startsWith("data:")) return data.code;
+  return QRCode.toDataURL(data.code, { errorCorrectionLevel: "M", margin: 1, width: 240 });
+}
+
+function isMissingInstanceError(error: unknown): boolean {
+  return error instanceof Error &&
+    error.message.startsWith("Evolution 404:") &&
+    error.message.includes("instance does not exist");
+}
+
 export class EvolutionAdapter implements WhatsAppAdapter {
   constructor(
     private readonly baseUrl = process.env.EVOLUTION_API_URL ?? "",
@@ -157,30 +173,55 @@ export class EvolutionAdapter implements WhatsAppAdapter {
 
   async connectionState(): Promise<ConnectionInfo> {
     if (!isWhatsAppConfigured()) return { state: "open", qr: null };
-    const data = (await this.get(`/instance/connectionState/${this.instance}`)) as {
-      instance?: { state?: string };
-    };
-    return { state: normalizeState(data.instance?.state), qr: null };
+    try {
+      const data = (await this.get(`/instance/connectionState/${this.instance}`)) as {
+        instance?: { state?: string };
+      };
+      return { state: normalizeState(data.instance?.state), qr: null };
+    } catch (error) {
+      if (isMissingInstanceError(error)) return { state: "close", qr: null };
+      throw error;
+    }
   }
 
   async connect(): Promise<ConnectionInfo> {
     if (!isWhatsAppConfigured()) return { state: "open", qr: null };
+    try {
+      return await this.connectExistingInstance();
+    } catch (error) {
+      if (!isMissingInstanceError(error)) throw error;
+
+      await this.createInstance();
+      return this.connectExistingInstance();
+    }
+  }
+
+  private async connectExistingInstance(): Promise<ConnectionInfo> {
     // Evolution returns either { instance: { state } } when already connected,
     // or a pairing payload with base64/code when a scan is needed.
     const data = (await this.get(`/instance/connect/${this.instance}`)) as {
       instance?: { state?: string };
       base64?: string;
       code?: string;
+      qrcode?: { base64?: string; code?: string };
     };
     if (data.instance?.state) {
       return { state: normalizeState(data.instance.state), qr: null };
     }
-    const qr = data.base64
-      ? data.base64.startsWith("data:")
-        ? data.base64
-        : `data:image/png;base64,${data.base64}`
-      : null;
+    const qr = await pairingPayloadToQr({
+      base64: data.base64 ?? data.qrcode?.base64,
+      code: data.code ?? data.qrcode?.code,
+    });
     return { state: "connecting", qr };
+  }
+
+  private async createInstance(): Promise<void> {
+    await this.post2("/instance/create", {
+      instanceName: this.instance,
+      token: this.token,
+      qrcode: false,
+      integration: "WHATSAPP-BAILEYS",
+    });
   }
 
   async disconnect(): Promise<ConnectionInfo> {
