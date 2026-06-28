@@ -9,6 +9,7 @@ import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { filterAllowed, getPrincipalCan } from "@/components/domain/_helpers";
 import { routes } from "@/lib/routes";
 import { NewPropertyDialog } from "@/components/domain/properties/new-property-dialog";
+import { DeleteResourceButton } from "@/components/domain/delete-resource-button";
 
 export const metadata = { title: "Imóveis" };
 
@@ -31,19 +32,23 @@ export default async function PropertiesPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {properties.map((p) => (
-            <EntityCard
-              key={p.id}
-              href={routes.property(p.id)}
-              icon={<Building2 className="size-5" />}
-              title={p.address}
-              subtitle={p.kind}
-              status={<StatusBadge status={p.status} />}
-              meta={[
-                { label: "Área", value: p.areaM2 ? `${p.areaM2} m²` : "—" },
-                { label: "Dorm.", value: p.bedrooms ?? 0 },
-                { label: "Vagas", value: p.parkingSpots ?? 0 },
-              ]}
-            />
+            <div key={p.id} className="space-y-2">
+              <EntityCard
+                href={routes.property(p.id)}
+                icon={<Building2 className="size-5" />}
+                title={p.address}
+                subtitle={p.kind}
+                status={<StatusBadge status={p.status} />}
+                meta={[
+                  { label: "Área", value: p.areaM2 ? `${p.areaM2} m²` : "—" },
+                  { label: "Dorm.", value: p.bedrooms ?? 0 },
+                  { label: "Vagas", value: p.parkingSpots ?? 0 },
+                ]}
+              />
+              <div className="flex justify-end px-1">
+                <DeleteResourceButton endpoint={`/api/properties/${p.id}`} label={String(p.address)} />
+              </div>
+            </div>
           ))}
         </div>
       )}

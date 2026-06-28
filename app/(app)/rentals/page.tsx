@@ -10,6 +10,7 @@ import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { formatBRL } from "@/lib/utils";
 import { routes } from "@/lib/routes";
 import { NewRentalDialog } from "@/components/domain/rentals/new-rental-dialog";
+import { DeleteResourceButton } from "@/components/domain/delete-resource-button";
 
 export const metadata = { title: "Locação" };
 
@@ -63,17 +64,21 @@ export default async function RentalsPage() {
             const property = properties[index];
             const tenant = tenants[index];
             return (
-              <EntityCard
-                key={c.id}
-                href={routes.rental(c.id)}
-                icon={<KeyRound className="size-5" />}
-                title={property?.address ?? "Imóvel"}
-                subtitle={`Inquilino: ${tenant?.name ?? "—"}`}
-                status={<StatusBadge status={c.status} />}
-                meta={[{ label: "Venc.", value: `dia ${c.dueDay}` }]}
-                highlightLabel="Aluguel"
-                highlight={`${formatBRL(c.monthlyValue)}`}
-              />
+              <div key={c.id} className="space-y-2">
+                <EntityCard
+                  href={routes.rental(c.id)}
+                  icon={<KeyRound className="size-5" />}
+                  title={property?.address ?? "Imóvel"}
+                  subtitle={`Inquilino: ${tenant?.name ?? "—"}`}
+                  status={<StatusBadge status={c.status} />}
+                  meta={[{ label: "Venc.", value: `dia ${c.dueDay}` }]}
+                  highlightLabel="Aluguel"
+                  highlight={`${formatBRL(c.monthlyValue)}`}
+                />
+                <div className="flex justify-end px-1">
+                  <DeleteResourceButton endpoint={`/api/rentals/${c.id}`} label={`locação de ${property?.address ?? "imóvel"}`} />
+                </div>
+              </div>
             );
           })}
         </div>

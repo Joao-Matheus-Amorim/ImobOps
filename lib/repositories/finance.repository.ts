@@ -45,7 +45,16 @@ export const financeRepository = {
     if (existing) return existing;
 
     const r = buildRepasse(contract, installment, ctx.tenancyId, ctx.userId);
-    return repasses.create(ctx, r);
+    return repasses.create(ctx, {
+      contractId: r.contractId,
+      referenceMonth: r.referenceMonth,
+      grossAmount: r.grossAmount,
+      adminFeeAmount: r.adminFeeAmount,
+      netAmount: r.netAmount,
+      status: r.status,
+      paidAt: r.paidAt,
+      receiptDocumentId: r.receiptDocumentId,
+    });
   },
 
   markRepassePaid(ctx: RepoContext, id: string): Promise<Repasse | null> {

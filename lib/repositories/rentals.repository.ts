@@ -54,8 +54,28 @@ export const rentalsRepository = {
     const fresh = generateInstallments(contract, ctx.tenancyId, ctx.userId).filter(
       (i) => !existing.has(i.referenceMonth),
     );
-    for (const i of fresh) await installments.create(ctx, i);
+    for (const i of fresh) {
+      await installments.create(ctx, {
+        contractId: i.contractId,
+        referenceMonth: i.referenceMonth,
+        dueDate: i.dueDate,
+        amount: i.amount,
+        status: i.status,
+        paidAt: i.paidAt,
+        paidAmount: i.paidAmount,
+        receiptDocumentId: i.receiptDocumentId,
+        boletoDocumentId: i.boletoDocumentId,
+        chargeId: i.chargeId,
+        notes: i.notes,
+      });
+    }
     return this.listInstallments(ctx, contractId);
+  },
+
+  async remove(ctx: RepoContext, id: string): Promise<boolean> {
+    const current = await installments.list(ctx, (i) => i.contractId === id);
+    for (const i of current) await installments.remove(ctx, i.id);
+    return contracts.remove(ctx, id);
   },
 
   markInstallmentPaid(

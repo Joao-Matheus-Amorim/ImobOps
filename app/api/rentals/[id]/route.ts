@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { rentalsRepository } from "@/lib/repositories/rentals.repository";
+import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
@@ -54,4 +55,36 @@ export async function PATCH(
   });
 
   return NextResponse.json({ ok: true, contract });
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireContext(request);
+  if ("error" in auth) return auth.error;
+  const { ctx } = auth;
+
+  const contract = await rentalsRepository.get(ctx, params.id);
+  if (!contract) {
+    return NextResponse.json({ error: "Contrato não encontrado." }, { status: 404 });
+  }
+
+  const removed = await rentalsRepository.remove(ctx, params.id);
+  if (!removed) {
+    return NextResponse.json({ error: "Contrato não encontrado." }, { status: 404 });
+  }
+
+  await propertiesRepository.changeStatus(ctx, contract.propertyId, "disponivel");
+
+  await auditRepository.log(ctx, {
+    userId: ctx.userId,
+    action: "delete",
+    entityType: "rental_contract",
+    entityId: params.id,
+    payloadBefore: contract as unknown as Record<string, unknown>,
+    payloadAfter: null,
+  });
+
+  return NextResponse.json({ ok: true });
 }

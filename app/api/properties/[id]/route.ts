@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
+import { rentalsRepository } from "@/lib/repositories/rentals.repository";
+import { salesRepository } from "@/lib/repositories/sales.repository";
 import { auditRepository } from "@/lib/repositories/audit.repository";
 import { requireContext } from "@/lib/api-auth";
 
@@ -63,4 +65,51 @@ export async function PATCH(
   });
 
   return NextResponse.json({ ok: true, property });
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
+  const auth = await requireContext(request);
+  if ("error" in auth) return auth.error;
+  const { ctx } = auth;
+
+  const property = await propertiesRepository.get(ctx, params.id);
+  if (!property) {
+    return NextResponse.json({ error: "Imóvel não encontrado." }, { status: 404 });
+  }
+
+  const [rentals, listings] = await Promise.all([
+    rentalsRepository.list(ctx),
+    salesRepository.listListings(ctx),
+  ]);
+  if (rentals.some((rental) => rental.propertyId === params.id)) {
+    return NextResponse.json(
+      { error: "Não é possível remover imóvel com contrato de locação vinculado." },
+      { status: 400 },
+    );
+  }
+  if (listings.some((listing) => listing.propertyId === params.id)) {
+    return NextResponse.json(
+      { error: "Não é possível remover imóvel com listagem de venda vinculada." },
+      { status: 400 },
+    );
+  }
+
+  const removed = await propertiesRepository.remove(ctx, params.id);
+  if (!removed) {
+    return NextResponse.json({ error: "Imóvel não encontrado." }, { status: 404 });
+  }
+
+  await auditRepository.log(ctx, {
+    userId: ctx.userId,
+    action: "delete",
+    entityType: "property",
+    entityId: params.id,
+    payloadBefore: property as unknown as Record<string, unknown>,
+    payloadAfter: null,
+  });
+
+  return NextResponse.json({ ok: true });
 }

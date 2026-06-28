@@ -42,6 +42,10 @@ export const propertiesRepository = {
     return col.update(ctx, id, { status });
   },
 
+  remove(ctx: RepoContext, id: string): Promise<boolean> {
+    return col.remove(ctx, id);
+  },
+
   byCondo(ctx: RepoContext, condoId: string): Promise<Property[]> {
     return col.list(ctx, (p) => p.condoId === condoId);
   },
