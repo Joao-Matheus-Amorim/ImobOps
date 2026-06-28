@@ -41,7 +41,7 @@ export function buildCondoFeesReport(context: ReportsContext): BuiltReport {
 
 export function buildCondoExpensesReport(context: ReportsContext): BuiltReport {
   const rows: BuiltReport["rows"] = context.condoExpenses
-    .filter((e) => e.status !== "pago")
+    .filter((e) => e.status !== "paga")
     .map((expense) => ({
       id: expense.id,
       href: routes.condo(expense.condoId),

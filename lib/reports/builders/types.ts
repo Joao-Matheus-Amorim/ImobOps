@@ -1,6 +1,27 @@
 // Shared types for report builders
 
-import type { ReportDefinition } from "../definitions";
+import { ReportDefinition } from "../definitions";
+import {
+  Property,
+  Client,
+  RentalContract,
+  Installment,
+  Charge,
+  Repasse,
+  Commission,
+  SaleListing,
+  SaleContract,
+  Proposal,
+  CrmLead,
+  CrmActivity,
+  DocumentRecord,
+  User,
+  Condo,
+  Unit,
+  CondoFee,
+  CondoExpense,
+  CondoMeeting,
+} from "@/lib/types/domain";
 
 export type ReportValue = string | number | null;
 
@@ -60,30 +81,30 @@ export interface ReportsDashboardData {
 export interface ReportsContext {
   today: string;
   todayMonth: string;
-  properties: any[];
-  clients: any[];
-  rentals: any[];
-  installments: any[];
-  charges: any[];
-  repasses: any[];
-  commissions: any[];
-  listings: any[];
-  saleContracts: any[];
-  proposals: any[];
-  leads: any[];
-  activities: any[];
-  documents: any[];
-  users: any[];
-  condos: any[];
-  condoUnits: any[];
-  condoFees: any[];
-  condoExpenses: any[];
-  condoMeetings: any[];
-  propertyById: Map<string, any>;
-  clientById: Map<string, any>;
-  rentalById: Map<string, any>;
-  listingById: Map<string, any>;
-  userById: Map<string, any>;
-  condoById: Map<string, any>;
-  condoUnitById: Map<string, any>;
+  properties: Property[];
+  clients: Client[];
+  rentals: RentalContract[];
+  installments: Installment[];
+  charges: Charge[];
+  repasses: Repasse[];
+  commissions: Commission[];
+  listings: SaleListing[];
+  saleContracts: SaleContract[];
+  proposals: Proposal[];
+  leads: CrmLead[];
+  activities: CrmActivity[];
+  documents: DocumentRecord[];
+  users: User[];
+  condos: Condo[];
+  condoUnits: Unit[];
+  condoFees: CondoFee[];
+  condoExpenses: CondoExpense[];
+  condoMeetings: CondoMeeting[];
+  propertyById: Map<string, Property>;
+  clientById: Map<string, Client>;
+  rentalById: Map<string, RentalContract>;
+  listingById: Map<string, SaleListing>;
+  userById: Map<string, User>;
+  condoById: Map<string, Condo>;
+  condoUnitById: Map<string, Unit>;
 }
