@@ -2,16 +2,9 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSessionUser } from "@/lib/session";
 import { routes } from "@/lib/routes";
-import { buildDashboardData } from "@/components/domain/dashboard/dashboard-data";
-import {
-  AdminDashboard,
-  BrokerDashboard,
-  FinanceDashboard,
-  CondoDashboard,
-  ViewerDashboard,
-} from "@/components/domain/dashboard/dashboard-views";
+import { buildDashboardData, buildSimplifiedDashboardData } from "@/components/domain/dashboard/dashboard-data";
+import { Dashboard } from "@/components/domain/dashboard/dashboard-views";
 
-export const metadata = { title: "Dashboard" };
 
 const GREETING: Record<string, string> = {
   admin: "Visão geral da imobiliária",
@@ -22,26 +15,19 @@ const GREETING: Record<string, string> = {
   viewer: "Resumo da operação",
 };
 
+
 export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) redirect(routes.login);
   const ctx = { tenancyId: user.tenancyId, userId: user.id };
-  const data = await buildDashboardData(ctx);
+  // Use the simplified dashboard data for all users except admin and manager
+  const isSimplifiedMode = !(user.role === "admin" || user.role === "manager");
+  const data = isSimplifiedMode ? await buildSimplifiedDashboardData(ctx) : await buildDashboardData(ctx);
 
   return (
     <div className="space-y-5">
       <PageHeader title={`Olá, ${user.displayName.split(" ")[0]}`} description={GREETING[user.role]} />
-      {user.role === "admin" || user.role === "manager" ? (
-        <AdminDashboard data={data} />
-      ) : user.role === "broker" ? (
-        <BrokerDashboard data={data} />
-      ) : user.role === "finance" ? (
-        <FinanceDashboard data={data} />
-      ) : user.role === "condo_admin" ? (
-        <CondoDashboard data={data} />
-      ) : (
-        <ViewerDashboard data={data} />
-      )}
+      <Dashboard data={data} isSimplifiedMode={isSimplifiedMode} />
     </div>
   );
 }
