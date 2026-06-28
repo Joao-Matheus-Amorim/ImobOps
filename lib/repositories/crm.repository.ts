@@ -22,6 +22,10 @@ export const crmRepository = {
     return leads.create(ctx, data);
   },
 
+  updateLead(ctx: RepoContext, id: string, patch: Partial<CrmLead>): Promise<CrmLead | null> {
+    return leads.update(ctx, id, patch);
+  },
+
   assignLead(ctx: RepoContext, id: string, userId: string): Promise<CrmLead | null> {
     return leads.update(ctx, id, { assignedToUserId: userId });
   },
@@ -50,6 +54,10 @@ export const crmRepository = {
     data: Omit<CrmActivity, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
   ): Promise<CrmActivity> {
     return activities.create(ctx, data);
+  },
+
+  updateActivity(ctx: RepoContext, id: string, patch: Partial<CrmActivity>): Promise<CrmActivity | null> {
+    return activities.update(ctx, id, patch);
   },
 
   async scheduleVisit(

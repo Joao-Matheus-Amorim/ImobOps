@@ -13,10 +13,10 @@ import {
 
 const bodySchema = z.object({
   kind: z.enum(["pf", "pj"]),
-  name: z.string().min(1, "Informe o nome."),
+  name: z.string().trim().refine((value) => value.split(/\s+/).filter(Boolean).length >= 2, "Informe nome e sobrenome."),
   document: z.string().trim().min(1).nullable().optional(),
   email: z.string().trim().email().nullable().optional(),
-  phone: z.string().trim().min(1).nullable().optional(),
+  phone: z.string().trim().min(1, "Informe o telefone."),
   whatsapp: z.string().trim().min(1).nullable().optional(),
   address: z.string().trim().min(1).nullable().optional(),
   tags: z.array(z.string()).default([]),

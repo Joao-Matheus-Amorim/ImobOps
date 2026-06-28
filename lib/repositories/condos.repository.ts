@@ -169,6 +169,17 @@ export const condosRepository = {
     return rows.sort((a, b) => a.date.localeCompare(b.date));
   },
 
+  createMeeting(
+    ctx: RepoContext,
+    data: Omit<CondoMeeting, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
+  ): Promise<CondoMeeting> {
+    return meetings.create(ctx, data);
+  },
+
+  updateMeeting(ctx: RepoContext, id: string, patch: Partial<CondoMeeting>): Promise<CondoMeeting | null> {
+    return meetings.update(ctx, id, patch);
+  },
+
   async upcomingMeetings(ctx: RepoContext): Promise<CondoMeeting[]> {
     const today = new Date().toISOString().slice(0, 10);
     return (await this.listMeetings(ctx)).filter((m) => m.date >= today);

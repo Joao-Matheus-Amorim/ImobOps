@@ -32,6 +32,21 @@ enum MessageSender {
   bot
 }
 
+enum AutomationStatus {
+  active
+  paused
+
+  @@map("automation_status_t")
+}
+
+enum AutomationRunStatus {
+  success
+  error
+  skipped
+
+  @@map("automation_run_status_t")
+}
+
 model WhatsappConversation {
   id                   String                @id @db.Uuid
   tenancyId            String                @map("tenancy_id") @db.Uuid
@@ -76,4 +91,51 @@ model WhatsappMessage {
   @@index([conversationId], map: "idx_messages_conversation")
   @@index([externalId], map: "idx_messages_external_id")
   @@map("whatsapp_messages")
+}
+
+model AutomationRule {
+  id          String           @id @default(uuid()) @db.Uuid
+  tenancyId   String           @map("tenancy_id") @db.Uuid
+  name        String
+  description String?
+  status      AutomationStatus @default(active)
+  timezone    String           @default("America/Sao_Paulo")
+  trigger     Json
+  action      Json
+  nextRunAt   DateTime?        @map("next_run_at") @db.Timestamptz(6)
+  lastRunAt   DateTime?        @map("last_run_at") @db.Timestamptz(6)
+  createdAt   DateTime         @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime         @map("updated_at") @default(now()) @updatedAt @db.Timestamptz(6)
+  createdBy   String?          @map("created_by") @db.Uuid
+
+  runs AutomationRun[]
+
+  @@index([tenancyId], map: "idx_automation_rules_tenancy")
+  @@index([tenancyId, status, nextRunAt], map: "idx_automation_rules_due")
+  @@map("automation_rules")
+}
+
+model AutomationRun {
+  id             String              @id @default(uuid()) @db.Uuid
+  tenancyId      String              @map("tenancy_id") @db.Uuid
+  ruleId         String              @map("rule_id") @db.Uuid
+  scheduledFor   DateTime            @map("scheduled_for") @db.Timestamptz(6)
+  startedAt      DateTime            @map("started_at") @default(now()) @db.Timestamptz(6)
+  finishedAt     DateTime?           @map("finished_at") @db.Timestamptz(6)
+  status         AutomationRunStatus @default(skipped)
+  idempotencyKey String              @map("idempotency_key")
+  actionKind     String              @map("action_kind")
+  payload        Json                @default("{}")
+  result         Json?
+  error          String?
+  createdAt      DateTime            @map("created_at") @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime            @map("updated_at") @default(now()) @updatedAt @db.Timestamptz(6)
+  createdBy      String?             @map("created_by") @db.Uuid
+
+  rule AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenancyId, idempotencyKey], map: "uq_automation_runs_idempotency")
+  @@index([tenancyId], map: "idx_automation_runs_tenancy")
+  @@index([ruleId, scheduledFor], map: "idx_automation_runs_rule")
+  @@map("automation_runs")
 }

@@ -59,6 +59,11 @@ export const billingRepository = {
     return c ? withEffectiveStatus(c) : null;
   },
 
+  async updateCharge(ctx: RepoContext, id: string, patch: Partial<Charge>): Promise<ChargeView | null> {
+    const updated = await charges.update(ctx, id, patch);
+    return updated ? withEffectiveStatus(updated) : null;
+  },
+
   async forInstallment(ctx: RepoContext, installmentId: string): Promise<ChargeView | null> {
     const list = await charges.list(
       ctx,

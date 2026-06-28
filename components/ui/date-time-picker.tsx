@@ -9,16 +9,10 @@ import { cn } from "@/lib/utils";
 type PickerMode = "date" | "datetime";
 
 const WEEKDAYS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
-const TIME_OPTIONS = [
-  "08:00",
-  "09:00",
-  "10:00",
-  "11:00",
-  "14:00",
-  "15:00",
-  "16:00",
-  "17:00",
-] as const;
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const minutes = index * 30;
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+});
 
 function parseDateOnly(value: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -293,7 +287,8 @@ export function DateTimePicker({
                 <Clock3 className="size-3.5" />
                 Horario
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="max-h-44 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                <div className="grid grid-cols-4 gap-2">
                 {TIME_OPTIONS.map((time) => (
                   <Button
                     key={time}
@@ -306,6 +301,7 @@ export function DateTimePicker({
                     {time}
                   </Button>
                 ))}
+                </div>
               </div>
             </div>
           ) : null}

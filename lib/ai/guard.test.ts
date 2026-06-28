@@ -40,6 +40,7 @@ describe("registry sanity", () => {
       "create_condo", "add_unit", "generate_condo_fees", "mark_condo_fee_paid", "register_condo_expense", "apportion_expense",
       "create_lead", "assign_lead", "move_lead_stage", "log_activity", "schedule_visit",
       "send_whatsapp_message", "send_whatsapp_template", "search_conversations",
+      "create_automation_rule",
     ];
     for (const name of required) {
       expect(getTool(name), `tool ${name} ausente`).toBeDefined();

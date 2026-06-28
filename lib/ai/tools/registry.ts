@@ -9,6 +9,7 @@ import { condoTools } from "./condos.tools";
 import { crmTools } from "./crm.tools";
 import { whatsappTools } from "./whatsapp.tools";
 import { financeTools } from "./finance.tools";
+import { automationTools } from "./automation.tools";
 
 export const ALL_TOOLS: ToolDefinition[] = [
   ...clientTools,
@@ -19,6 +20,7 @@ export const ALL_TOOLS: ToolDefinition[] = [
   ...crmTools,
   ...whatsappTools,
   ...financeTools,
+  ...automationTools,
 ];
 
 const BY_NAME = new Map(ALL_TOOLS.map((t) => [t.name, t]));

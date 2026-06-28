@@ -8,6 +8,7 @@ import { crmRepository } from "./crm.repository";
 import { billingRepository } from "./billing.repository";
 import { rentalsRepository } from "./rentals.repository";
 import { condosRepository } from "./condos.repository";
+import { automationRepository } from "./automation.repository";
 
 const events = new Collection<CalendarEvent>("calendarEvents", "calendar_events");
 
@@ -19,7 +20,7 @@ export interface UnifiedEvent {
   title: string;
   startsAt: string; // ISO
   tone: CalendarTone;
-  source: "manual" | "visit" | "charge" | "contract" | "meeting";
+  source: "manual" | "visit" | "charge" | "contract" | "meeting" | "automation";
   href?: string;
 }
 
@@ -44,13 +45,14 @@ export const calendarRepository = {
   // --- Unified feed: manual + operational, normalized ---
 
   async listUnified(ctx: RepoContext): Promise<UnifiedEvent[]> {
-    const [manual, activities, charges, rentals, condos, meetings] = await Promise.all([
+    const [manual, activities, charges, rentals, condos, meetings, automations] = await Promise.all([
       events.list(ctx),
       crmRepository.listActivities(ctx),
       billingRepository.list(ctx),
       rentalsRepository.list(ctx),
       condosRepository.list(ctx).catch(() => []),
       condosRepository.listMeetings(ctx).catch(() => []),
+      automationRepository.listRules(ctx).catch(() => []),
     ]);
     const condoName = new Map(condos.map((c) => [c.id, c.name]));
 
@@ -99,6 +101,19 @@ export const calendarRepository = {
         tone: "meeting",
         source: "meeting",
         href: `/condos/${m.condoId}`,
+      });
+    }
+
+    // Automation rules show up as operational tasks at their next execution time.
+    for (const rule of automations) {
+      if (!rule.nextRunAt) continue;
+      out.push({
+        id: `a-${rule.id}`,
+        title: `Automação: ${rule.name}`,
+        startsAt: rule.nextRunAt,
+        tone: "task",
+        source: "automation",
+        href: `/calendar?automation=${rule.id}`,
       });
     }
 
