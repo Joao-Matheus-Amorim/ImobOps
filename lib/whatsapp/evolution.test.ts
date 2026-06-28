@@ -253,9 +253,6 @@ describe("EvolutionAdapter com fetch mockado (API configurada)", () => {
     expect(state.state).toBe("open");
 
     const connectCalls = calls.filter((c) => c.includes("/instance/connect/")).length;
-    const createCalls = calls.filter((c) => c.includes("/instance/create")).length;
     expect(connectCalls).toBeGreaterThanOrEqual(1);
-    // connectExistingInstance is called; if first fails, createInstance + connectExistingInstance
-    // The first connect call fails (404), then createInstance succeeds, then connect again
   });
 });
