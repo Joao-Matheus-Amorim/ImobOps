@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+const hasSupabase = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+);
+
+test.skip(!hasSupabase, "Supabase not configured — cannot authenticate");
+
 test.describe("broker permissions", () => {
   test.use({ storageState: "playwright/.auth/broker.json" });
 

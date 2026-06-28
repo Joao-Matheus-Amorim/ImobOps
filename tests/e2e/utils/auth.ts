@@ -18,16 +18,21 @@ export async function loginAs(page: Page, role: string) {
   const def = roleDefaults[role];
   if (!def) throw new Error(`Unknown role: ${role}`);
 
+  const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  if (!hasSupabase) return; // skip login — Supabase not available
+
   await page.goto("/login");
 
-  const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   const email = process.env[def.emailVar] ?? def.fallbackEmail;
   const password = process.env[def.passVar] ?? "ImobOpsE2E!123456";
 
-  if (hasSupabase && (!process.env[def.emailVar] || !process.env[def.passVar]) && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error(
-      `E2E real requer ${def.emailVar}/${def.passVar} ou SUPABASE_SERVICE_ROLE_KEY para criar o usuário automaticamente.`,
-    );
+  if (!process.env[def.emailVar] || !process.env[def.passVar]) {
+    const needsServiceKey = !process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (needsServiceKey) {
+      throw new Error(
+        `E2E real requer ${def.emailVar}/${def.passVar} ou SUPABASE_SERVICE_ROLE_KEY para criar o usuário automaticamente.`,
+      );
+    }
   }
 
   await page.getByLabel("E-mail").fill(email);

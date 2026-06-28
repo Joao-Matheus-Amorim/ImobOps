@@ -1,7 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { track, cleanupAll } from "../utils/cleanup";
 
+const hasSupabase = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+);
+
 const TAG = `[E2E ${Date.now()}]`;
+
+test.skip(!hasSupabase, "Supabase not configured — cannot authenticate");
 
 test.describe.configure({ mode: "serial" });
 

@@ -79,6 +79,7 @@ export default defineConfig({
     },
     {
       name: "a11y-login",
+      testMatch: "**/accessibility/**",
       use: { ...devices["Desktop Chrome"] },
     },
   ],

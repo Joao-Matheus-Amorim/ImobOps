@@ -1,7 +1,7 @@
 import type { BuiltReport, ReportValue } from "./builders";
 import type { ReportFormat } from "./definitions";
 import ExcelJS from "exceljs";
-import PDFDocument from "pdfkit";
+import PDFDocument from "pdfkit/js/pdfkit.standalone";
 
 function stringify(value: ReportValue): string {
   if (value === null || value === undefined) return "";
