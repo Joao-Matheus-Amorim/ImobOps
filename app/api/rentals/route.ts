@@ -78,35 +78,43 @@ export async function POST(request: Request) {
     }
   }
 
-  const contract = await rentalsRepository.create(ctx, {
-    propertyId: d.propertyId,
-    landlordClientId: property.ownerClientId,
-    tenantClientId: d.tenantClientId,
-    guarantorClientId: d.guarantorClientId ?? null,
-    monthlyValue: d.monthlyValue,
-    dueDay: d.dueDay,
-    startDate: d.startDate,
-    endDate: addMonths(d.startDate, d.durationMonths),
-    durationMonths: d.durationMonths,
-    indexType: d.indexType,
-    adminFeePct: d.adminFeePct,
-    lateFeePct: d.lateFeePct,
-    lateInterestPctMonth: d.lateInterestPctMonth,
-    status: "ativo",
-  });
+  try {
+    const contract = await rentalsRepository.create(ctx, {
+      propertyId: d.propertyId,
+      landlordClientId: property.ownerClientId,
+      tenantClientId: d.tenantClientId,
+      guarantorClientId: d.guarantorClientId ?? null,
+      monthlyValue: d.monthlyValue,
+      dueDay: d.dueDay,
+      startDate: d.startDate,
+      endDate: addMonths(d.startDate, d.durationMonths),
+      durationMonths: d.durationMonths,
+      indexType: d.indexType,
+      adminFeePct: d.adminFeePct,
+      lateFeePct: d.lateFeePct,
+      lateInterestPctMonth: d.lateInterestPctMonth,
+      status: "ativo",
+    });
 
-  // Generate the recurring rent installments for the contract.
-  const installments = await rentalsRepository.generateInstallments(ctx, contract.id);
-  await propertiesRepository.changeStatus(ctx, property.id, "alugado");
+    // Generate the recurring rent installments for the contract.
+    const installments = await rentalsRepository.generateInstallments(ctx, contract.id);
+    await propertiesRepository.changeStatus(ctx, property.id, "alugado");
 
-  await auditRepository.log(ctx, {
-    userId: ctx.userId,
-    action: "create",
-    entityType: "rental_contract",
-    entityId: contract.id,
-    payloadBefore: null,
-    payloadAfter: contract as unknown as Record<string, unknown>,
-  });
+    auditRepository.log(ctx, {
+      userId: ctx.userId,
+      action: "create",
+      entityType: "rental_contract",
+      entityId: contract.id,
+      payloadBefore: null,
+      payloadAfter: contract as unknown as Record<string, unknown>,
+    }).catch((error) => {
+      console.error("rentals.audit_failed", error);
+    });
 
-  return NextResponse.json({ ok: true, contract, installments: installments.length });
+    return NextResponse.json({ ok: true, contract, installments: installments.length });
+  } catch (error) {
+    console.error("rentals.create_failed", error);
+    const message = error instanceof Error ? error.message : "Erro inesperado ao criar locação.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
