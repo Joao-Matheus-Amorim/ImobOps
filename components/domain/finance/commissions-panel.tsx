@@ -1,5 +1,6 @@
 "use client";
 
+import { S } from "@/lib/status";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
@@ -71,7 +72,7 @@ export function CommissionsPanel({ rows }: { rows: CommissionRow[] }) {
               <div className="flex items-center gap-3">
                 <span className="font-semibold">{row.amountLabel}</span>
                 <StatusBadge status={row.status} />
-                {row.status !== "paga" ? (
+                {row.status !== S.PAGA ? (
                   <Button
                     size="sm"
                     variant="outline"

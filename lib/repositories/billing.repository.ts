@@ -3,6 +3,7 @@
 // payments idempotently — paying a charge marks its installment paid and triggers
 // the repasse. Mock-store backed today; same interface targets Supabase later.
 
+import { S } from "@/lib/status";
 import type {
   Charge,
   ChargeMethod,
@@ -67,7 +68,7 @@ export const billingRepository = {
   async forInstallment(ctx: RepoContext, installmentId: string): Promise<ChargeView | null> {
     const list = await charges.list(
       ctx,
-      (x) => x.sourceId === installmentId && x.status !== "cancelada",
+      (x) => x.sourceId === installmentId && x.status !== S.CANCELADA,
     );
     const c = list.at(0);
     return c ? withEffectiveStatus(c) : null;
@@ -78,7 +79,7 @@ export const billingRepository = {
   async lateBreakdownForInstallment(ctx: RepoContext, installmentId: string) {
     const installmentList = await rentalsRepository.listInstallments(ctx);
     const installment = installmentList.find((i) => i.id === installmentId);
-    if (!installment || installment.status === "pago") return null;
+    if (!installment || installment.status === S.PAGO) return null;
     const contract = await rentalsRepository.get(ctx, installment.contractId);
     const b = computeLateCharge(
       installment.amount,
@@ -100,7 +101,7 @@ export const billingRepository = {
     method: ChargeMethod,
   ): Promise<ChargeView | null> {
     const existing = await this.forInstallment(ctx, installmentId);
-    if (existing && existing.status !== "falha") return existing;
+    if (existing && existing.status !== S.FALHA) return existing;
 
     const installmentList = await rentalsRepository.listInstallments(ctx);
     const installment = installmentList.find((i) => i.id === installmentId);
@@ -138,7 +139,7 @@ export const billingRepository = {
     });
 
     // Link the charge to the installment (1:1 active charge).
-    if (charge.status !== "falha") {
+    if (charge.status !== S.FALHA) {
       await rentalsRepository.setInstallmentCharge(ctx, installment.id, charge.id);
     }
 
@@ -148,7 +149,7 @@ export const billingRepository = {
   async forCondoFee(ctx: RepoContext, feeId: string): Promise<ChargeView | null> {
     const list = await charges.list(
       ctx,
-      (x) => x.sourceId === feeId && x.status !== "cancelada",
+      (x) => x.sourceId === feeId && x.status !== S.CANCELADA,
     );
     const c = list.at(0);
     return c ? withEffectiveStatus(c) : null;
@@ -162,7 +163,7 @@ export const billingRepository = {
     method: ChargeMethod,
   ): Promise<ChargeView | null> {
     const existing = await this.forCondoFee(ctx, feeId);
-    if (existing && existing.status !== "falha") return existing;
+    if (existing && existing.status !== S.FALHA) return existing;
 
     const fee = await condosRepository.getFee(ctx, feeId);
     if (!fee) return null;
@@ -182,7 +183,7 @@ export const billingRepository = {
       dueDate: fee.dueDate,
     });
 
-    if (charge.status !== "falha") {
+    if (charge.status !== S.FALHA) {
       await condosRepository.setFeeCharge(ctx, fee.id, charge.id);
     }
     return charge;
@@ -215,7 +216,7 @@ export const billingRepository = {
     });
   },
 
-  // Shared emission: calls the gateway and persists the charge (or a "falha"
+  // Shared emission: calls the gateway and persists the charge (or a S.FALHA
   // record if the gateway rejects). Returns the charge with effective status.
   async createChargeRecord(
     ctx: RepoContext,
@@ -265,7 +266,7 @@ export const billingRepository = {
       return withEffectiveStatus(
         await charges.create(ctx, {
           ...base,
-          status: "pendente",
+          status: S.PENDENTE,
           externalId: result.externalId,
           boletoUrl: result.boletoUrl,
           pixPayload: result.pixPayload,
@@ -275,7 +276,7 @@ export const billingRepository = {
       return withEffectiveStatus(
         await charges.create(ctx, {
           ...base,
-          status: "falha",
+          status: S.FALHA,
           externalId: null,
           boletoUrl: null,
           pixPayload: null,
@@ -297,10 +298,10 @@ export const billingRepository = {
     const list = await charges.list(ctx, (c) => c.externalId === externalId);
     const charge = list.at(0);
     if (!charge) return null;
-    if (charge.status === "paga") return withEffectiveStatus(charge); // idempotent
+    if (charge.status === S.PAGA) return withEffectiveStatus(charge); // idempotent
 
     const updated = await charges.update(ctx, charge.id, {
-      status: "paga",
+      status: S.PAGA,
       paidAt: paidAtIso,
       paidAmount: round2(paidAmount),
     });

@@ -1,6 +1,7 @@
 // Calendar repository. Owns manual events (calendar_events table) and aggregates
 // operational events (CRM visits, charge due dates, contract start/end, condo
 // meetings) into one unified feed for the calendar UI.
+import { S } from "@/lib/status";
 import type { CalendarEvent, CalendarTone } from "@/lib/types/domain";
 import { type RepoContext } from "./base";
 import { Collection } from "./collection";
@@ -76,7 +77,7 @@ export const calendarRepository = {
 
     // Charge due dates (boleto/PIX).
     for (const c of charges) {
-      if (c.status === "paga" || c.status === "cancelada") continue;
+      if (c.status === S.PAGA || c.status === S.CANCELADA) continue;
       out.push({
         id: `c-${c.id}`,
         title: `Vencimento: ${c.customerName ?? c.description ?? "cobrança"}`,

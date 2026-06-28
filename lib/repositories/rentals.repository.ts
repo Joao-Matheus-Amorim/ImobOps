@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type {
   RentalContract,
   Installment,
@@ -64,7 +65,7 @@ export const rentalsRepository = {
     receiptDocumentId?: string,
   ): Promise<Installment | null> {
     return installments.update(ctx, installmentId, {
-      status: "pago" as InstallmentStatus,
+      status: S.PAGO as InstallmentStatus,
       paidAt: new Date().toISOString(),
       paidAmount,
       receiptDocumentId: receiptDocumentId ?? null,

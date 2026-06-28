@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type {
   SaleListing,
   Proposal,
@@ -50,7 +51,7 @@ export const salesRepository = {
     data: Omit<Proposal, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
   ): Promise<Proposal> {
     const p = await proposals.create(ctx, data);
-    await listings.update(ctx, p.listingId, { status: "sob_proposta" });
+    await listings.update(ctx, p.listingId, { status: S.SOB_PROPOSTA });
     return p;
   },
 
@@ -80,7 +81,7 @@ export const salesRepository = {
     data: Omit<SaleContract, "id" | "tenancyId" | "createdAt" | "updatedAt" | "createdBy">,
   ): Promise<SaleContract> {
     const contract = await saleContracts.create(ctx, data);
-    await listings.update(ctx, contract.listingId, { status: "vendida" });
+    await listings.update(ctx, contract.listingId, { status: S.VENDIDA });
     return contract;
   },
 };

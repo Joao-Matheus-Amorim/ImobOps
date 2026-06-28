@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -129,7 +130,7 @@ export async function POST(request: Request) {
     storagePath,
     mime: file.type,
     size: file.size,
-    status: "pendente",
+    status: S.PENDENTE,
     expiresAt,
     uploadedBy: user.id,
     validatedBy: null,

@@ -1,5 +1,6 @@
 "use client";
 
+import { S } from "@/lib/status";
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, X } from "lucide-react";
@@ -9,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import type { ListingStatus, SaleListing } from "@/lib/types/domain";
 
 const STATUS_OPTIONS: { value: ListingStatus; label: string }[] = [
-  { value: "ativa", label: "Ativa" },
-  { value: "sob_proposta", label: "Sob proposta" },
-  { value: "vendida", label: "Vendida" },
-  { value: "cancelada", label: "Cancelada" },
+  { value: S.ATIVA, label: S.ATIVA },
+  { value: S.SOB_PROPOSTA, label: "Sob proposta" },
+  { value: S.VENDIDA, label: S.VENDIDA },
+  { value: S.CANCELADA, label: S.CANCELADA },
 ];
 
 // Edits an existing sale listing (price, commission, status). The property a

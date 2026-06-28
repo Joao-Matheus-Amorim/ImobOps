@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import { z } from "zod";
 import { defineTool, repoCtx } from "./helpers";
 import { automationRepository } from "@/lib/repositories/automation.repository";
@@ -26,7 +27,7 @@ export const automationTools = [
       return automationRepository.createRule(repoCtx(ctx), {
         name: params.name,
         description: params.description ?? null,
-        status: "active",
+        status: S.ACTIVE,
         trigger,
         action,
       });

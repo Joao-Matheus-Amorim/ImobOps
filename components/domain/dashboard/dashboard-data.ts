@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type { FunnelStage } from "@/lib/types/domain";
 import { FUNNEL_ORDER } from "@/lib/types/domain";
 import type { RepoContext } from "@/lib/repositories/base";
@@ -117,11 +118,11 @@ export async function buildDashboardData(ctx: RepoContext): Promise<DashboardDat
   const upcomingMeetings = upcoming.length;
 
   const chargesTodayCount = charges.filter(
-    (c) => c.effectiveStatus === "pendente" && c.dueDate === today,
+    (c) => c.effectiveStatus === S.PENDENTE && c.dueDate === today,
   ).length;
 
   const overdueChargesCount = charges.filter(
-    (c) => c.effectiveStatus === "vencida",
+    (c) => c.effectiveStatus === S.VENCIDA,
   ).length;
 
   const unreadConversationsCount = conversations.filter(
@@ -129,7 +130,7 @@ export async function buildDashboardData(ctx: RepoContext): Promise<DashboardDat
   ).length;
 
   const pendingRepassesCount = repasseList.filter(
-    (r) => r.status === "pendente",
+    (r) => r.status === S.PENDENTE,
   ).length;
 
   const expiringRentalsCount = rentals.filter(

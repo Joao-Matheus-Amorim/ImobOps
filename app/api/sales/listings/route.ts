@@ -1,5 +1,6 @@
 // Create a sale listing for an existing property. Body: { propertyId,
 // askingPrice, commissionPct }.
+import { S } from "@/lib/status";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { salesRepository } from "@/lib/repositories/sales.repository";
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
   const hasOpenListing = existingListings.some(
     (listing) =>
       listing.propertyId === property.id &&
-      (listing.status === "ativa" || listing.status === "sob_proposta"),
+      (listing.status === S.ATIVA || listing.status === S.SOB_PROPOSTA),
   );
   if (hasOpenListing) {
     return NextResponse.json({ error: "Este imóvel já possui uma listagem de venda ativa." }, { status: 400 });
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
   const listing = await salesRepository.createListing(ctx, {
     propertyId: parsed.data.propertyId,
     askingPrice: parsed.data.askingPrice,
-    status: "ativa",
+    status: S.ATIVA,
     commissionPct: parsed.data.commissionPct,
   });
 

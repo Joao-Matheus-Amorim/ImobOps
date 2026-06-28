@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type {
   Condo,
   Unit,
@@ -109,7 +110,7 @@ export const condosRepository = {
   },
 
   markFeePaid(ctx: RepoContext, id: string): Promise<CondoFee | null> {
-    return fees.update(ctx, id, { status: "pago", paidAt: new Date().toISOString() });
+    return fees.update(ctx, id, { status: S.PAGO, paidAt: new Date().toISOString() });
   },
 
   getFee(ctx: RepoContext, id: string): Promise<CondoFee | null> {

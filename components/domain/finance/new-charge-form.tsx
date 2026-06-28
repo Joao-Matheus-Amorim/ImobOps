@@ -1,5 +1,6 @@
 "use client";
 
+import { S } from "@/lib/status";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Loader2, Send, Copy, FileText, X } from "lucide-react";
@@ -70,7 +71,7 @@ export function NewChargeForm({
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setError(data?.error ?? `Falha ao emitir (${res.status}).`);
-      } else if (data?.charge?.status === "falha") {
+      } else if (data?.charge?.status === S.FALHA) {
         setError("O gateway recusou a emissão. Veja o terminal do servidor.");
       } else {
         setCreated(data.charge);

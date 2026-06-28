@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type { ReactNode } from "react";
 import {
   CheckCircle2,
@@ -60,7 +61,7 @@ export default async function AdminPage() {
         />
         <AdminStat
           label="Canais"
-          value={isWhatsAppConfigured() ? "online" : "pendente"}
+          value={isWhatsAppConfigured() ? "online" : S.PENDENTE}
           helper={isSupabaseConfigured() ? "db real" : "mock store"}
           icon={<MessageCircleMore className="size-5" />}
         />
@@ -84,7 +85,7 @@ export default async function AdminPage() {
                   </div>
                 </div>
                 <Badge variant={check.ready ? "success" : "warning"}>
-                  {check.ready ? "Pronto" : "Pendente"}
+                  {check.ready ? "Pronto" : S.PENDENTE}
                 </Badge>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -106,7 +107,7 @@ export default async function AdminPage() {
         <CardContent className="grid grid-cols-1 gap-2 text-sm md:grid-cols-3">
           <Integration label="Supabase" on={isSupabaseConfigured()} offText="Modo mock" />
           <Integration label={`IA (${aiProvider()})`} on={aiProvider() !== "mock"} offText="Fallback local" />
-          <Integration label="WhatsApp" on={isWhatsAppConfigured()} offText="Pendente" />
+          <Integration label="WhatsApp" on={isWhatsAppConfigured()} offText={S.PENDENTE} />
         </CardContent>
       </Card>
 

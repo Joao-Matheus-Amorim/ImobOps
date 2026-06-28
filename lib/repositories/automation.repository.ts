@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type { AutomationRule, AutomationRun, AutomationStatus } from "@/lib/types/domain";
 import type { RepoContext } from "./base";
 import { Collection } from "./collection";
@@ -23,7 +24,7 @@ export const automationRepository = {
     return rules.create(ctx, {
       ...data,
       timezone: "America/Sao_Paulo",
-      nextRunAt: data.status === "active" ? nextRunAt(data.trigger) : null,
+      nextRunAt: data.status === S.ACTIVE ? nextRunAt(data.trigger) : null,
       lastRunAt: null,
     });
   },
@@ -36,7 +37,7 @@ export const automationRepository = {
     return rules.update(ctx, id, {
       ...patch,
       timezone: "America/Sao_Paulo",
-      nextRunAt: shouldRecompute && merged.status === "active" ? nextRunAt(merged.trigger) : patch.nextRunAt,
+      nextRunAt: shouldRecompute && merged.status === S.ACTIVE ? nextRunAt(merged.trigger) : patch.nextRunAt,
     });
   },
 
@@ -45,12 +46,12 @@ export const automationRepository = {
     if (!current) return null;
     return rules.update(ctx, id, {
       status,
-      nextRunAt: status === "active" ? nextRunAt(current.trigger) : null,
+      nextRunAt: status === S.ACTIVE ? nextRunAt(current.trigger) : null,
     });
   },
 
   async listDue(ctx: RepoContext, now = new Date()): Promise<AutomationRule[]> {
-    const rows = await rules.list(ctx, (rule) => rule.status === "active" && Boolean(rule.nextRunAt) && rule.nextRunAt! <= now.toISOString());
+    const rows = await rules.list(ctx, (rule) => rule.status === S.ACTIVE && Boolean(rule.nextRunAt) && rule.nextRunAt! <= now.toISOString());
     return rows.sort((a, b) => (a.nextRunAt ?? "").localeCompare(b.nextRunAt ?? ""));
   },
 
@@ -58,7 +59,7 @@ export const automationRepository = {
     await rules.update(ctx, rule.id, {
       lastRunAt: new Date().toISOString(),
       nextRunAt: rule.trigger.kind === "once" ? null : nextRunAt(rule.trigger, new Date(Date.now() + 1000)),
-      status: rule.trigger.kind === "once" ? "paused" : rule.status,
+      status: rule.trigger.kind === "once" ? S.PAUSED : rule.status,
     });
   },
 

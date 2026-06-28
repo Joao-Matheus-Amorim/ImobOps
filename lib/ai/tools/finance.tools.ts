@@ -1,6 +1,7 @@
 // AI tools for billing: create a standalone charge (boleto/PIX) for a client and
 // send an existing charge to the client over WhatsApp. Both are write tools, so
 // the chat flow shows a dry-run preview and requires confirmation before running.
+import { S } from "@/lib/status";
 import { z } from "zod";
 import { defineTool, repoCtx } from "./helpers";
 import { billingRepository } from "@/lib/repositories/billing.repository";
@@ -19,7 +20,7 @@ export const financeTools = [
     action: "view",
     schema: z.object({
       clientId: z.string().optional(),
-      status: z.enum(["pendente", "paga", "vencida", "cancelada", "falha"]).optional(),
+      status: z.enum([S.PENDENTE, S.PAGA, S.VENCIDA, S.CANCELADA, S.FALHA]).optional(),
       onlyOpen: z.boolean().optional(),
     }),
     run: async (p, ctx) => {
@@ -27,7 +28,7 @@ export const financeTools = [
       return all
         .filter((c) => (p.clientId ? c.clientId === p.clientId : true))
         .filter((c) => (p.status ? c.effectiveStatus === p.status : true))
-        .filter((c) => (p.onlyOpen ? c.effectiveStatus !== "paga" && c.effectiveStatus !== "cancelada" : true))
+        .filter((c) => (p.onlyOpen ? c.effectiveStatus !== S.PAGA && c.effectiveStatus !== S.CANCELADA : true))
         .map((c) => ({
           id: c.id,
           clientId: c.clientId,

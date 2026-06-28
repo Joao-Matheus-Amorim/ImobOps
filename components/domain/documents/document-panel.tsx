@@ -1,5 +1,6 @@
 "use client";
 
+import { S } from "@/lib/status";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CheckCircle2, Download, FileText, ShieldCheck, Trash2, Upload, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -200,14 +201,14 @@ export function DocumentPanel({
                   </Button>
                   {canValidate ? (
                     <>
-                      <Button size="sm" variant="outline" onClick={() => patchStatus(document.id, "validado")} disabled={isPending}>
+                      <Button size="sm" variant="outline" onClick={() => patchStatus(document.id, S.VALIDADO)} disabled={isPending}>
                         <CheckCircle2 className="size-4" /> Validar
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => patchStatus(document.id, "rejeitado")} disabled={isPending}>
+                      <Button size="sm" variant="outline" onClick={() => patchStatus(document.id, S.REJEITADO)} disabled={isPending}>
                         <XCircle className="size-4" /> Rejeitar
                       </Button>
                     </>
-                  ) : document.status === "validado" ? (
+                  ) : document.status === S.VALIDADO ? (
                     <span className="inline-flex items-center gap-1 text-xs text-emerald-400">
                       <ShieldCheck className="size-4" /> validado
                     </span>

@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type { Repasse, Commission } from "@/lib/types/domain";
 import { type RepoContext } from "./base";
 import { Collection } from "./collection";
@@ -32,7 +33,7 @@ export const financeRepository = {
     if (!contract) return null;
     const installmentList = await rentalsRepository.listInstallments(ctx, contractId);
     const installment = installmentList.find(
-      (i) => i.referenceMonth === referenceMonth && i.status === "pago",
+      (i) => i.referenceMonth === referenceMonth && i.status === S.PAGO,
     );
     if (!installment) return null;
 
@@ -48,7 +49,7 @@ export const financeRepository = {
   },
 
   markRepassePaid(ctx: RepoContext, id: string): Promise<Repasse | null> {
-    return repasses.update(ctx, id, { status: "pago", paidAt: new Date().toISOString() });
+    return repasses.update(ctx, id, { status: S.PAGO, paidAt: new Date().toISOString() });
   },
 
   // --- Commissions ---
@@ -59,7 +60,7 @@ export const financeRepository = {
   },
 
   recordCommissionPayment(ctx: RepoContext, id: string): Promise<Commission | null> {
-    return commissions.update(ctx, id, { status: "paga", paidAt: new Date().toISOString() });
+    return commissions.update(ctx, id, { status: S.PAGA, paidAt: new Date().toISOString() });
   },
 
   createCommission(
@@ -75,18 +76,18 @@ export const financeRepository = {
     const insts = await rentalsRepository.listInstallments(ctx);
     const month = new Date().toISOString().slice(0, 7);
     const receivableThisMonth = insts
-      .filter((i) => i.referenceMonth === month && i.status !== "pago" && i.status !== "cancelado")
+      .filter((i) => i.referenceMonth === month && i.status !== S.PAGO && i.status !== S.CANCELADO)
       .reduce((s, i) => s + i.amount, 0);
     const overdueAmount = insts
       .filter((i) => i.status === "atrasado")
       .reduce((s, i) => s + i.amount, 0);
     const repasseList = await this.listRepasses(ctx);
     const pendingRepasses = repasseList
-      .filter((r) => r.status === "pendente")
+      .filter((r) => r.status === S.PENDENTE)
       .reduce((s, r) => s + r.netAmount, 0);
     const commissionList = await this.listCommissions(ctx);
     const pendingCommissions = commissionList
-      .filter((c) => c.status === "pendente")
+      .filter((c) => c.status === S.PENDENTE)
       .reduce((s, c) => s + c.amount, 0);
     return { receivableThisMonth, overdueAmount, pendingRepasses, pendingCommissions };
   },

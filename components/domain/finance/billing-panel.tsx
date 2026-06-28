@@ -1,5 +1,6 @@
 "use client";
 
+import { S } from "@/lib/status";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileText, QrCode, Check, Loader2 } from "lucide-react";
@@ -46,7 +47,7 @@ export function BillingPanel({ rows }: { rows: BillingRow[] }) {
       const data = await res.json().catch(() => null);
       if (!res.ok) {
         setError(data?.error ?? `Falha ao emitir (${res.status}).`);
-      } else if (data?.charge?.status === "falha") {
+      } else if (data?.charge?.status === S.FALHA) {
         setError("O gateway recusou a emissão. Veja o terminal do servidor.");
       }
       router.refresh();
@@ -123,7 +124,7 @@ export function BillingPanel({ rows }: { rows: BillingRow[] }) {
                         <FileText className="size-4" />
                       </a>
                     ) : null}
-                    {row.charge.effectiveStatus !== "paga" ? (
+                    {row.charge.effectiveStatus !== S.PAGA ? (
                       <Button
                         size="sm"
                         variant="outline"

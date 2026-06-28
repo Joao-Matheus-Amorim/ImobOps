@@ -1,5 +1,6 @@
 "use client";
 
+import { S } from "@/lib/status";
 import { Clock3, PlayCircle, Settings2 } from "lucide-react";
 import type { AutomationRule } from "@/lib/types/domain";
 import { Button } from "@/components/ui/button";
@@ -52,8 +53,8 @@ export function AutomationSection({
                     {rule.nextRunAt ? `${datePart(rule.nextRunAt).split("-").reverse().join("/")} ${timePart(rule.nextRunAt)}` : "Sem próxima execução"}
                   </p>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${rule.status === "active" ? "bg-emerald-500/18 text-emerald-200" : "bg-muted text-muted-foreground"}`}>
-                  {rule.status === "active" ? "Ativa" : "Pausada"}
+                <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${rule.status === S.ACTIVE ? "bg-emerald-500/18 text-emerald-200" : "bg-muted text-muted-foreground"}`}>
+                  {rule.status === S.ACTIVE ? S.ATIVA : "Pausada"}
                 </span>
               </div>
               <p className="mt-3 line-clamp-2 text-xs text-muted-foreground">
@@ -61,7 +62,7 @@ export function AutomationSection({
               </p>
               <div className="mt-4 flex gap-2">
                 <Button type="button" size="sm" variant="outline" onClick={() => onToggle(rule)} disabled={isPending}>
-                  <Clock3 className="size-3.5" /> {rule.status === "active" ? "Pausar" : "Ativar"}
+                  <Clock3 className="size-3.5" /> {rule.status === S.ACTIVE ? "Pausar" : "Ativar"}
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => onTest(rule)} disabled={isPending}>
                   <PlayCircle className="size-3.5" /> Testar

@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getPrincipal, getSessionUser } from "@/lib/session";
@@ -8,7 +9,7 @@ import { DOCUMENT_BUCKET, ENTITY_FEATURE } from "@/lib/documents/config";
 import { getDocumentStorageClient } from "@/lib/documents/storage";
 
 const patchSchema = z.object({
-  status: z.enum(["pendente", "validado", "rejeitado", "vencido"]),
+  status: z.enum([S.PENDENTE, S.VALIDADO, S.REJEITADO, S.VENCIDO]),
   rejectedReason: z.string().max(500).optional().nullable(),
 });
 
@@ -38,8 +39,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Corpo inválido." }, { status: 400 });
 
-  const validated = parsed.data.status === "validado";
-  const rejected = parsed.data.status === "rejeitado";
+  const validated = parsed.data.status === S.VALIDADO;
+  const rejected = parsed.data.status === S.REJEITADO;
   const document = await documentsRepository.updateStatus(ctx, params.id, {
     status: parsed.data.status,
     validatedBy: validated ? user.id : null,

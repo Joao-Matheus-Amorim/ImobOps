@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import { z } from "zod";
 
 export const automationTriggerSchema = z.object({
@@ -29,7 +30,7 @@ export const automationActionSchema = z.object({
 export const automationRuleInputSchema = z.object({
   name: z.string().trim().min(1, "Informe o nome da automação."),
   description: z.string().trim().nullable().optional(),
-  status: z.enum(["active", "paused"]).default("active"),
+  status: z.enum([S.ACTIVE, S.PAUSED]).default(S.ACTIVE),
   trigger: automationTriggerSchema,
   action: automationActionSchema,
 });

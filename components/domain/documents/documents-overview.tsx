@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { routes } from "@/lib/routes";
+import { S } from "@/lib/status";
 import type { DocumentRecord, DocumentStatus, EntityType } from "@/lib/types/domain";
 import { DOCUMENT_KIND_LABELS, DOCUMENT_STATUS_LABELS } from "@/lib/types/domain";
 import { formatDate } from "@/lib/utils";
@@ -47,9 +48,9 @@ function formatSize(bytes: number): string {
 }
 
 export function DocumentsOverview({ documents }: { documents: DocumentRecord[] }) {
-  const pending = documents.filter((document) => document.status === "pendente").length;
-  const rejected = documents.filter((document) => document.status === "rejeitado").length;
-  const expired = documents.filter((document) => document.status === "vencido").length;
+  const pending = documents.filter((document) => document.status === S.PENDENTE).length;
+  const rejected = documents.filter((document) => document.status === S.REJEITADO).length;
+  const expired = documents.filter((document) => document.status === S.VENCIDO).length;
 
   return (
     <div className="space-y-5">

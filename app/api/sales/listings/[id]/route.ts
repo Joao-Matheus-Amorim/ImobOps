@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { salesRepository } from "@/lib/repositories/sales.repository";
@@ -7,7 +8,7 @@ import { requireContext } from "@/lib/api-auth";
 const patchSchema = z.object({
   askingPrice: z.number().positive().optional(),
   commissionPct: z.number().min(0).max(100).optional(),
-  status: z.enum(["ativa", "sob_proposta", "vendida", "cancelada"]).optional(),
+  status: z.enum([S.ATIVA, S.SOB_PROPOSTA, S.VENDIDA, S.CANCELADA]).optional(),
 });
 
 export async function PATCH(

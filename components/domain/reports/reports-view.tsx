@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { formatBRL, formatDate } from "@/lib/utils";
 import type { BuiltReport, ReportRowData, ReportsDashboardData, ReportValue } from "@/lib/reports/builders";
-import type { ReportFormat, ReportId, ReportTab } from "@/lib/reports/definitions";
+import type { ReportFormat, ReportId, ReportTab, ReportColumn } from "@/lib/reports/definitions";
 import { REPORT_TABS } from "@/lib/reports/definitions";
 
 const TAB_REPORTS: Record<ReportTab, ReportId[]> = {
@@ -62,7 +62,7 @@ function reportById(data: ReportsDashboardData, id: ReportId): BuiltReport {
 function ExportActions({ report }: { report: BuiltReport }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {report.definition.formats.map((format) => {
+      {report.definition.formats.map((format: ReportFormat) => {
         const Icon = FORMAT_ICON[format];
         return (
           <Button key={format} asChild size="sm" variant="outline">
@@ -97,7 +97,7 @@ function ReportTable({ report, limit }: { report: BuiltReport; limit?: number })
       <table className="min-w-full divide-y divide-primary/10 text-sm">
         <thead className="bg-background/35 text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
-            {report.definition.columns.map((column) => (
+            {report.definition.columns.map((column: ReportColumn) => (
               <th key={column.key} className={`px-3 py-2 ${column.align === "right" ? "text-right" : "text-left"}`}>
                 {column.label}
               </th>
@@ -113,9 +113,9 @@ function ReportTable({ report, limit }: { report: BuiltReport; limit?: number })
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
+            rows.map((row: ReportRowData) => (
               <tr key={row.id} className="bg-background/15 transition hover:bg-primary/8">
-                {report.definition.columns.map((column) => (
+                {report.definition.columns.map((column: ReportColumn) => (
                   <td key={column.key} className={`whitespace-nowrap px-3 py-2 ${column.align === "right" ? "text-right font-medium" : "text-left"}`}>
                     {valueLabel(row.values[column.key] ?? null)}
                   </td>

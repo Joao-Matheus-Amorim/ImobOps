@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { RepoContext } from "@/lib/repositories/base";
+import { S } from "@/lib/status";
 import type { AutomationActionConfig, AutomationActionKind } from "@/lib/types/domain";
 import { clientsRepository } from "@/lib/repositories/clients.repository";
 import { propertiesRepository } from "@/lib/repositories/properties.repository";
@@ -64,24 +65,24 @@ const rentalPatch = rentalCreate.partial();
 
 const chargeStandalone = z.object({ clientId: id, amount: z.coerce.number().positive(), dueDate: z.string().min(10), method: z.enum(["boleto", "pix", "cartao"]).default("boleto"), description: z.string().optional() });
 const chargeForSource = z.object({ sourceId: id, method: z.enum(["boleto", "pix", "cartao"]).default("boleto") });
-const chargePatch = z.object({ description: nullableString, customerName: nullableString, method: z.enum(["boleto", "pix", "cartao"]).optional(), amount: z.coerce.number().positive().optional(), dueDate: z.string().min(10).optional(), status: z.enum(["pendente", "paga", "vencida", "cancelada", "falha"]).optional() });
+const chargePatch = z.object({ description: nullableString, customerName: nullableString, method: z.enum(["boleto", "pix", "cartao"]).optional(), amount: z.coerce.number().positive().optional(), dueDate: z.string().min(10).optional(), status: z.enum([S.PENDENTE, S.PAGA, S.VENCIDA, S.CANCELADA, S.FALHA]).optional() });
 
 const leadCreate = z.object({ clientId: nullableString, source: z.enum(["whatsapp", "site", "indicacao", "outros"]).default("outros"), interest: z.enum(["locacao", "venda", "condominio", "outro"]).default("outro"), assignedToUserId: nullableString, funnelStage: z.enum(["novo", "qualificado", "visita_agendada", "proposta", "fechado_ganho", "fechado_perdido"]).default("novo"), lostReason: nullableString });
 const leadPatch = leadCreate.partial();
 const activityCreate = z.object({ leadId: id, kind: z.enum(["ligacao", "visita", "whatsapp", "email", "proposta", "nota"]).default("nota"), description: nullableString, scheduledAt: nullableString, doneAt: nullableString, byUserId: nullableString });
 const scheduleVisit = z.object({ leadId: id, scheduledAt: z.string().min(1), description: z.string().min(1) });
 
-const listingCreate = z.object({ propertyId: id, askingPrice: z.coerce.number().positive(), status: z.enum(["ativa", "sob_proposta", "vendida", "cancelada"]).default("ativa"), commissionPct: z.coerce.number().min(0).default(6) });
+const listingCreate = z.object({ propertyId: id, askingPrice: z.coerce.number().positive(), status: z.enum([S.ATIVA, S.SOB_PROPOSTA, S.VENDIDA, S.CANCELADA]).default(S.ATIVA), commissionPct: z.coerce.number().min(0).default(6) });
 const listingPatch = listingCreate.partial();
 const proposalCreate = z.object({ listingId: id, buyerClientId: id, brokerUserId: id, offeredPrice: z.coerce.number().positive(), conditions: nullableString, status: z.enum(["em_analise", "contraproposta", "aceita", "recusada"]).default("em_analise"), history: z.array(z.object({ at: z.string(), by: z.enum(["buyer", "seller"]), price: z.coerce.number(), note: nullableString })).default([]) });
 const moveProposal = z.object({ proposalId: id, status: z.enum(["em_analise", "contraproposta", "aceita", "recusada"]), note: z.string().optional() });
-const saleContractCreate = z.object({ listingId: id, buyerClientId: id, sellerClientId: id, finalPrice: z.coerce.number().positive(), signedAt: nullableString, paymentTerms: nullableString, status: z.enum(["em_andamento", "fechado", "cancelado"]).default("fechado") });
+const saleContractCreate = z.object({ listingId: id, buyerClientId: id, sellerClientId: id, finalPrice: z.coerce.number().positive(), signedAt: nullableString, paymentTerms: nullableString, status: z.enum([S.EM_ANDAMENTO, S.FECHADO, S.CANCELADO]).default(S.FECHADO) });
 
 const condoCreate = z.object({ name: z.string().min(1), address: z.string().min(1), unitCount: z.coerce.number().int().min(0), managerUserId: nullableString, adminFeePct: z.coerce.number().min(0).default(10) });
 const condoPatch = condoCreate.partial();
 const unitCreate = z.object({ condoId: id, label: z.string().min(1), ownerClientId: nullableString, currentResidentClientId: nullableString, areaM2: z.coerce.number().nullable().default(null), fractionPct: z.coerce.number().min(0).default(0) });
 const condoFees = z.object({ condoId: id, referenceMonth: z.string().min(7), dueDate: z.string().min(10), amount: z.coerce.number().positive() });
-const expenseCreate = z.object({ condoId: id, referenceMonth: z.string().min(7), description: z.string().min(1), totalAmount: z.coerce.number().positive(), apportionment: z.enum(["igual", "fracao_ideal"]).default("igual"), status: z.enum(["lancada", "rateada", "paga"]).default("lancada") });
+const expenseCreate = z.object({ condoId: id, referenceMonth: z.string().min(7), description: z.string().min(1), totalAmount: z.coerce.number().positive(), apportionment: z.enum(["igual", "fracao_ideal"]).default("igual"), status: z.enum(["lancada", "rateada", S.PAGA]).default("lancada") });
 const meetingCreate = z.object({ condoId: id, date: z.string().min(10), kind: z.enum(["ordinaria", "extraordinaria"]).default("ordinaria"), summary: nullableString, ataDocumentId: nullableString });
 
 function requireTarget(action: AutomationActionConfig): string {

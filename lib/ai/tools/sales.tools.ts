@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import { z } from "zod";
 import { defineTool, repoCtx } from "./helpers";
 import { salesRepository } from "@/lib/repositories/sales.repository";
@@ -17,7 +18,7 @@ export const salesTools = [
         propertyId: p.propertyId,
         askingPrice: p.askingPrice,
         commissionPct: p.commissionPct,
-        status: "ativa",
+        status: S.ATIVA,
       }),
     preview: async (p) => `Criar listagem de venda por ${formatBRL(p.askingPrice)}.`,
   }),
@@ -68,7 +69,7 @@ export const salesTools = [
         finalPrice: p.finalPrice,
         signedAt: new Date().toISOString(),
         paymentTerms: null,
-        status: "fechado",
+        status: S.FECHADO,
       }),
     preview: async (p) => `Fechar venda por ${formatBRL(p.finalPrice)}.`,
   }),

@@ -1,6 +1,7 @@
 // Pure, testable business logic for rental installments and repasses.
 // No I/O — used by both mock-data seeding and the repositories.
 
+import { S } from "@/lib/status";
 import type { Installment, RentalContract, Repasse } from "@/lib/types/domain";
 import { clampDueDay, round2, deterministicId } from "@/lib/utils";
 
@@ -95,7 +96,7 @@ export function buildRepasse(
     grossAmount: c.grossAmount,
     adminFeeAmount: c.adminFeeAmount,
     netAmount: c.netAmount,
-    status: "pendente",
+    status: S.PENDENTE,
     paidAt: null,
     receiptDocumentId: null,
   };

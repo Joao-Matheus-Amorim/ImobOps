@@ -1,5 +1,5 @@
-import type { BuiltReport, ReportValue } from "./builders";
-import type { ReportFormat } from "./definitions";
+import type { BuiltReport, ReportRowData, ReportValue } from "./builders";
+import type { ReportFormat, ReportColumn } from "./definitions";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit/js/pdfkit.standalone";
 
@@ -40,9 +40,9 @@ export function reportContentType(format: ReportFormat): string {
 }
 
 export function exportCsv(report: BuiltReport): string {
-  const headers = report.definition.columns.map((column) => csvEscape(column.label)).join(";");
-  const rows = report.rows.map((row) =>
-    report.definition.columns.map((column) => csvEscape(row.values[column.key] ?? "")).join(";"),
+  const headers = report.definition.columns.map((column: ReportColumn) => csvEscape(column.label)).join(";");
+  const rows = report.rows.map((row: ReportRowData) =>
+    report.definition.columns.map((column: ReportColumn) => csvEscape(row.values[column.key] ?? "")).join(";"),
   );
   return [`Relatório;${csvEscape(report.definition.title)}`, `Gerado em;${csvEscape(report.generatedAt)}`, "", headers, ...rows].join("\r\n");
 }
@@ -68,9 +68,9 @@ export function exportHtml(report: BuiltReport): string {
   const totals = Object.entries(report.totals)
     .map(([key, value]) => `<span><strong>${htmlEscape(key)}</strong>: ${htmlEscape(value)}</span>`)
     .join("");
-  const headers = report.definition.columns.map((column) => `<th>${htmlEscape(column.label)}</th>`).join("");
+  const headers = report.definition.columns.map((column: ReportColumn) => `<th>${htmlEscape(column.label)}</th>`).join("");
   const rows = report.rows
-    .map((row) => `<tr>${report.definition.columns.map((column) => `<td>${htmlEscape(row.values[column.key] ?? "")}</td>`).join("")}</tr>`)
+    .map((row: ReportRowData) => `<tr>${report.definition.columns.map((column: ReportColumn) => `<td>${htmlEscape(row.values[column.key] ?? "")}</td>`).join("")}</tr>`)
     .join("");
   return `<!doctype html>
 <html lang="pt-BR">
@@ -112,11 +112,11 @@ export async function exportXlsx(report: BuiltReport): Promise<Buffer> {
   ws.addRow(["Gerado em", report.generatedAt]);
   ws.addRow([]);
 
-  const headerRow = ws.addRow(report.definition.columns.map((c) => c.label));
+  const headerRow = ws.addRow(report.definition.columns.map((c: ReportColumn) => c.label));
   headerRow.font = { bold: true };
 
   for (const row of report.rows) {
-    ws.addRow(report.definition.columns.map((c) => row.values[c.key] ?? ""));
+    ws.addRow(report.definition.columns.map((c: ReportColumn) => row.values[c.key] ?? ""));
   }
 
   if (Object.keys(report.totals).length > 0) {
@@ -125,7 +125,7 @@ export async function exportXlsx(report: BuiltReport): Promise<Buffer> {
     totalsRow.font = { bold: true };
   }
 
-  ws.columns = report.definition.columns.map((c) => ({
+  ws.columns = report.definition.columns.map((c: ReportColumn) => ({
     width: Math.max(12, c.label.length * 1.5),
   }));
 
@@ -167,9 +167,10 @@ export async function exportPdf(report: BuiltReport): Promise<Buffer> {
     doc.fillColor("#172033").fontSize(9);
     let xPos = 40;
     for (let i = 0; i < report.definition.columns.length; i++) {
-      doc.text(report.definition.columns[i].label, xPos + 4, yPos + 4, {
+      const column = report.definition.columns[i] as ReportColumn;
+      doc.text(column.label, xPos + 4, yPos + 4, {
         width: colWidths[i] - 8,
-        align: report.definition.columns[i].align === "right" ? "right" : "left",
+        align: column.align === "right" ? "right" : "left",
       });
       xPos += colWidths[i];
     }
@@ -185,10 +186,11 @@ export async function exportPdf(report: BuiltReport): Promise<Buffer> {
 
       xPos = 40;
       for (let i = 0; i < report.definition.columns.length; i++) {
-        const val = row.values[report.definition.columns[i].key] ?? "";
+        const column = report.definition.columns[i] as ReportColumn;
+        const val = row.values[column.key] ?? "";
         doc.text(String(val), xPos + 2, yPos, {
           width: colWidths[i] - 4,
-          align: report.definition.columns[i].align === "right" ? "right" : "left",
+          align: column.align === "right" ? "right" : "left",
         });
         xPos += colWidths[i];
       }

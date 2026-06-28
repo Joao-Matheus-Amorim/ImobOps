@@ -1,5 +1,6 @@
 // Close a sale: create the sale contract and mark the listing as sold. Without
 // this route, fechar a venda never persisted (only the listing did).
+import { S } from "@/lib/status";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { salesRepository } from "@/lib/repositories/sales.repository";
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   if (!listing) {
     return NextResponse.json({ error: "Listagem não encontrada." }, { status: 400 });
   }
-  if (listing.status === "vendida" || listing.status === "cancelada") {
+  if (listing.status === S.VENDIDA || listing.status === S.CANCELADA) {
     return NextResponse.json({ error: "Esta listagem não pode ser fechada." }, { status: 400 });
   }
   const property = await propertiesRepository.get(ctx, listing.propertyId);
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     finalPrice: d.finalPrice,
     signedAt: d.signedAt ?? null,
     paymentTerms: d.paymentTerms ?? null,
-    status: d.signedAt ? "fechado" : "em_andamento",
+    status: d.signedAt ? S.FECHADO : S.EM_ANDAMENTO,
   });
 
   await auditRepository.log(ctx, {
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
         brokerUserId: d.brokerUserId,
         pct,
         amount: Math.round(d.finalPrice * pct) / 100,
-        status: "pendente",
+        status: S.PENDENTE,
         paidAt: null,
       });
       await auditRepository.log(ctx, {

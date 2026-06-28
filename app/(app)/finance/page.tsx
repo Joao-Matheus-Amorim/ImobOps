@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import Link from "next/link";
 import { TrendingUp, AlertTriangle, Send, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -51,7 +52,7 @@ export default async function FinancePage() {
   // Billing rows: unpaid installments + any charge already emitted for them.
   const allInstallments = await rentalsRepository.listInstallments(ctx);
   const openInstallments = allInstallments.filter(
-    (i) => i.status !== "pago" && i.status !== "cancelado",
+    (i) => i.status !== S.PAGO && i.status !== S.CANCELADO,
   );
   const installmentCharges = await Promise.all(
     openInstallments.map((i) => billingRepository.forInstallment(ctx, i.id)),

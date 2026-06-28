@@ -1,4 +1,5 @@
 import type { RepoContext } from "@/lib/repositories/base";
+import { S } from "@/lib/status";
 import type { AutomationRule } from "@/lib/types/domain";
 import { automationRepository } from "@/lib/repositories/automation.repository";
 import { billingRepository } from "@/lib/repositories/billing.repository";
@@ -66,13 +67,13 @@ export async function dispatchDueAutomations(ctx: RepoContext, now = new Date())
     await automationRepository.completeRuleRun(ctx, rule, scheduledFor);
   }
 
-  const chargeRules = (await automationRepository.listRules(ctx)).filter((rule) => rule.status === "active" && rule.trigger.kind === "charge_due");
+  const chargeRules = (await automationRepository.listRules(ctx)).filter((rule) => rule.status === S.ACTIVE && rule.trigger.kind === "charge_due");
   if (chargeRules.length) {
     const charges = await billingRepository.list(ctx);
     for (const rule of chargeRules) {
       const offset = rule.trigger.chargeOffsetDays ?? 0;
       for (const charge of charges) {
-        if (charge.effectiveStatus === "paga" || charge.status === "cancelada") continue;
+        if (charge.effectiveStatus === S.PAGA || charge.status === S.CANCELADA) continue;
         const scheduledFor = chargeOffsetRunAt(charge.dueDate, offset, rule.trigger.localTime);
         if (scheduledFor > now.toISOString()) continue;
         const action = rule.action.targetId ? rule.action : { ...rule.action, targetId: charge.id };

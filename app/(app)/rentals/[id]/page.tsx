@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Pencil, User, UserCheck, CalendarRange, ArrowUpRight } from "lucide-react";
@@ -35,10 +36,10 @@ export default async function RentalDetailPage({ params }: { params: { id: strin
     rentalsRepository.listInstallments(ctx, contract.id),
   ]);
 
-  const paid = installments.filter((i) => i.status === "pago");
+  const paid = installments.filter((i) => i.status === S.PAGO);
   const paidAmount = paid.reduce((s, i) => s + (i.paidAmount ?? i.amount), 0);
   const totalAmount = installments
-    .filter((i) => i.status !== "cancelado")
+    .filter((i) => i.status !== S.CANCELADO)
     .reduce((s, i) => s + i.amount, 0);
   const progress = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
 
@@ -93,7 +94,7 @@ export default async function RentalDetailPage({ params }: { params: { id: strin
             <div className="h-full rounded-full bg-emerald-400/80 transition-all" style={{ width: `${progress}%` }} />
           </div>
           <div className="mt-3 flex justify-between text-xs text-muted-foreground">
-            <span>{paid.length}/{installments.filter((i) => i.status !== "cancelado").length} parcelas pagas</span>
+            <span>{paid.length}/{installments.filter((i) => i.status !== S.CANCELADO).length} parcelas pagas</span>
             <span className="font-semibold text-foreground">{progress}%</span>
           </div>
         </Card>

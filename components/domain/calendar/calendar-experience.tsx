@@ -1,5 +1,6 @@
 "use client";
 
+import { S } from "@/lib/status";
 import { useMemo, useState, useTransition } from "react";
 import { Building2, CalendarDays, CheckSquare, ChevronLeft, ChevronRight, LayoutDashboard, Plus, Settings2, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -121,7 +122,7 @@ export function CalendarExperience({
     setError(null);
     setAutomationFeedback(null);
     startTransition(async () => {
-      const body = { ...formData, status: "active" as const };
+      const body = { ...formData, status: S.ACTIVE };
       const res = await fetch("/api/automation", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -137,7 +138,7 @@ export function CalendarExperience({
   }
 
   async function toggleAutomation(rule: AutomationRule) {
-    const status = rule.status === "active" ? "paused" : "active";
+    const status = rule.status === S.ACTIVE ? S.PAUSED : S.ACTIVE;
     startTransition(async () => {
       const res = await fetch(`/api/automation/${rule.id}`, {
         method: "PATCH",

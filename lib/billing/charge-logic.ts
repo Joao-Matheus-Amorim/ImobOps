@@ -1,6 +1,7 @@
 // Pure, testable billing logic. No I/O — used by the billing repository, the
 // reminder ladder and tests. Mirrors lib/repositories/installment-logic.ts in style.
 
+import { S } from "@/lib/status";
 import type {
   Charge,
   ChargeStatus,
@@ -25,14 +26,14 @@ export function daysBetween(referenceIso: string, targetIso: string): number {
 // status is always correct without depending on a cron job. Terminal states
 // (paga/cancelada/falha) are returned unchanged.
 export function chargeStatusAsOf(charge: Charge, asOfIso: string): ChargeStatus {
-  if (charge.status !== "pendente") return charge.status;
-  return daysBetween(asOfIso, charge.dueDate) < 0 ? "vencida" : "pendente";
+  if (charge.status !== S.PENDENTE) return charge.status;
+  return daysBetween(asOfIso, charge.dueDate) < 0 ? S.VENCIDA : S.PENDENTE;
 }
 
 // True when the charge is open (collectible) as of a given day.
 export function isOpen(charge: Charge, asOfIso: string): boolean {
   const s = chargeStatusAsOf(charge, asOfIso);
-  return s === "pendente" || s === "vencida";
+  return s === S.PENDENTE || s === S.VENCIDA;
 }
 
 // --- Reminder ladder ------------------------------------------------------

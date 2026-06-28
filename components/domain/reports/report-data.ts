@@ -1,3 +1,4 @@
+import { S } from "@/lib/status";
 import type { FunnelStage } from "@/lib/types/domain";
 import { FUNNEL_ORDER } from "@/lib/types/domain";
 import type { RepoContext } from "@/lib/repositories/base";
@@ -115,12 +116,12 @@ export async function buildReportsData(ctx: RepoContext): Promise<ReportsData> {
   const occupancyPct = properties.length ? Math.round((rentedCount / properties.length) * 100) : 0;
 
   const openCharges = charges.filter((charge) =>
-    charge.effectiveStatus !== "paga" && charge.effectiveStatus !== "cancelada",
+    charge.effectiveStatus !== S.PAGA && charge.effectiveStatus !== S.CANCELADA,
   );
-  const overdueCharges = charges.filter((charge) => charge.effectiveStatus === "vencida");
+  const overdueCharges = charges.filter((charge) => charge.effectiveStatus === S.VENCIDA);
   const dueSoonCharges = openCharges.filter((charge) => inDateRange(charge.dueDate, today, next7));
-  const pendingRepasses = repasses.filter((repasse) => repasse.status === "pendente");
-  const pendingCommissions = commissions.filter((commission) => commission.status === "pendente");
+  const pendingRepasses = repasses.filter((repasse) => repasse.status === S.PENDENTE);
+  const pendingCommissions = commissions.filter((commission) => commission.status === S.PENDENTE);
   const openLeads = leads.filter((lead) => OPEN_LEAD_STAGES.includes(lead.funnelStage));
   const openProposals = proposals.filter((proposal) => proposal.status !== "aceita" && proposal.status !== "recusada");
   const contractsEndingSoon = rentals.filter((rental) =>
