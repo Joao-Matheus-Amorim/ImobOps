@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 
+const hasSupabase = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+);
+
 test.describe("WhatsApp", () => {
   test("page loads inbox", async ({ page }) => {
     await page.goto("/whatsapp");
@@ -24,6 +28,7 @@ test.describe("WhatsApp", () => {
   });
 
   test("send API requires auth", async ({ page }) => {
+    test.skip(!hasSupabase, "Supabase not configured — cannot authenticate");
     await page.context().clearCookies();
     const res = await page.request.post("/api/whatsapp/send", {
       data: { to: "5511999999999", body: "test" },

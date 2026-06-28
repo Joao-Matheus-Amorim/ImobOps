@@ -24,13 +24,21 @@ const reports = [
 
 const formats = ["csv", "json", "html", "xls", "xlsx", "pdf"] as const;
 
+async function fetchWithRetry(page: import("@playwright/test").Page, url: string, maxRetries = 3) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await page.request.get(url);
+    if (res.status() !== 429 || attempt >= maxRetries) return res;
+    await new Promise((r) => setTimeout(r, (attempt + 1) * 2000));
+  }
+}
+
 test.describe("reports export", () => {
   test.describe.configure({ mode: "serial" });
 
   for (const report of reports) {
     for (const format of formats) {
       test(`exports ${report} as ${format}`, async ({ page }) => {
-        const response = await page.request.get(`/api/reports/export?report=${report}&format=${format}`);
+        const response = await fetchWithRetry(page, `/api/reports/export?report=${report}&format=${format}`);
         const body = await response.text();
         expect(response.ok(), `${response.status()} ${body}`).toBeTruthy();
         expect(response.headers()["content-disposition"]).toContain(report.replace(/\./g, "-"));
