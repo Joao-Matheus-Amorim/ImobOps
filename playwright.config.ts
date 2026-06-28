@@ -28,6 +28,7 @@ export default defineConfig({
     {
       name: "chromium",
       dependencies: ["setup"],
+      testIgnore: "**/accessibility/**",
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/admin.json",
@@ -36,6 +37,7 @@ export default defineConfig({
     {
       name: "webkit",
       dependencies: ["setup"],
+      testIgnore: "**/accessibility/**",
       use: {
         ...devices["Desktop Safari"],
         storageState: "playwright/.auth/admin.json",
@@ -48,6 +50,7 @@ export default defineConfig({
     {
       name: "broker",
       dependencies: ["setup", "broker-setup"],
+      testIgnore: "**/accessibility/**",
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/broker.json",
@@ -60,6 +63,7 @@ export default defineConfig({
     {
       name: "finance",
       dependencies: ["setup", "finance-setup"],
+      testIgnore: "**/accessibility/**",
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/finance.json",
@@ -72,6 +76,7 @@ export default defineConfig({
     {
       name: "viewer",
       dependencies: ["setup", "viewer-setup"],
+      testIgnore: "**/accessibility/**",
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/viewer.json",

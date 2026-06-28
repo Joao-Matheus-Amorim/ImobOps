@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="pt-BR"
-      className={`dark ${sans.variable} ${display.variable}`}
+      className={`${sans.variable} ${display.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans">{children}</body>
