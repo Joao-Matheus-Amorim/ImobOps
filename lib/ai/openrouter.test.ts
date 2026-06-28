@@ -89,9 +89,23 @@ describe("OpenRouterAdapter", () => {
     await expect(adapter.chat(msg, tools)).rejects.toThrow("OPENROUTER_API_KEY nao configurada");
   });
 
-  it("chatStream delega para chat e emite chunks", async () => {
-    globalThis.fetch = mockFetch(200, {
-      choices: [{ message: { content: "Stream response", tool_calls: undefined } }],
+  it("chatStream emite chunks via SSE", async () => {
+    const encoder = new TextEncoder();
+    const sseData = [
+      'data: {"choices":[{"delta":{"content":"Stream"}}]}',
+      'data: {"choices":[{"delta":{"content":" resposta"}}]}',
+      "data: [DONE]",
+    ].join("\n\n");
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(sseData));
+          controller.close();
+        },
+      }),
+      text: () => Promise.resolve(sseData),
     });
     const adapter = new OpenRouterAdapter();
     const chunks: string[] = [];
@@ -99,6 +113,6 @@ describe("OpenRouterAdapter", () => {
       chunks.push(chunk.delta);
       if (chunk.done) break;
     }
-    expect(chunks).toContain("Stream response");
+    expect(chunks.join("")).toBe("Stream resposta");
   });
 });

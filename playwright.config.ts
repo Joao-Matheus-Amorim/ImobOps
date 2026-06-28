@@ -41,6 +41,46 @@ export default defineConfig({
         storageState: "playwright/.auth/admin.json",
       },
     },
+    {
+      name: "broker-setup",
+      testMatch: /broker\.auth\.setup\.ts/,
+    },
+    {
+      name: "broker",
+      dependencies: ["setup", "broker-setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/broker.json",
+      },
+    },
+    {
+      name: "finance-setup",
+      testMatch: /finance\.auth\.setup\.ts/,
+    },
+    {
+      name: "finance",
+      dependencies: ["setup", "finance-setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/finance.json",
+      },
+    },
+    {
+      name: "viewer-setup",
+      testMatch: /viewer\.auth\.setup\.ts/,
+    },
+    {
+      name: "viewer",
+      dependencies: ["setup", "viewer-setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/viewer.json",
+      },
+    },
+    {
+      name: "a11y-login",
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   webServer: process.env.E2E_SKIP_WEBSERVER
     ? undefined

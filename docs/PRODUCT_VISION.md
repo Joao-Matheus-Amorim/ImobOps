@@ -36,14 +36,16 @@ Hoje o repositório está em um estado **maduro, mock-first por padrão**:
   append-only e cache Redis (Upstash) com degradação graciosa.
 - O calendário operacional já existe para eventos manuais e agregação de itens
   operacionais (visitas, prazos, assembleias) na leitura.
-- Testes E2E com Playwright (104 testes, Chromium + WebKit) cobrem navegação,
-  acessibilidade WCAG 2.1 AA, exportação de relatórios e validação de formulários.
+- Testes E2E com Playwright (104+ testes, Chromium + WebKit) cobrem navegação,
+  acessibilidade WCAG 2.1 AA, exportação de relatórios, validação de formulários,
+  WhatsApp (página/API/webhook) e permissões por role (broker/finance/viewer).
 - Exportação de relatórios em 4 formatos (CSV, JSON, HTML, XLS) via API dedicada,
   sem dependências externas.
+- Streaming SSE real nos adapters OpenAI, Anthropic e OpenRouter com fallback
+  chain; frontend consumindo tokens em tempo real.
 
 O que ainda não existe:
-- Streaming SSE no assistente de IA (`chatStream()` não conectado ao HTTP).
-- Testes E2E de criação de entidades, WhatsApp e permissões.
+- Testes E2E de criação de entidades (imóvel→locação→venda).
 - Exportação XLSX nativa (atual é HTML com extensão `.xls`) e PDF.
 - CI/CD com GitHub Actions.
 - UI de overrides de permissão para admin.

@@ -166,11 +166,45 @@ npm run e2e:chrome    # só Chromium
 npm run e2e:safari    # só WebKit
 npm run e2e:a11y      # só acessibilidade
 npm run e2e:ui        # modo UI (inspecionar testes)
+npm run e2e:install   # instalar browsers do Playwright
 ```
 
-104 testes E2E (todas as páginas, acessibilidade WCAG 2.1 AA em 16 páginas,
-exportação de relatórios em 4 formatos × 23 relatórios, validação de criação de
-imóvel). Autenticação automática com seed opcional via Supabase.
+[![CI](https://github.com/anomalyco/imobops/actions/workflows/ci.yml/badge.svg)](https://github.com/anomalyco/imobops/actions/workflows/ci.yml) [![a11y](https://github.com/anomalyco/imobops/actions/workflows/ci.yml/badge.svg?job=a11y)](https://github.com/anomalyco/imobops/actions/workflows/ci.yml)
+
+120+ testes E2E multi-browser (Chromium + WebKit) em 7 especificações:
+navegação (10 rotas), acessibilidade WCAG 2.1 AA (16 páginas), exportação
+(23 relatórios × 4 formatos), validação de criação de imóvel, WhatsApp
+(página/API/webhook), permissões por role (broker/finance/viewer) e
+criação completa (cliente→imóvel→locação→listagem de venda) com cleanup.
+
+#### Setup de ambiente
+
+| Variável | Obrigatório? | Descrição |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Sim (real) | URL do Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sim (real) | Anon key do Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | Opcional | Cria users automaticamente |
+| `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` | Opcional | Credenciais admin |
+| `E2E_BROKER_EMAIL` / `E2E_BROKER_PASSWORD` | Opcional | Credenciais corretor |
+| `E2E_FINANCE_EMAIL` / `E2E_FINANCE_PASSWORD` | Opcional | Credenciais financeiro |
+| `E2E_VIEWER_EMAIL` / `E2E_VIEWER_PASSWORD` | Opcional | Credenciais visualizador |
+| `E2E_PORT` | Opcional (padrão 3001) | Porta do dev server |
+| `E2E_BASE_URL` | Opcional | URL base completa |
+| `E2E_SKIP_WEBSERVER` | Opcional | Pula init do Next.js |
+
+Com `SUPABASE_SERVICE_ROLE_KEY`, o setup cria/garante todos os 4 usuários
+automaticamente. Sem ela, defina as credenciais explicitamente no `.env.local`.
+
+#### Autenticação multi-role
+
+Cada role tem um `storageState` independente salvo em `playwright/.auth/`:
+- `admin.json` — acesso total
+- `broker.json` — escopo `own` (clientes, imóveis, vendas, CRM, WhatsApp)
+- `finance.json` — escopo `all` em financeiro; sem acesso a WhatsApp/CRM
+- `viewer.json — read-only em todas as páginas
+
+Os testes de permissão (`tests/e2e/permissions/scopes.spec.ts`) alternam entre
+esses states para validar acesso a páginas e enforcement de APIs por role.
 
 ---
 

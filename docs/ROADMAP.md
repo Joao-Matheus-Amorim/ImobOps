@@ -227,14 +227,17 @@ Além dos 9 cortes, o repositório contém os seguintes itens já implementados:
 
 ### Testes E2E (Playwright) ✅
 
-104 testes multi-browser (Chromium + WebKit) em 4 especificações:
+104+ testes multi-browser (Chromium + WebKit) em 6 especificações:
 - **Navegação**: todas as 10 rotas principais (dashboard, clientes, imóveis,
   locação, vendas, financeiro, relatórios, documentos, CRM, condomínios).
 - **Acessibilidade**: WCAG 2.1 AA com axe-core em 16 páginas críticas.
 - **Exportação**: 23 relatórios × 4 formatos (CSV, JSON, HTML, XLS) via API.
 - **Validação**: criação de imóvel com HTML5 required (sem gravar dados).
+- **WhatsApp**: página, validação de envio, webhook, autenticação.
+- **Permissões**: acesso a páginas e APIs por role (broker, finance, viewer).
 
-Autenticação automática com seed opcional via Supabase admin client.
+Autenticação automática com seed opcional via Supabase admin client. Setup
+multi-role (broker, finance, viewer) com storage states independentes.
 
 ### Exportação de relatórios ✅
 
@@ -251,13 +254,13 @@ Endpoint: `GET /api/reports/export?report=&format=`. Sem dependências externas.
 
 | Item | Status | Observação |
 |------|--------|------------|
-| Testes E2E de criação (imóvel→locação→venda) | ❌ | Implementar com seed/cleanup |
-| Testes E2E WhatsApp | ❌ | Inbox, envio, webhook |
-| Testes E2E de permissões | ❌ | Escopo `own`/`team`/`all` por papel |
-| CI/CD (GitHub Actions) | ❌ | Workflows para PR/push |
-| Exportação XLSX real | ❌ | Adicionar `exceljs` |
-| Exportação PDF | ❌ | Adicionar `jsPDF` ou `pdfkit` |
-| SSE streaming | ❌ | Conectar `chatStream()` ao endpoint HTTP |
+| Testes E2E de criação (imóvel→locação→venda) | ✅ | Flow completo cliente→imóvel→locação→listagem via API com UI verification e cleanup |
+| Testes E2E WhatsApp | ✅ | Página, envio, webhook, auth |
+| Testes E2E de permissões | ✅ | Broker, finance, viewer — páginas + APIs |
+| CI/CD (GitHub Actions) | ✅ | Workflow CI: typecheck, lint, unit, build, E2E (se Supabase config) |
+| Exportação XLSX real | ✅ | `exceljs` nativo com 23 relatórios |
+| Exportação PDF | ✅ | `pdfkit` nativo com 23 relatórios |
+| SSE streaming | ✅ | `chatStream()` real nos 3 adapters + frontend |
 | UI de overrides de permissão | ❌ | Admin gerenciar permissões por usuário |
 
 ---

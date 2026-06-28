@@ -22,7 +22,7 @@ const reports = [
   "condos.meetings",
 ] as const;
 
-const formats = ["csv", "json", "html", "xls"] as const;
+const formats = ["csv", "json", "html", "xls", "xlsx", "pdf"] as const;
 
 test.describe("reports export", () => {
   test.describe.configure({ mode: "serial" });
@@ -34,7 +34,7 @@ test.describe("reports export", () => {
         const body = await response.text();
         expect(response.ok(), `${response.status()} ${body}`).toBeTruthy();
         expect(response.headers()["content-disposition"]).toContain(report.replace(/\./g, "-"));
-        expect(response.headers()["content-type"]).toContain(format === "xls" ? "excel" : format === "csv" ? "csv" : format);
+        expect(response.headers()["content-type"]).toContain(format === "xls" ? "excel" : format === "xlsx" ? "openxml" : format === "pdf" ? "pdf" : format === "csv" ? "csv" : format);
         expect(body.length).toBeGreaterThan(0);
       });
     }

@@ -74,9 +74,70 @@ export class OpenAiAdapter implements LlmAdapter {
   }
 
   async *chatStream(messages: ChatMessage[], tools: ToolDefinition[]) {
-    const res = await this.chat(messages, tools);
-    yield { delta: res.content, done: false };
-    yield { delta: "", done: true, response: res };
+    if (!this.apiKey) throw new Error("OPENAI_API_KEY não configurada.");
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({ ...this.buildBody(messages, tools), stream: true }),
+    });
+    if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let accumulatedContent = "";
+    const toolCallAcc: Map<number, { id: string; name: string; args: string }> = new Map();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+          const payload = trimmed.slice(6);
+          if (payload === "[DONE]") {
+            const toolCalls: ToolCall[] = [...toolCallAcc.values()]
+              .filter((tc) => tc.name)
+              .map((tc) => ({ id: tc.id, name: tc.name, params: safeParse(tc.args) }));
+            yield { delta: "", done: true, response: { content: accumulatedContent, toolCalls } };
+            return;
+          }
+          try {
+            const parsed = JSON.parse(payload);
+            const delta = parsed.choices?.[0]?.delta;
+            if (delta?.content) {
+              accumulatedContent += delta.content;
+              yield { delta: delta.content, done: false };
+            }
+            if (delta?.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                const existing = toolCallAcc.get(tc.index) ?? { id: "", name: "", args: "" };
+                if (tc.id) existing.id = tc.id;
+                if (tc.function?.name) existing.name = tc.function.name;
+                if (tc.function?.arguments) existing.args += tc.function.arguments;
+                toolCallAcc.set(tc.index, existing);
+              }
+            }
+          } catch {
+            // skip malformed JSON chunks
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    const toolCalls: ToolCall[] = [...toolCallAcc.values()]
+      .filter((tc) => tc.name)
+      .map((tc) => ({ id: tc.id, name: tc.name, params: safeParse(tc.args) }));
+    yield { delta: "", done: true, response: { content: accumulatedContent, toolCalls } };
   }
 }
 

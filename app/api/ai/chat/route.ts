@@ -19,7 +19,7 @@ import {
   waitForCachedResponse,
 } from "@/lib/ai/cache";
 import { recordAiAction } from "@/lib/ai/audit";
-import type { ChatMessage } from "@/lib/types/ai";
+import type { ChatMessage, ChatResponse } from "@/lib/types/ai";
 
 // Max automatic read-tool round-trips before we stop (avoids loops / cost).
 const MAX_READ_STEPS = 4;
@@ -54,40 +54,22 @@ COMO AGIR:
 6. Consultas (buscar, listar, ver) podem ser respondidas direto.
 Nunca responda "sem assunto" ou em branco: ou age, ou pergunta o que falta, ou explica por que não pode.`;
 
-export async function POST(request: Request) {
-  const principal = await getPrincipal();
-  const user = await getSessionUser();
-  if (!principal || !user) {
-    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
-  }
-
-  const json = await request.json().catch(() => ({}));
-  const parsed = bodySchema.safeParse(json);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Corpo inválido." }, { status: 400 });
-  }
-
-  const tools = allowedToolsFor(ALL_TOOLS, principal);
-  const adapter = getLlmAdapter();
-
-  // Models have no clock — give them today's date so they can resolve "amanhã",
-  // "hoje", "semana que vem" into real yyyy-mm-dd values.
+function buildMessages(user: { displayName: string; role: string }, parsedMessages: z.infer<typeof bodySchema>["messages"]): ChatMessage[] {
   const today = new Date();
   const todayISO = today.toISOString().slice(0, 10);
   const tomorrowISO = new Date(today.getTime() + 86_400_000).toISOString().slice(0, 10);
   const dateContext = `Hoje é ${todayISO} (amanhã é ${tomorrowISO}). Resolva datas relativas para o formato yyyy-mm-dd; nunca devolva fórmulas ou código.`;
-
-  const messages: ChatMessage[] = [
+  return [
     {
       role: "system",
       content: `${SYSTEM_PROMPT}\n${dateContext}\nUsuário: ${user.displayName} (${user.role}).`,
     },
-    ...parsed.data.messages,
+    ...parsedMessages,
   ];
+}
 
-  const toolCtx = toolContextFor(principal, user.tenancyId);
-
-  const reqHash = hashRequest(messages, tools.map((t) => t.name), user.tenancyId);
+async function runAgentLoop(adapter: ReturnType<typeof getLlmAdapter>, messages: ChatMessage[], tools: ReturnType<typeof allowedToolsFor>, toolCtx: ReturnType<typeof toolContextFor>, originalPrompt: string) {
+  const reqHash = hashRequest(messages, tools.map((t) => t.name), toolCtx.tenancyId);
 
   const callModel = async () => {
     try {
@@ -106,52 +88,41 @@ export async function POST(request: Request) {
     }
   };
 
-  // Cache-aware first call: skip LLM if identical request was answered recently,
-  // and deduplicate concurrent identical requests via Redis lock. The lock is
-  // released only after the agent loop caches the final answer.
   let lockAcquired = false;
   const firstCall = async () => {
     const cached = await getCachedResponse(reqHash);
     if (cached) return cached;
-
     lockAcquired = await acquireLock(reqHash);
     if (!lockAcquired) {
       const waited = await waitForCachedResponse(reqHash);
       if (waited) return waited;
     }
-
     return callModel();
   };
 
-  // Agent loop: run READ tools automatically (search/list/get) and feed the
-  // results back to the model, so it can chain steps (e.g. search a client, then
-  // propose creating a charge). Stop when the model returns text or proposes a
-  // WRITE tool — writes always go to the UI for dry-run + confirmation.
-  let response;
+  let response: ChatResponse;
   try {
     response = await firstCall();
     for (let step = 0; step < MAX_READ_STEPS; step++) {
-      const reads = response.toolCalls.filter(
+      const reads = response!.toolCalls.filter(
         (tc) => tools.find((t) => t.name === tc.name)?.effect === "read",
       );
-      const hasWrite = response.toolCalls.some(
+      const hasWrite = response!.toolCalls.some(
         (tc) => tools.find((t) => t.name === tc.name)?.effect === "write",
       );
       if (reads.length === 0 || hasWrite) break;
 
-      // Record the assistant turn that requested the tools (with tool_calls),
-      // then the results, so the next model call has the full context.
-      messages.push({ role: "assistant", content: response.content ?? "", toolCalls: response.toolCalls });
+      messages.push({ role: "assistant", content: response!.content ?? "", toolCalls: response!.toolCalls });
       for (const tc of reads) {
         const tool = tools.find((t) => t.name === tc.name);
         if (!tool) continue;
-        const cachedResult = await getCachedToolResult(tool.name, tc.params, user.tenancyId);
+        const cachedResult = await getCachedToolResult(tool.name, tc.params, toolCtx.tenancyId);
         const result = cachedResult !== null
           ? { callId: tc.id, toolName: tool.name, dryRun: false, confirmed: true, ok: true, data: cachedResult }
           : await runTool(tool, tc.params, toolCtx, { confirm: true }, tc.id);
-        recordAiAction(toolCtx, parsed.data.messages[0]?.content ?? "", tool.name, tc.params, result);
+        recordAiAction(toolCtx, originalPrompt, tool.name, tc.params, result);
         if (result.ok && result.data && cachedResult === null) {
-          await setCachedToolResult(tool.name, tc.params, result.data, user.tenancyId).catch(() => {});
+          await setCachedToolResult(tool.name, tc.params, result.data, toolCtx.tenancyId).catch(() => {});
         }
         messages.push({
           role: "tool",
@@ -163,21 +134,194 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     if (lockAcquired) await releaseLock(reqHash).catch(() => {});
-    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+    throw err;
   }
 
-  // Attach previews for any proposed write tool calls so the UI can ask to confirm.
-  const writeCalls = response.toolCalls.filter(
-    (tc) => tools.find((t) => t.name === tc.name)?.effect === "write",
-  );
-  const proposed = writeCalls.map((tc) => ({
+  await setCachedResponse(reqHash, { content: response!.content, toolCalls: response!.toolCalls }).catch(() => {});
+  if (lockAcquired) await releaseLock(reqHash).catch(() => {});
+
+  return response!;
+}
+
+async function* streamAgentLoop(adapter: ReturnType<typeof getLlmAdapter>, messages: ChatMessage[], tools: ReturnType<typeof allowedToolsFor>, toolCtx: ReturnType<typeof toolContextFor>, originalPrompt: string) {
+  const reqHash = hashRequest(messages, tools.map((t) => t.name), toolCtx.tenancyId);
+
+  const callModelStream = async function* () {
+    for await (const chunk of adapter.chatStream(messages, tools)) {
+      yield chunk;
+    }
+  };
+
+  let lockAcquired = false;
+  try {
+    const cached = await getCachedResponse(reqHash);
+    if (cached) {
+      yield { type: "done" as const, provider: adapter.name, content: cached.content, toolCalls: cached.toolCalls };
+      return;
+    }
+
+    lockAcquired = await acquireLock(reqHash);
+    if (!lockAcquired) {
+      const waited = await waitForCachedResponse(reqHash);
+      if (waited) {
+        yield { type: "done" as const, provider: adapter.name, content: waited.content, toolCalls: waited.toolCalls };
+        return;
+      }
+    }
+
+    // First model call — stream tokens
+    let response: ChatResponse | null = null;
+    for await (const chunk of callModelStream()) {
+      if (!chunk.done && chunk.delta) {
+        yield { type: "delta" as const, delta: chunk.delta };
+      } else if (chunk.done && chunk.response) {
+        response = chunk.response;
+      }
+    }
+
+    if (!response) {
+      yield { type: "error" as const, error: "Modelo não retornou resposta." };
+      return;
+    }
+
+    // Agent loop for read tools
+    for (let step = 0; step < MAX_READ_STEPS; step++) {
+      const r = response!;
+      const reads = r.toolCalls.filter(
+        (tc) => tools.find((t) => t.name === tc.name)?.effect === "read",
+      );
+      const hasWrite = r.toolCalls.some(
+        (tc) => tools.find((t) => t.name === tc.name)?.effect === "write",
+      );
+      if (reads.length === 0 || hasWrite) break;
+
+      yield { type: "thinking" as const, step: step + 1 };
+
+      // Execute read tools
+      messages.push({ role: "assistant", content: r.content ?? "", toolCalls: r.toolCalls });
+      for (const tc of reads) {
+        const tool = tools.find((t) => t.name === tc.name);
+        if (!tool) continue;
+        const cachedResult = await getCachedToolResult(tool.name, tc.params, toolCtx.tenancyId);
+        const result = cachedResult !== null
+          ? { callId: tc.id, toolName: tool.name, dryRun: false, confirmed: true, ok: true, data: cachedResult }
+          : await runTool(tool, tc.params, toolCtx, { confirm: true }, tc.id);
+        recordAiAction(toolCtx, originalPrompt, tool.name, tc.params, result);
+        if (result.ok && result.data && cachedResult === null) {
+          await setCachedToolResult(tool.name, tc.params, result.data, toolCtx.tenancyId).catch(() => {});
+        }
+        messages.push({
+          role: "tool",
+          content: JSON.stringify(result.ok ? (result.data ?? null) : { error: result.error }),
+          toolCallId: tc.id,
+        });
+      }
+
+      // Next call — stream tokens
+      response = null;
+      for await (const chunk of callModelStream()) {
+        if (!chunk.done && chunk.delta) {
+          yield { type: "delta" as const, delta: chunk.delta };
+        } else if (chunk.done && chunk.response) {
+          response = chunk.response;
+        }
+      }
+    }
+
+    if (!response) {
+      yield { type: "error" as const, error: "Modelo não retornou resposta após processamento." };
+      return;
+    }
+
+    await setCachedResponse(reqHash, { content: response.content, toolCalls: response.toolCalls }).catch(() => {});
+    if (lockAcquired) await releaseLock(reqHash).catch(() => {});
+
+    // Final event with proposed write tools
+    const writeCalls = response.toolCalls.filter(
+      (tc) => tools.find((t) => t.name === tc.name)?.effect === "write",
+    );
+    const proposed = writeCalls.map((tc) => ({
       ...tc,
       effect: "write" as const,
       requiresConfirmation: true,
     }));
 
-  await setCachedResponse(reqHash, { content: response.content, toolCalls: writeCalls }).catch(() => {});
-  if (lockAcquired) await releaseLock(reqHash).catch(() => {});
+    yield {
+      type: "done" as const,
+      provider: adapter.name,
+      content: response.content,
+      toolCalls: proposed,
+    };
+  } catch (err) {
+    if (lockAcquired) await releaseLock(reqHash).catch(() => {});
+    yield { type: "error" as const, error: (err as Error).message };
+  }
+}
+
+export async function POST(request: Request) {
+  const principal = await getPrincipal();
+  const user = await getSessionUser();
+  if (!principal || !user) {
+    return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
+  }
+
+  const json = await request.json().catch(() => ({}));
+  const parsed = bodySchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Corpo inválido." }, { status: 400 });
+  }
+
+  const tools = allowedToolsFor(ALL_TOOLS, principal);
+  const adapter = getLlmAdapter();
+  const messages = buildMessages(user, parsed.data.messages);
+  const toolCtx = toolContextFor(principal, user.tenancyId);
+  const originalPrompt = parsed.data.messages[0]?.content ?? "";
+
+  const wantsStream = request.headers.get("accept") === "text/event-stream" || new URL(request.url).searchParams.has("stream");
+
+  if (wantsStream) {
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of streamAgentLoop(adapter, messages, tools, toolCtx, originalPrompt)) {
+            const data = JSON.stringify(event);
+            controller.enqueue(encoder.encode(`event: ${event.type}\ndata: ${data}\n\n`));
+          }
+        } catch (err) {
+          const data = JSON.stringify({ error: (err as Error).message });
+          controller.enqueue(encoder.encode(`event: error\ndata: ${data}\n\n`));
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+      },
+    });
+  }
+
+  // Non-streaming path (backward compatible)
+  let response;
+  try {
+    response = await runAgentLoop(adapter, messages, tools, toolCtx, originalPrompt);
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 502 });
+  }
+
+  const writeCalls = response.toolCalls.filter(
+    (tc) => tools.find((t) => t.name === tc.name)?.effect === "write",
+  );
+  const proposed = writeCalls.map((tc) => ({
+    ...tc,
+    effect: "write" as const,
+    requiresConfirmation: true,
+  }));
 
   return NextResponse.json({
     provider: adapter.name,

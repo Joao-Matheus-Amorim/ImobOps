@@ -2,7 +2,7 @@ import type { FeatureKey } from "@/lib/types/permissions";
 
 export type ReportTab = "overview" | "finance" | "rentals" | "sales" | "crm" | "documents" | "condos";
 export type ReportLevel = "simplified" | "professional";
-export type ReportFormat = "csv" | "json" | "html" | "xls";
+export type ReportFormat = "csv" | "json" | "html" | "xls" | "xlsx" | "pdf";
 export type ReportId =
   | "overview.executive"
   | "finance.receivables"
@@ -79,7 +79,7 @@ export const REPORT_TABS: { id: ReportTab; label: string; description: string }[
   },
 ];
 
-const ALL_FORMATS: ReportFormat[] = ["csv", "json", "html", "xls"];
+const ALL_FORMATS: ReportFormat[] = ["csv", "json", "html", "xls", "xlsx", "pdf"];
 
 export const REPORT_DEFINITIONS: Record<ReportId, ReportDefinition> = {
   "overview.executive": {
@@ -433,5 +433,5 @@ export function parseReportId(value: string | null | undefined): ReportId {
 }
 
 export function parseReportFormat(value: string | null | undefined): ReportFormat {
-  return value === "json" || value === "html" || value === "xls" ? value : "csv";
+  return value === "json" || value === "html" || value === "xls" || value === "xlsx" || value === "pdf" ? value : "csv";
 }

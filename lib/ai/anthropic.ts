@@ -90,10 +90,81 @@ export class AnthropicAdapter implements LlmAdapter {
   }
 
   async *chatStream(messages: ChatMessage[], tools: ToolDefinition[]) {
-    // Simplified: delegate to non-streaming and emit once. Real streaming can be
-    // added via the SSE endpoint later without changing the interface.
-    const res = await this.chat(messages, tools);
-    yield { delta: res.content, done: false };
-    yield { delta: "", done: true, response: res };
+    if (!this.apiKey) throw new Error("ANTHROPIC_API_KEY não configurada.");
+    const body = this.buildBody(messages, tools);
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": this.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({ ...body, stream: true }),
+    });
+    if (!res.ok) throw new Error(`Anthropic ${res.status}: ${await res.text()}`);
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let accumulatedContent = "";
+    let eventType = "";
+    let currentToolId = "";
+    let currentToolName = "";
+    let currentToolInput = "";
+    const toolCalls: ToolCall[] = [];
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith("event: ")) {
+            eventType = trimmed.slice(7);
+            continue;
+          }
+          if (!trimmed.startsWith("data: ")) continue;
+          const payload = trimmed.slice(6);
+          let parsed: Record<string, unknown>;
+          try { parsed = JSON.parse(payload); } catch { continue; }
+
+          if (eventType === "content_block_start") {
+            const block = parsed.content_block as Record<string, unknown> | undefined;
+            if (block?.type === "tool_use") {
+              currentToolId = (block.id as string) ?? "";
+              currentToolName = (block.name as string) ?? "";
+              currentToolInput = "";
+            }
+          } else if (eventType === "content_block_delta") {
+            const delta = parsed.delta as Record<string, unknown> | undefined;
+            if (delta?.type === "text_delta") {
+              const text = (delta.text as string) ?? "";
+              accumulatedContent += text;
+              yield { delta: text, done: false };
+            } else if (delta?.type === "input_json_delta") {
+              currentToolInput += (delta.partial_json as string) ?? "";
+            }
+          } else if (eventType === "content_block_stop") {
+            if (currentToolName) {
+              toolCalls.push({ id: currentToolId, name: currentToolName, params: safeParse2(currentToolInput) });
+              currentToolName = "";
+              currentToolInput = "";
+              currentToolId = "";
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    yield { delta: "", done: true, response: { content: accumulatedContent, toolCalls } };
   }
+}
+
+function safeParse2(json: string): Record<string, unknown> {
+  try { return JSON.parse(json) as Record<string, unknown>; } catch { return {}; }
 }

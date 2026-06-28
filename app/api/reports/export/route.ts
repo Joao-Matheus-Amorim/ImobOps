@@ -23,7 +23,8 @@ export async function GET(request: Request) {
   }
 
   const report = await buildReportById(auth.ctx, reportId);
-  const body = exportReport(report, format);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: any = await exportReport(report, format);
 
   return new NextResponse(body, {
     status: 200,

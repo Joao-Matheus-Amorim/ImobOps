@@ -5,7 +5,7 @@ import { REPORT_DEFINITIONS, REPORT_TABS, type ReportFormat, type ReportId } fro
 import { exportReport, reportContentType, reportFileName } from "./export";
 
 const ctx = { tenancyId: DEMO_TENANCY_ID, userId: DEMO_USERS.admin };
-const formats: ReportFormat[] = ["csv", "json", "html", "xls"];
+const formats: ReportFormat[] = ["csv", "json", "html", "xls", "xlsx", "pdf"];
 
 describe("reports definitions", () => {
   it("keeps every report assigned to an existing tab and export format", () => {
@@ -49,10 +49,16 @@ describe("reports export", () => {
       const report = await buildReportById(ctx, reportId);
 
       for (const format of formats) {
-        const exported = exportReport(report, format);
+        const exported = await exportReport(report, format);
         expect(exported.length).toBeGreaterThan(0);
         expect(reportFileName(report, format)).toContain(reportId.replace(/\./g, "-"));
-        expect(reportContentType(format)).toContain(format === "xls" ? "excel" : format === "csv" ? "csv" : format);
+        if (format === "xlsx") {
+          expect(reportContentType(format)).toContain("openxml");
+        } else if (format === "pdf") {
+          expect(reportContentType(format)).toContain("pdf");
+        } else {
+          expect(reportContentType(format)).toContain(format === "xls" ? "excel" : format === "csv" ? "csv" : format);
+        }
       }
     }
   });

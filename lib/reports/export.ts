@@ -1,5 +1,7 @@
 import type { BuiltReport, ReportValue } from "./builders";
 import type { ReportFormat } from "./definitions";
+import ExcelJS from "exceljs";
+import PDFDocument from "pdfkit";
 
 function stringify(value: ReportValue): string {
   if (value === null || value === undefined) return "";
@@ -23,6 +25,8 @@ export function reportFileName(report: BuiltReport, format: ReportFormat): strin
   const slug = report.definition.id.replace(/\./g, "-");
   const date = report.generatedAt.slice(0, 10);
   if (format === "xls") return `${slug}-${date}.xls`;
+  if (format === "xlsx") return `${slug}-${date}.xlsx`;
+  if (format === "pdf") return `${slug}-${date}.pdf`;
   return `${slug}-${date}.${format === "html" ? "html" : format}`;
 }
 
@@ -30,6 +34,8 @@ export function reportContentType(format: ReportFormat): string {
   if (format === "json") return "application/json; charset=utf-8";
   if (format === "html") return "text/html; charset=utf-8";
   if (format === "xls") return "application/vnd.ms-excel; charset=utf-8";
+  if (format === "xlsx") return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  if (format === "pdf") return "application/pdf";
   return "text/csv; charset=utf-8";
 }
 
@@ -94,9 +100,109 @@ export function exportXls(report: BuiltReport): string {
   );
 }
 
-export function exportReport(report: BuiltReport, format: ReportFormat): string {
+export async function exportXlsx(report: BuiltReport): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "ImobOps";
+  wb.created = new Date();
+
+  const safeTitle = report.definition.title.slice(0, 31).replace(/[*?:\\/[\]<>|]/g, "");
+  const ws = wb.addWorksheet(safeTitle || "Report");
+
+  ws.addRow(["ImobOps", report.definition.title]);
+  ws.addRow(["Gerado em", report.generatedAt]);
+  ws.addRow([]);
+
+  const headerRow = ws.addRow(report.definition.columns.map((c) => c.label));
+  headerRow.font = { bold: true };
+
+  for (const row of report.rows) {
+    ws.addRow(report.definition.columns.map((c) => row.values[c.key] ?? ""));
+  }
+
+  if (Object.keys(report.totals).length > 0) {
+    ws.addRow([]);
+    const totalsRow = ws.addRow(Object.entries(report.totals).flat());
+    totalsRow.font = { bold: true };
+  }
+
+  ws.columns = report.definition.columns.map((c) => ({
+    width: Math.max(12, c.label.length * 1.5),
+  }));
+
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}
+
+export async function exportPdf(report: BuiltReport): Promise<Buffer> {
+  const doc = new PDFDocument({ margin: 40, size: "A4" });
+  const chunks: Buffer[] = [];
+  doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+  return new Promise((resolve, reject) => {
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.on("error", reject);
+
+    doc.fontSize(10).fillColor("#667085").text("ImobOps · Relatório", { continued: false });
+    doc.fillColor("#172033").fontSize(18).text(report.definition.title, { continued: false });
+    doc.fontSize(10).fillColor("#667085").text(report.definition.description, { continued: false });
+    doc.fontSize(9).fillColor("#667085").text(`Gerado em ${report.generatedAt}`, { continued: false });
+
+    if (Object.keys(report.totals).length > 0) {
+      doc.moveDown(0.5);
+      doc.fontSize(10).fillColor("#172033");
+      for (const [key, val] of Object.entries(report.totals)) {
+        doc.text(`${key}: ${val}`, { continued: false });
+      }
+    }
+
+    doc.moveDown(1);
+
+    const pageWidth = 495; // A4 at 72 DPI — 40 margins each side
+    const colWidths = report.definition.columns.map(() => pageWidth / report.definition.columns.length);
+
+    // Header row (bold with background)
+    let yPos = doc.y;
+    const headerHeight = 18;
+    doc.rect(40, yPos, pageWidth, headerHeight).fill("#f2f4f7");
+    doc.fillColor("#172033").fontSize(9);
+    let xPos = 40;
+    for (let i = 0; i < report.definition.columns.length; i++) {
+      doc.text(report.definition.columns[i].label, xPos + 4, yPos + 4, {
+        width: colWidths[i] - 8,
+        align: report.definition.columns[i].align === "right" ? "right" : "left",
+      });
+      xPos += colWidths[i];
+    }
+
+    // Data rows
+    doc.fontSize(8).fillColor("#172033");
+    for (const row of report.rows) {
+      yPos = doc.y + 4;
+      if (yPos > 720) {
+        doc.addPage();
+        yPos = doc.y + 4;
+      }
+
+      xPos = 40;
+      for (let i = 0; i < report.definition.columns.length; i++) {
+        const val = row.values[report.definition.columns[i].key] ?? "";
+        doc.text(String(val), xPos + 2, yPos, {
+          width: colWidths[i] - 4,
+          align: report.definition.columns[i].align === "right" ? "right" : "left",
+        });
+        xPos += colWidths[i];
+      }
+    }
+
+    doc.end();
+  });
+}
+
+export async function exportReport(report: BuiltReport, format: ReportFormat): Promise<string | Buffer> {
   if (format === "json") return exportJson(report);
   if (format === "html") return exportHtml(report);
   if (format === "xls") return exportXls(report);
+  if (format === "xlsx") return exportXlsx(report);
+  if (format === "pdf") return exportPdf(report);
   return exportCsv(report);
 }

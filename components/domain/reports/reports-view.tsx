@@ -24,6 +24,8 @@ const FORMAT_ICON: Record<ReportFormat, typeof Download> = {
   json: FileJson,
   html: Printer,
   xls: FileSpreadsheet,
+  xlsx: FileSpreadsheet,
+  pdf: FileText,
 };
 
 function valueLabel(value: ReportValue): string {
