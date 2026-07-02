@@ -19,12 +19,20 @@ export async function loginAs(page: Page, role: string) {
   if (!def) throw new Error(`Unknown role: ${role}`);
 
   const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  if (!hasSupabase) return; // skip login — Supabase not available
+  const hasServiceKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!hasSupabase && !hasServiceKey) {
+    console.log("Supabase não configurado. Teste em modo mock.");
+    return; // skip login — Supabase not available
+  }
 
   await page.goto("/login");
+  await page.waitForLoadState("networkidle");
 
   const email = process.env[def.emailVar] ?? def.fallbackEmail;
   const password = process.env[def.passVar] ?? "ImobOpsE2E!123456";
+
+  console.log(`Logging in with email: ${email}, password: ${password}`);
 
   if (!process.env[def.emailVar] || !process.env[def.passVar]) {
     const needsServiceKey = !process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -35,8 +43,8 @@ export async function loginAs(page: Page, role: string) {
     }
   }
 
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha").fill(password);
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(password);
   await page.getByRole("button", { name: /entrar/i }).click();
 
   await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 });

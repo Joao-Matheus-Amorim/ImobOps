@@ -25,6 +25,7 @@ export function LoginForm({ mock }: { mock: boolean }) {
     const supabase = createClient();
     if (!supabase) {
       // Mock mode: no auth, go straight in.
+      console.log("Login em modo mock");
       router.push(routes.dashboard);
       return;
     }
@@ -33,6 +34,7 @@ export function LoginForm({ mock }: { mock: boolean }) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) {
+      console.error("Login error:", error);
       setError("E-mail ou senha inválidos.");
       return;
     }
