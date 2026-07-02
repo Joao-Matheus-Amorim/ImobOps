@@ -1,7 +1,7 @@
 import type { Client, User } from "@/lib/types/domain";
 import { DEMO_TENANCY_ID, DEMO_USERS } from "@/lib/constants";
 
-const now = "2026-06-01T12:00:00.000Z";
+const now = new Date().toISOString();
 
 function base(id: string, ownerUserId: string | null) {
   return {
