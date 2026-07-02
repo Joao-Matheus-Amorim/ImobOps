@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 
+const hasSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+
 test.describe("Delete Properties", () => {
+  test.skip(!hasSupabase, "Sem Supabase — dados mock compartilhados");
+
   test.beforeEach(async ({ page }) => {
     await page.goto("/properties");
     await page.waitForLoadState("networkidle");
@@ -42,6 +46,8 @@ test.describe("Delete Properties", () => {
 });
 
 test.describe("Delete Rentals", () => {
+  test.skip(!hasSupabase, "Sem Supabase — dados mock compartilhados");
+
   test.beforeEach(async ({ page }) => {
     await page.goto("/rentals");
     await page.waitForLoadState("networkidle");
